@@ -1,0 +1,277 @@
+/**
+ * MalikSe — i18n translations (English + Hindi)
+ */
+
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    // Navigation
+    nav_search: "Search",
+    nav_my_properties: "My Properties",
+    nav_saved: "Saved",
+    nav_messages: "Messages",
+    nav_profile: "Profile",
+
+    // Auth
+    auth_welcome: "Welcome to MalikSe",
+    auth_tagline: "Verified Properties. Direct Owners.",
+    auth_login: "Login",
+    auth_register: "Register",
+    auth_mobile: "Mobile Number",
+    auth_otp: "Enter OTP",
+    auth_otp_sent: "OTP sent to",
+    auth_verify: "Verify",
+    auth_resend: "Resend OTP",
+    auth_name: "Full Name",
+    auth_email: "Email (optional)",
+    auth_role_owner: "I'm a Property Owner",
+    auth_role_buyer: "I'm a Buyer",
+    auth_continue: "Continue",
+    auth_logout: "Logout",
+
+    // Dashboard / My Properties
+    my_properties_title: "My Properties",
+    my_properties_empty: "No properties listed yet",
+    my_properties_empty_sub: "Tap '+' to create your first property listing.",
+    my_properties_new: "New Listing",
+    my_properties_pending: "Pending Verification",
+    my_properties_verified: "Verified",
+    my_properties_rejected: "Rejected",
+
+    // Search
+    search_placeholder: "Search by location, type...",
+    search_filter: "Filter",
+    search_verified_only: "Verified Only",
+    search_no_results: "No properties found",
+    search_type: "Property Type",
+    search_budget: "Budget",
+    search_apply: "Apply Filters",
+
+    // Property Detail
+    prop_area: "Area",
+    prop_price: "Price",
+    prop_type: "Type",
+    prop_location: "Location",
+    prop_contact_owner: "Contact Owner",
+    prop_send_offer: "Send Offer",
+    prop_save: "Save",
+    prop_saved: "Saved",
+    prop_documents: "Documents",
+    prop_verified_disclaimer: "\"Verified\" means platform-assisted document and site check — not a full legal title guarantee.",
+    prop_negotiable: "Negotiable",
+    prop_not_negotiable: "Fixed Price",
+    prop_khata: "Khata No.",
+    prop_khesra: "Khesra/Plot No.",
+    prop_holding: "Holding No.",
+    prop_road_width: "Road Width",
+    prop_chauhaddi: "Boundary (Chauhaddi)",
+
+    // Verification Badges
+    badge_identity: "Identity Verified",
+    badge_documents: "Documents Checked",
+    badge_site: "Site Visited",
+    badge_lawyer: "Lawyer Reviewed",
+    badge_fully: "Fully Verified",
+
+    // Document Vault
+    vault_title: "Document Vault",
+    vault_upload: "Upload Document",
+    vault_select_file: "Select File",
+    vault_no_docs: "No documents uploaded yet",
+    vault_share: "Share Link",
+    vault_view: "View",
+    vault_share_copied: "48-Hour share link copied!",
+    vault_type_registry: "Registry",
+    vault_type_mutation: "Mutation",
+    vault_type_lpc: "LPC/Jamabandi",
+    vault_type_map: "Map",
+    vault_type_rent: "Rent Receipt",
+    vault_type_id: "Owner ID Proof",
+
+    // Deal / Offer
+    deal_make_offer: "Make an Offer",
+    deal_offer_amount: "Your Offer (₹)",
+    deal_commission_note: "Commission: 1% + tax from each side on deal completion",
+    deal_submit_offer: "Submit Offer",
+    deal_status_offered: "Offer Sent",
+    deal_status_accepted: "Offer Accepted",
+    deal_status_rejected: "Offer Rejected",
+    deal_status_token_paid: "Token Paid",
+    deal_status_completed: "Deal Completed",
+    deal_token_pay: "Pay Token Amount",
+
+    // Advisor Panel
+    advisor_tasks: "Verification Tasks",
+    advisor_no_tasks: "No tasks assigned",
+    advisor_checkin: "GPS Check-In",
+    advisor_checkin_done: "Checked In",
+    advisor_upload_photos: "Upload Site Photos",
+    advisor_checklist: "Inspection Checklist",
+    advisor_notes: "Inspection Notes",
+    advisor_submit: "Submit Report",
+    advisor_submitted: "Report Submitted",
+
+    // Admin
+    admin_dashboard: "Admin Dashboard",
+    admin_total_owners: "Total Owners",
+    admin_total_buyers: "Total Buyers",
+    admin_total_properties: "Properties",
+    admin_pending: "Pending",
+    admin_verified: "Verified",
+    admin_rejected: "Rejected",
+    admin_deals: "Active Deals",
+    admin_commission: "Commission Earned",
+    admin_approve: "Approve",
+    admin_reject: "Reject",
+    admin_assign_advisor: "Assign Advisor",
+
+    // Misc
+    loading: "Loading...",
+    error_generic: "Something went wrong. Please try again.",
+    success: "Success",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    save: "Save",
+    edit: "Edit",
+    delete: "Delete",
+    share: "Share",
+  },
+
+  hi: {
+    // Navigation
+    nav_search: "खोजें",
+    nav_my_properties: "मेरी संपत्तियाँ",
+    nav_saved: "सहेजा",
+    nav_messages: "संदेश",
+    nav_profile: "प्रोफ़ाइल",
+
+    // Auth
+    auth_welcome: "MalikSe में आपका स्वागत है",
+    auth_tagline: "सत्यापित संपत्तियाँ। सीधे मालिक।",
+    auth_login: "लॉगिन",
+    auth_register: "पंजीकरण",
+    auth_mobile: "मोबाइल नंबर",
+    auth_otp: "OTP दर्ज करें",
+    auth_otp_sent: "OTP भेजा गया",
+    auth_verify: "सत्यापित करें",
+    auth_resend: "OTP पुनः भेजें",
+    auth_name: "पूरा नाम",
+    auth_email: "ईमेल (वैकल्पिक)",
+    auth_role_owner: "मैं संपत्ति मालिक हूँ",
+    auth_role_buyer: "मैं खरीदार हूँ",
+    auth_continue: "जारी रखें",
+    auth_logout: "लॉगआउट",
+
+    // Dashboard / My Properties
+    my_properties_title: "मेरी संपत्तियाँ",
+    my_properties_empty: "अभी तक कोई संपत्ति सूचीबद्ध नहीं",
+    my_properties_empty_sub: "अपनी पहली संपत्ति सूची बनाने के लिए '+' दबाएं।",
+    my_properties_new: "नई लिस्टिंग",
+    my_properties_pending: "सत्यापन लंबित",
+    my_properties_verified: "सत्यापित",
+    my_properties_rejected: "अस्वीकृत",
+
+    // Search
+    search_placeholder: "स्थान, प्रकार से खोजें...",
+    search_filter: "फ़िल्टर",
+    search_verified_only: "केवल सत्यापित",
+    search_no_results: "कोई संपत्ति नहीं मिली",
+    search_type: "संपत्ति का प्रकार",
+    search_budget: "बजट",
+    search_apply: "फ़िल्टर लागू करें",
+
+    // Property Detail
+    prop_area: "क्षेत्रफल",
+    prop_price: "मूल्य",
+    prop_type: "प्रकार",
+    prop_location: "स्थान",
+    prop_contact_owner: "मालिक से संपर्क करें",
+    prop_send_offer: "प्रस्ताव भेजें",
+    prop_save: "सहेजें",
+    prop_saved: "सहेजा गया",
+    prop_documents: "दस्तावेज़",
+    prop_verified_disclaimer: "\"सत्यापित\" का अर्थ है प्लेटफ़ॉर्म-सहायता प्राप्त दस्तावेज़ और साइट जाँच — पूर्ण कानूनी शीर्षक गारंटी नहीं।",
+    prop_negotiable: "बातचीत योग्य",
+    prop_not_negotiable: "निश्चित मूल्य",
+    prop_khata: "खाता नं.",
+    prop_khesra: "खेसरा/प्लॉट नं.",
+    prop_holding: "होल्डिंग नं.",
+    prop_road_width: "सड़क की चौड़ाई",
+    prop_chauhaddi: "सीमा (चौहद्दी)",
+
+    // Verification Badges
+    badge_identity: "पहचान सत्यापित",
+    badge_documents: "दस्तावेज़ जाँचे",
+    badge_site: "साइट दौरा",
+    badge_lawyer: "वकील द्वारा समीक्षित",
+    badge_fully: "पूर्णतः सत्यापित",
+
+    // Document Vault
+    vault_title: "दस्तावेज़ तिजोरी",
+    vault_upload: "दस्तावेज़ अपलोड करें",
+    vault_select_file: "फ़ाइल चुनें",
+    vault_no_docs: "अभी तक कोई दस्तावेज़ अपलोड नहीं",
+    vault_share: "लिंक साझा करें",
+    vault_view: "देखें",
+    vault_share_copied: "48 घंटे का लिंक कॉपी हो गया!",
+    vault_type_registry: "रजिस्ट्री",
+    vault_type_mutation: "दाखिल-खारिज",
+    vault_type_lpc: "LPC/जमाबंदी",
+    vault_type_map: "नक्शा",
+    vault_type_rent: "लगान रसीद",
+    vault_type_id: "मालिक पहचान प्रमाण",
+
+    // Deal / Offer
+    deal_make_offer: "प्रस्ताव दें",
+    deal_offer_amount: "आपका प्रस्ताव (₹)",
+    deal_commission_note: "कमीशन: डील पूर्ण होने पर प्रत्येक पक्ष से 1% + कर",
+    deal_submit_offer: "प्रस्ताव भेजें",
+    deal_status_offered: "प्रस्ताव भेजा गया",
+    deal_status_accepted: "प्रस्ताव स्वीकृत",
+    deal_status_rejected: "प्रस्ताव अस्वीकृत",
+    deal_status_token_paid: "टोकन भुगतान",
+    deal_status_completed: "डील पूर्ण",
+    deal_token_pay: "टोकन राशि का भुगतान करें",
+
+    // Advisor Panel
+    advisor_tasks: "सत्यापन कार्य",
+    advisor_no_tasks: "कोई कार्य नहीं",
+    advisor_checkin: "GPS चेक-इन",
+    advisor_checkin_done: "चेक इन हो गया",
+    advisor_upload_photos: "साइट फ़ोटो अपलोड करें",
+    advisor_checklist: "निरीक्षण सूची",
+    advisor_notes: "निरीक्षण नोट्स",
+    advisor_submit: "रिपोर्ट जमा करें",
+    advisor_submitted: "रिपोर्ट जमा हो गई",
+
+    // Admin
+    admin_dashboard: "एडमिन डैशबोर्ड",
+    admin_total_owners: "कुल मालिक",
+    admin_total_buyers: "कुल खरीदार",
+    admin_total_properties: "संपत्तियाँ",
+    admin_pending: "लंबित",
+    admin_verified: "सत्यापित",
+    admin_rejected: "अस्वीकृत",
+    admin_deals: "सक्रिय डील",
+    admin_commission: "अर्जित कमीशन",
+    admin_approve: "स्वीकृत",
+    admin_reject: "अस्वीकृत",
+    admin_assign_advisor: "सलाहकार नियुक्त करें",
+
+    // Misc
+    loading: "लोड हो रहा है...",
+    error_generic: "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+    success: "सफलता",
+    cancel: "रद्द करें",
+    confirm: "पुष्टि करें",
+    save: "सहेजें",
+    edit: "संपादित करें",
+    delete: "हटाएं",
+    share: "साझा करें",
+  },
+};
+
+export function t(language: string, key: string): string {
+  return translations[language]?.[key] || translations["en"]?.[key] || key;
+}
+
+export default translations;

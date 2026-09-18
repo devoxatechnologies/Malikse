@@ -378,8 +378,8 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(6, 78, 59, 0.78)",
-    backgroundImage: "linear-gradient(145deg, rgba(6, 78, 59, 0.88) 0%, rgba(15, 23, 42, 0.94) 100%)" as any,
+    backgroundColor: "rgba(6, 78, 59, 0.42)",
+    backgroundImage: "linear-gradient(180deg, rgba(6, 78, 59, 0.35) 0%, rgba(15, 23, 42, 0.65) 55%, rgba(15, 23, 42, 0.92) 100%)" as any,
   },
   heroContent: {
     flex: 1,

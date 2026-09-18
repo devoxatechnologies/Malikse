@@ -158,27 +158,42 @@ export default function SearchScreen() {
 
       {/* Search Header */}
       <View style={styles.header}>
+        {/* Mobile Locality & Trust Strip */}
+        <View style={styles.mobileLocationRow}>
+          <View style={styles.locationTag}>
+            <MaterialIcons name="place" size={14} color="#059669" />
+            <Text style={styles.locationTagText}>Patna & Surrounding Parcels</Text>
+          </View>
+          <View style={styles.verifiedTag}>
+            <MaterialIcons name="verified" size={12} color="#059669" />
+            <Text style={styles.verifiedTagText}>Direct Owners</Text>
+          </View>
+        </View>
+
         <View style={styles.searchBar}>
-          <MaterialIcons name="search" size={20} color={AppTheme.colors.primary} />
+          <MaterialIcons name="search" size={20} color="#059669" />
           <TextInput 
             style={styles.searchInput} 
-            placeholder={t(language, "search_placeholder") || "Search by location or plot name..."}
-            placeholderTextColor={AppTheme.colors.textMuted}
+            placeholder={t(language, "search_placeholder") || "Search by colony, Danapur, Bihta..."}
+            placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <MaterialIcons name="close" size={18} color={AppTheme.colors.textMuted} />
+            <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
+              <MaterialIcons name="close" size={18} color="#94A3B8" />
             </TouchableOpacity>
           ) : null}
+          <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.7}>
+            <MaterialIcons name="tune" size={18} color="#059669" />
+          </TouchableOpacity>
         </View>
 
         {/* Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
           {[
             { key: "all", label: "All Properties", icon: "domain" },
-            { key: "verified", label: "Verified Only", icon: "verified" },
+            { key: "verified", label: "100% Verified", icon: "verified" },
             { key: "land", label: "Plots & Land", icon: "terrain" },
             { key: "flat", label: "Flats & Villas", icon: "apartment" },
             { key: "patna", label: "Patna", icon: "place" },
@@ -194,7 +209,7 @@ export default function SearchScreen() {
                 <MaterialIcons
                   name={chip.icon as any}
                   size={14}
-                  color={isActive ? AppTheme.colors.primaryDark : AppTheme.colors.textSecondary}
+                  color={isActive ? "#059669" : "#64748B"}
                 />
                 <Text style={[styles.chipTxt, isActive && styles.chipTxtActive]}>
                   {chip.label}
@@ -245,20 +260,62 @@ const styles = StyleSheet.create({
   },
   header: { 
     padding: 14, 
-    backgroundColor: AppTheme.colors.white, 
+    backgroundColor: "#FFFFFF", 
     borderBottomWidth: 1, 
-    borderBottomColor: AppTheme.colors.border,
-    ...AppTheme.shadows.soft,
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  mobileLocationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  locationTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  locationTagText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+  verifiedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  verifiedTagText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#059669",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppTheme.colors.background,
-    borderRadius: AppTheme.radius.full,
-    paddingHorizontal: 14,
-    height: 46,
-    borderWidth: 1,
-    borderColor: AppTheme.colors.border,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+  },
+  filterIconBtn: {
+    padding: 6,
+    marginLeft: 4,
+    borderLeftWidth: 1,
+    borderLeftColor: "#E2E8F0",
   },
   searchInput: {
     flex: 1,

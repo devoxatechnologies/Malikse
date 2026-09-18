@@ -167,23 +167,62 @@ export default function SearchScreenWeb() {
         }
       />
 
-      {/* Hero Search & Filter Bar */}
+      {/* Enhanced Hero Search & Filter Bar */}
       <View style={styles.filterSection}>
         <View style={styles.searchBarWrapper}>
-          <View style={styles.searchBox}>
-            <MaterialIcons name="search" size={20} color={AppTheme.colors.primary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t(language, "search_placeholder") || "Search location, colony, or plot type..."}
-              placeholderTextColor={AppTheme.colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <MaterialIcons name="close" size={18} color={AppTheme.colors.textMuted} />
-              </TouchableOpacity>
-            ) : null}
+          {/* Header Banner Strip */}
+          <View style={styles.heroStrip}>
+            <View>
+              <Text style={styles.heroTitle}>Direct Land & Plots from Genuine Owners</Text>
+              <View style={styles.heroTrustRow}>
+                <View style={styles.trustItem}>
+                  <MaterialIcons name="verified" size={13} color="#059669" />
+                  <Text style={styles.trustItemText}>100% Jamabandi & Registry Checked</Text>
+                </View>
+                <Text style={styles.trustDot}>&bull;</Text>
+                <View style={styles.trustItem}>
+                  <MaterialIcons name="gps-fixed" size={13} color="#059669" />
+                  <Text style={styles.trustItemText}>Physical GPS Boundary Visits</Text>
+                </View>
+                <Text style={styles.trustDot}>&bull;</Text>
+                <View style={styles.trustItem}>
+                  <MaterialIcons name="handshake" size={13} color="#059669" />
+                  <Text style={styles.trustItemText}>Zero Brokerage</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.statBadge}>
+              <Text style={styles.statBadgeNum}>1,400+</Text>
+              <Text style={styles.statBadgeTxt}>Verified Parcels</Text>
+            </View>
+          </View>
+
+          {/* Composite Search Bar */}
+          <View style={styles.searchComposite}>
+            <View style={styles.locationPill}>
+              <MaterialIcons name="place" size={16} color="#059669" />
+              <Text style={styles.locationPillText}>Patna, BR</Text>
+            </View>
+            <View style={styles.searchDivider} />
+            <View style={styles.searchBox}>
+              <MaterialIcons name="search" size={18} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={t(language, "search_placeholder") || "Search by colony, Danapur, Bihta, Bailey Road, plot size..."}
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
+                  <MaterialIcons name="close" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <TouchableOpacity style={styles.searchActionBtn} activeOpacity={0.8}>
+              <MaterialIcons name="search" size={16} color="#FFFFFF" />
+              <Text style={styles.searchActionBtnText}>Search</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Quick Filter Chips */}
@@ -206,7 +245,7 @@ export default function SearchScreenWeb() {
                   <MaterialIcons
                     name={chip.icon as any}
                     size={14}
-                    color={isActive ? AppTheme.colors.primaryDark : AppTheme.colors.textSecondary}
+                    color={isActive ? "#059669" : "#64748B"}
                   />
                   <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
                     {chip.label}
@@ -324,34 +363,139 @@ const styles = StyleSheet.create({
     backgroundColor: AppTheme.colors.background,
   },
   filterSection: {
-    backgroundColor: AppTheme.colors.white,
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: AppTheme.colors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderBottomColor: "#E2E8F0",
+    paddingTop: 14,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   searchBarWrapper: {
-    maxWidth: 1200,
+    maxWidth: 1300,
     width: "100%",
     alignSelf: "center",
   },
-  searchBox: {
+  heroStrip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  heroTitle: {
+    fontSize: 19,
+    fontWeight: "900",
+    color: "#0F172A",
+    letterSpacing: -0.4,
+  },
+  heroTrustRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppTheme.colors.background,
+    gap: 8,
+    marginTop: 3,
+  },
+  trustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  trustItemText: {
+    fontSize: 11,
+    color: "#059669",
+    fontWeight: "700",
+  },
+  trustDot: {
+    color: "#94A3B8",
+    fontSize: 11,
+  },
+  statBadge: {
+    alignItems: "flex-end",
+    backgroundColor: "#F0FDF4",
     borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-    borderRadius: AppTheme.radius.full,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: "#BBF7D0",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  statBadgeNum: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#059669",
+  },
+  statBadgeTxt: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#166534",
+  },
+  searchComposite: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     marginBottom: 10,
+  },
+  locationPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  locationPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+  searchDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#CBD5E1",
+    marginHorizontal: 8,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: AppTheme.colors.text,
+    marginLeft: 6,
+    fontSize: 13,
+    color: "#0F172A",
+    fontWeight: "500",
     outlineStyle: "none" as any,
+  },
+  searchActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#059669",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchActionBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
   chipsScroll: {
     flexDirection: "row",

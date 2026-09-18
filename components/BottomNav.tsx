@@ -5,12 +5,14 @@ import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useLanguageStore } from "../src/store/languageStore";
 import { t } from "../src/i18n/translations";
 import { useAuthStore } from "../src/store/authStore";
+import { AppTheme } from "../constants/theme";
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { language, toggleLanguage } = useLanguageStore();
   const role = useAuthStore((s) => s.role);
+  const authState = useAuthStore((s) => s.authState);
 
   // Define tabs based on role
   const tabs = [
@@ -23,62 +25,115 @@ export default function BottomNav() {
   ];
 
   return (
-    <View style={styles.container}>
-      {tabs.map((tab, idx) => {
-        const isActive = pathname === tab.route;
-        return (
-          <TouchableOpacity
-            key={idx}
-            style={styles.tab}
-            onPress={() => router.replace(tab.route as any)}
-          >
-            {tab.type === "font-awesome" ? (
-              <FontAwesome5 name={tab.icon} size={20} color={isActive ? "#2A85FF" : "#999"} />
-            ) : (
-              <MaterialIcons name={tab.icon as any} size={24} color={isActive ? "#2A85FF" : "#999"} />
-            )}
-            <Text style={[styles.label, isActive && styles.activeLabel]}>{tab.name}</Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.wrapper}>
+      <View style={styles.container}>
+        {tabs.map((tab, idx) => {
+          const isActive = pathname === tab.route;
+          return (
+            <TouchableOpacity
+              key={idx}
+              style={styles.tab}
+              onPress={() => router.replace(tab.route as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
+                {tab.type === "font-awesome" ? (
+                  <FontAwesome5
+                    name={tab.icon}
+                    size={18}
+                    color={isActive ? AppTheme.colors.primary : AppTheme.colors.textMuted}
+                  />
+                ) : (
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={22}
+                    color={isActive ? AppTheme.colors.primary : AppTheme.colors.textMuted}
+                  />
+                )}
+              </View>
+              <Text style={[styles.label, isActive && styles.activeLabel]}>{tab.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
 
-      {/* Language Toggle Tab */}
-      <TouchableOpacity style={styles.tab} onPress={toggleLanguage}>
-        <MaterialIcons name="language" size={24} color="#999" />
-        <Text style={styles.label}>{language === "en" ? "हिन्दी" : "Eng"}</Text>
-      </TouchableOpacity>
+        {/* Quick Post Property CTA if owner */}
+        {role === "owner" && (
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => router.push("/listing/create")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.postBtn}>
+              <MaterialIcons name="add" size={20} color={AppTheme.colors.white} />
+            </View>
+            <Text style={[styles.label, { color: AppTheme.colors.primaryDark, fontWeight: "700" }]}>
+              + Post
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Language Toggle Tab */}
+        <TouchableOpacity style={styles.tab} onPress={toggleLanguage} activeOpacity={0.7}>
+          <View style={styles.iconContainer}>
+            <MaterialIcons name="translate" size={20} color={AppTheme.colors.textMuted} />
+          </View>
+          <Text style={styles.label}>{language === "en" ? "हिन्दी" : "Eng"}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: AppTheme.colors.white,
+    borderTopWidth: 1,
+    borderTopColor: AppTheme.colors.border,
+    ...AppTheme.shadows.card,
+  },
   container: {
     flexDirection: "row",
-    height: Platform.OS === "ios" ? 80 : 64,
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#EAEAEA",
-    paddingBottom: Platform.OS === "ios" ? 20 : 0,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    height: Platform.OS === "ios" ? 82 : 66,
+    paddingBottom: Platform.OS === "ios" ? 18 : 6,
+    paddingTop: 6,
+    maxWidth: 600,
+    width: "100%",
+    alignSelf: "center",
+    justifyContent: "space-around",
+    alignItems: "center",
   },
   tab: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 8,
+    paddingVertical: 2,
+  },
+  iconContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: AppTheme.radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIconContainer: {
+    backgroundColor: AppTheme.colors.primaryLight,
   },
   label: {
-    fontSize: 10,
-    color: "#999",
-    marginTop: 4,
-    fontFamily: Platform.OS === "ios" ? "System" : "Roboto",
+    fontSize: 11,
+    color: AppTheme.colors.textMuted,
+    marginTop: 2,
+    fontWeight: "500",
   },
   activeLabel: {
-    color: "#2A85FF",
-    fontWeight: "bold",
+    color: AppTheme.colors.primaryDark,
+    fontWeight: "700",
+  },
+  postBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: AppTheme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -16,44 +16,51 @@ export interface PropertyBadges {
 export interface PropertyLocation {
   state: string;
   district: string;
-  block: string;
-  mauza: string;
-  policeStation: string;
+  block?: string;
+  mauza?: string;
+  policeStation?: string;
   lat: number;
   lng: number;
 }
 
 export interface PropertyDisclosures {
-  hasLoan: boolean;
-  hasDispute: boolean;
-  possessionStatus: string;
+  hasLoan?: boolean;
+  hasDispute?: boolean;
+  possessionStatus?: string;
 }
 
 export interface Property {
   id: string;
-  ownerId: string;
+  _id?: string;
+  title?: string;
+  image?: string;
+  area?: string;
+  verified?: boolean;
+  date?: string;
+  ownerId?: string;
   jointOwnerIds?: string[];
-  type: PropertyType;
+  type: PropertyType | string;
   location: PropertyLocation;
   parcelPoints?: { lat: number; lng: number }[];
   khata?: string;
   khesra?: string;
   holdingNumber?: string;
-  totalArea: number;       // in sq ft or sq m
-  sellableArea: number;
+  totalArea?: number;       // in sq ft or sq m
+  sellableArea?: number;
   boundary?: string;       // chauhaddi description
   roadWidth?: number;
   price: number;           // in INR
-  negotiable: boolean;
-  media: {
+  negotiable?: boolean;
+  media?: {
     photos: string[];      // S3/GridFS URLs
-    videos: string[];
+    videos?: string[];
   };
-  documents: string[];     // Document IDs
+  documents?: string[];     // Document IDs
   disclosures?: PropertyDisclosures;
-  status: PropertyStatus;
-  badges: PropertyBadges;
-  createdAt: string;
+  status: PropertyStatus | string;
+  badges?: PropertyBadges | any;
+  createdAt?: string;
+  updatedAt?: string;
   // Populated fields (from server joins)
   ownerName?: string;
   locationName?: string;   // Human-readable address

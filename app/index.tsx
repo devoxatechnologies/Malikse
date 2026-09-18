@@ -5,7 +5,7 @@ export default function Index() {
   const { authState, user } = useAuthStore();
 
   if (authState !== "AUTHENTICATED" || !user) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/search" />;
   }
 
   // Redirect based on role if authenticated

@@ -1,31 +1,94 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, FlatList, Image, TextInput } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity, FlatList, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { propertyService } from "../../src/services/propertyService";
+import type { Property } from "../../src/types/property.types";
+import PropertyCard from "../../components/PropertyCard";
+import AppHeader from "../../components/AppHeader";
 import { t } from "../../src/i18n/translations";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { useListingFilterStore } from "../../src/store/listingFilterStore";
-import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { useAuthStore } from "../../src/store/authStore";
+import { MaterialIcons } from "@expo/vector-icons";
+import { AppTheme } from "../../constants/theme";
 
-const DUMMY_PROPERTIES = [
-  { id: "p1", title: "Commercial Plot on Main Road", price: "₹85,00,000", location: "Danapur, Patna", area: "2400 sq.ft", image: "https://images.unsplash.com/photo-1524813686514-a57563d77965?w=400&q=80", verified: true },
-  { id: "p2", title: "Residential Land for Villa", price: "₹32,00,000", location: "Bihta, Patna", area: "1500 sq.ft", image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=80", verified: true },
-  { id: "p3", title: "Farm Land with Tube Well", price: "₹18,50,000", location: "Naubatpur, Patna", area: "1.5 Acre", image: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=400&q=80", verified: false }
+const DUMMY_PROPERTIES: Property[] = [
+  {
+    id: "prop_1",
+    ownerId: "owner_1",
+    title: "Prime Commercial Plot on Main Bailey Road",
+    type: "land",
+    price: 8500000,
+    totalArea: 2400,
+    sellableArea: 2400,
+    location: { district: "Danapur, Patna", state: "Bihar", lat: 25.6127, lng: 85.0456 },
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
+    media: { photos: ["https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80"] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "prop_2",
+    ownerId: "owner_2",
+    title: "Residential Land for Modern Villa",
+    type: "land",
+    price: 3200000,
+    totalArea: 1500,
+    sellableArea: 1500,
+    location: { district: "Bihta, Patna", state: "Bihar", lat: 25.5684, lng: 84.8582 },
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
+    media: { photos: ["https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "prop_3",
+    ownerId: "owner_3",
+    title: "Fertile Highway Agricultural Farm Land",
+    type: "land",
+    price: 1850000,
+    totalArea: 43560,
+    sellableArea: 43560,
+    location: { district: "Naubatpur, Patna", state: "Bihar", lat: 25.5342, lng: 84.9741 },
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: false, fullyVerified: false },
+    media: { photos: ["https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&q=80"] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "prop_4",
+    ownerId: "owner_4",
+    title: "Luxury 3BHK Apartment in Gated Community",
+    type: "flat",
+    price: 6500000,
+    totalArea: 1850,
+    sellableArea: 1420,
+    location: { district: "Kankarbagh, Patna", state: "Bihar", lat: 25.5941, lng: 85.1550 },
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
+    media: { photos: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"] },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
 ];
 
 export default function SearchScreen() {
   const router = useRouter();
   const { language } = useLanguageStore();
   const filters = useListingFilterStore();
+  const { user, authState } = useAuthStore();
   
-  const [properties, setProperties] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [properties, setProperties] = useState<Property[]>(DUMMY_PROPERTIES);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeChip, setActiveChip] = useState("all");
 
   useEffect(() => {
     fetchProperties();
-  }, [filters.verifiedOnly, filters.type, filters.location]);
+  }, [filters.verifiedOnly, filters.propertyType, filters.location]);
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -35,7 +98,11 @@ export default function SearchScreen() {
         type: filters.propertyType || undefined,
         location: filters.location || undefined
       });
-      setProperties(data.length ? data : DUMMY_PROPERTIES);
+      if (data && data.length > 0) {
+        setProperties(data);
+      } else {
+        setProperties(DUMMY_PROPERTIES);
+      }
     } catch (e) {
       setProperties(DUMMY_PROPERTIES);
     } finally {
@@ -43,116 +110,280 @@ export default function SearchScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image || item.media?.photos?.[0] || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=80" }} style={styles.cardImage} />
-        {item.verified && (
-          <View style={styles.verifiedBadge}>
-            <MaterialIcons name="verified" size={14} color="#FFF" />
-            <Text style={styles.verifiedTxt}>Verified Owner</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>{item.price || "₹--,--,---"}</Text>
-          <TouchableOpacity style={styles.contactBtn}>
-            <Text style={styles.contactBtnTxt}>Contact</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.title} numberOfLines={1}>{item.title || "Property Listing"}</Text>
-        <View style={styles.detailsRow}>
-          <MaterialIcons name="location-on" size={16} color="#666" />
-          <Text style={styles.detailTxt}>{item.location?.district || item.location}</Text>
-          <Text style={styles.dot}> • </Text>
-          <MaterialIcons name="square-foot" size={16} color="#666" />
-          <Text style={styles.detailTxt}>{item.totalArea || item.area}</Text>
-        </View>
-      </View>
-    </View>
-  );
+  const filteredProperties = properties.filter((p) => {
+    const loc = typeof p.location === "string" ? p.location : `${p.location?.district} ${p.location?.state}`;
+    const matchesSearch = !searchQuery || 
+      (p.title && p.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      loc.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (activeChip === "verified") return p.status === "verified";
+    if (activeChip === "land") return p.type === "land";
+    if (activeChip === "flat") return p.type === "flat";
+    if (activeChip === "patna") return loc.toLowerCase().includes("patna");
+    return true;
+  });
 
   return (
     <View style={styles.container}>
+      {/* Top Brand Header */}
+      <AppHeader
+        showBack={false}
+        showLanguageToggle={true}
+        rightElement={
+          authState === "AUTHENTICATED" && user ? (
+            <TouchableOpacity
+              style={styles.profileBtn}
+              onPress={() => router.push("/profile")}
+              activeOpacity={0.8}
+            >
+              <View style={styles.userAvatar}>
+                <Text style={styles.avatarLetter}>{user.name?.charAt(0) || "U"}</Text>
+              </View>
+              <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.loginBtn}
+              onPress={() => router.push("/login")}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="login" size={16} color={AppTheme.colors.white} />
+              <Text style={styles.loginBtnText}>Sign In</Text>
+            </TouchableOpacity>
+          )
+        }
+      />
+
       {/* Search Header */}
       <View style={styles.header}>
         <View style={styles.searchBar}>
-          <FontAwesome5 name="search" size={16} color="#999" />
+          <MaterialIcons name="search" size={20} color={AppTheme.colors.primary} />
           <TextInput 
             style={styles.searchInput} 
-            placeholder={t(language, "search_placeholder") || "Search location..."}
+            placeholder={t(language, "search_placeholder") || "Search by location or plot name..."}
+            placeholderTextColor={AppTheme.colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <TouchableOpacity style={styles.filterIconBtn}>
-            <FontAwesome5 name="sliders-h" size={16} color="#2A85FF" />
-          </TouchableOpacity>
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <MaterialIcons name="close" size={18} color={AppTheme.colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
         </View>
-        <View style={styles.chipsRow}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TouchableOpacity style={[styles.chip, styles.chipActive]}><Text style={styles.chipTxtActive}>All</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.chip}><Text style={styles.chipTxt}>Plots</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.chip}><Text style={styles.chipTxt}>Agricultural</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.chip}><Text style={styles.chipTxt}>Commercial</Text></TouchableOpacity>
-          </ScrollView>
-        </View>
+
+        {/* Filter Chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          {[
+            { key: "all", label: "All Properties", icon: "domain" },
+            { key: "verified", label: "Verified Only", icon: "verified" },
+            { key: "land", label: "Plots & Land", icon: "terrain" },
+            { key: "flat", label: "Flats & Villas", icon: "apartment" },
+            { key: "patna", label: "Patna", icon: "place" },
+          ].map((chip) => {
+            const isActive = activeChip === chip.key;
+            return (
+              <TouchableOpacity
+                key={chip.key}
+                style={[styles.chip, isActive && styles.chipActive]}
+                onPress={() => setActiveChip(chip.key)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name={chip.icon as any}
+                  size={14}
+                  color={isActive ? AppTheme.colors.primaryDark : AppTheme.colors.textSecondary}
+                />
+                <Text style={[styles.chipTxt, isActive && styles.chipTxtActive]}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
+      {/* Content List */}
       <View style={styles.content}>
-        <FlatList
-          data={properties}
-          keyExtractor={(item) => item.id || item._id}
-          contentContainerStyle={{ padding: 16 }}
-          renderItem={renderItem}
-        />
+        {loading ? (
+          <View style={styles.loaderBox}>
+            <ActivityIndicator size="large" color={AppTheme.colors.primary} />
+            <Text style={styles.loadingText}>{t(language, "loading")}</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProperties}
+            keyExtractor={(item, index) => item.id || item._id || String(index)}
+            contentContainerStyle={styles.listPadding}
+            renderItem={({ item }) => <PropertyCard property={item} />}
+            ListEmptyComponent={
+              <View style={styles.emptyBox}>
+                <MaterialIcons name="search-off" size={48} color={AppTheme.colors.textMuted} />
+                <Text style={styles.emptyTitle}>{t(language, "search_no_results")}</Text>
+                <Text style={styles.emptySub}>Try searching for a different area or clear filters.</Text>
+                <TouchableOpacity
+                  style={styles.resetBtn}
+                  onPress={() => { setSearchQuery(""); setActiveChip("all"); }}
+                >
+                  <Text style={styles.resetBtnTxt}>Clear Filters</Text>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F6F8" },
+  container: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
   header: { 
-    padding: 16, 
-    paddingTop: 60, 
-    backgroundColor: "#FFF", 
+    padding: 14, 
+    backgroundColor: AppTheme.colors.white, 
     borderBottomWidth: 1, 
-    borderColor: "#EAEAEA",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3
+    borderBottomColor: AppTheme.colors.border,
+    ...AppTheme.shadows.soft,
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0F2F5",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48
+    backgroundColor: AppTheme.colors.background,
+    borderRadius: AppTheme.radius.full,
+    paddingHorizontal: 14,
+    height: 46,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
   },
-  searchInput: { flex: 1, marginLeft: 12, fontSize: 16, color: "#333" },
-  filterIconBtn: { padding: 8 },
-  chipsRow: { marginTop: 12, flexDirection: "row" },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#F0F2F5", marginRight: 8, borderWidth: 1, borderColor: "transparent" },
-  chipActive: { backgroundColor: "#EBF3FF", borderColor: "#2A85FF" },
-  chipTxt: { color: "#666", fontWeight: "500" },
-  chipTxtActive: { color: "#2A85FF", fontWeight: "bold" },
-  content: { flex: 1 },
-  card: { backgroundColor: "#FFF", borderRadius: 16, marginBottom: 16, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  imageContainer: { position: "relative" },
-  cardImage: { width: "100%", height: 200, backgroundColor: "#EEE" },
-  verifiedBadge: { position: "absolute", top: 12, left: 12, backgroundColor: "rgba(46, 125, 50, 0.9)", flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
-  verifiedTxt: { color: "#FFF", fontSize: 12, fontWeight: "bold", marginLeft: 4 },
-  cardBody: { padding: 16 },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  price: { fontSize: 22, fontWeight: "bold", color: "#111" },
-  contactBtn: { backgroundColor: "#2A85FF", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  contactBtnTxt: { color: "#FFF", fontWeight: "bold", fontSize: 13 },
-  title: { fontSize: 16, fontWeight: "600", color: "#444", marginBottom: 8 },
-  detailsRow: { flexDirection: "row", alignItems: "center" },
-  detailTxt: { fontSize: 14, color: "#777", marginLeft: 4 },
-  dot: { color: "#CCC", marginHorizontal: 4 }
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: AppTheme.colors.text,
+    outlineStyle: "none" as any,
+  },
+  chipsRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: AppTheme.radius.full,
+    backgroundColor: AppTheme.colors.background,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+  },
+  chipActive: {
+    backgroundColor: AppTheme.colors.primaryLight,
+    borderColor: AppTheme.colors.primary,
+  },
+  chipTxt: {
+    color: AppTheme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  chipTxtActive: {
+    color: AppTheme.colors.primaryDark,
+    fontWeight: "700",
+  },
+  content: {
+    flex: 1,
+    maxWidth: 720,
+    width: "100%",
+    alignSelf: "center",
+  },
+  listPadding: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  loaderBox: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    color: AppTheme.colors.textSecondary,
+    fontSize: 13,
+  },
+  emptyBox: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: AppTheme.colors.text,
+    marginTop: 12,
+  },
+  emptySub: {
+    fontSize: 13,
+    color: AppTheme.colors.textMuted,
+    textAlign: "center",
+    marginTop: 6,
+    maxWidth: 260,
+  },
+  resetBtn: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: AppTheme.colors.primaryLight,
+    borderRadius: AppTheme.radius.md,
+  },
+  resetBtnTxt: {
+    color: AppTheme.colors.primaryDark,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  loginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: AppTheme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: AppTheme.radius.full,
+  },
+  loginBtnText: {
+    color: AppTheme.colors.white,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  profileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: AppTheme.colors.divider,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: AppTheme.radius.full,
+  },
+  userAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: AppTheme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarLetter: {
+    color: AppTheme.colors.white,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  userName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: AppTheme.colors.text,
+    maxWidth: 80,
+  },
 });

@@ -1,25 +1,39 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { AppTheme } from "../constants/theme";
 
 interface BadgeChipProps {
   label: string;
   active: boolean;
   icon: string;
+  color?: string;
 }
 
-export default function BadgeChip({ label, active, icon }: BadgeChipProps) {
+export default function BadgeChip({ label, active, icon, color = AppTheme.colors.primary }: BadgeChipProps) {
   return (
-    <View style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}>
-      <FontAwesome5 
-        name={icon} 
-        size={12} 
-        color={active ? "#0F5132" : "#666"} 
-        style={styles.icon} 
-      />
-      <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive]}>
+    <View style={[styles.chip, active ? [styles.chipActive, { backgroundColor: `${color}14`, borderColor: `${color}40` }] : styles.chipInactive]}>
+      {active ? (
+        <FontAwesome5 
+          name={icon} 
+          size={12} 
+          color={color} 
+          style={styles.icon} 
+        />
+      ) : (
+        <MaterialIcons
+          name="radio-button-unchecked"
+          size={13}
+          color={AppTheme.colors.textMuted}
+          style={styles.icon}
+        />
+      )}
+      <Text style={[styles.label, active ? [styles.labelActive, { color }] : styles.labelInactive]}>
         {label}
       </Text>
+      {active && (
+        <MaterialIcons name="check-circle" size={13} color={color} style={{ marginLeft: 4 }} />
+      )}
     </View>
   );
 }
@@ -29,31 +43,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 5,
+    borderRadius: AppTheme.radius.full,
     marginRight: 8,
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1,
   },
   chipActive: {
-    backgroundColor: "#D1E7DD",
-    borderColor: "#BADBCC",
+    backgroundColor: AppTheme.colors.primaryLight,
+    borderColor: AppTheme.colors.primary,
   },
   chipInactive: {
-    backgroundColor: "#F8F9FA",
-    borderColor: "#DEE2E6",
+    backgroundColor: AppTheme.colors.divider,
+    borderColor: AppTheme.colors.border,
   },
   icon: {
     marginRight: 6,
   },
   label: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "600",
   },
   labelActive: {
-    color: "#0F5132",
+    fontWeight: "700",
   },
   labelInactive: {
-    color: "#666",
+    color: AppTheme.colors.textMuted,
   },
 });

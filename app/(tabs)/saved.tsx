@@ -1,80 +1,110 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
+import { useRouter } from "expo-router";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import AppHeader from "../../components/AppHeader";
+import PropertyCard from "../../components/PropertyCard";
+import { AppTheme } from "../../constants/theme";
 
 const DUMMY_SAVED = [
-  { id: "s1", title: "Premium Plot in Kankarbagh", price: "₹45,00,000", location: "Patna, Bihar", area: "1200 sq.ft", image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=80" },
-  { id: "s2", title: "Agricultural Land", price: "₹12,50,000", location: "Hajipur, Bihar", area: "1 Acre", image: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=400&q=80" }
+  { 
+    id: "prop_1", 
+    title: "Prime Commercial Plot on Main Bailey Road", 
+    price: 8500000, 
+    location: { district: "Danapur, Patna", state: "Bihar" }, 
+    sellableArea: 2400,
+    type: "land",
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true },
+    media: { photos: ["https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80"] } 
+  },
+  { 
+    id: "prop_2", 
+    title: "Residential Land for Modern Villa", 
+    price: 3200000, 
+    location: { district: "Bihta, Patna", state: "Bihar" }, 
+    sellableArea: 1500,
+    type: "land",
+    status: "verified",
+    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true },
+    media: { photos: ["https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"] } 
+  }
 ];
 
 export default function SavedScreen() {
+  const router = useRouter();
   const [saved, setSaved] = useState(DUMMY_SAVED);
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <TouchableOpacity style={styles.heartBtn}>
-        <FontAwesome5 name="heart" solid size={20} color="#FF3B30" />
-      </TouchableOpacity>
-      <View style={styles.cardBody}>
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>{item.price}</Text>
-          <View style={styles.badge}><Text style={styles.badgeTxt}>Verified</Text></View>
-        </View>
-        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-        <View style={styles.detailsRow}>
-          <MaterialIcons name="location-on" size={16} color="#666" />
-          <Text style={styles.detailTxt}>{item.location}</Text>
-          <Text style={styles.dot}> • </Text>
-          <MaterialIcons name="square-foot" size={16} color="#666" />
-          <Text style={styles.detailTxt}>{item.area}</Text>
-        </View>
-      </View>
-    </View>
-  );
+  const handleRemove = (id: string) => {
+    setSaved(saved.filter(item => item.id !== id));
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Saved Properties</Text>
-        <Text style={styles.headerSub}>Properties you love, ready for you.</Text>
-      </View>
-
-      <FlatList
-        data={saved}
-        keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <FontAwesome5 name="heart" size={64} color="#E0E0E0" />
-            <Text style={styles.emptyTitle}>No saved properties</Text>
-            <Text style={styles.emptySub}>Start exploring and save your favorites here.</Text>
-          </View>
-        }
+    <View style={styles.screen}>
+      <AppHeader
+        title="Saved Properties"
+        subtitle={`${saved.length} shortlisted plots`}
+        showBack={true}
+        fallbackRoute="/search"
       />
+
+      <View style={styles.container}>
+        <FlatList
+          data={saved}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listPadding}
+          renderItem={({ item }) => (
+            <PropertyCard
+              property={item}
+              onSave={handleRemove}
+              isSaved={true}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <FontAwesome5 name="heart-broken" size={36} color={AppTheme.colors.textMuted} />
+              </View>
+              <Text style={styles.emptyTitle}>No saved properties</Text>
+              <Text style={styles.emptySub}>When you explore properties, tap the heart icon to shortlist your favorites here.</Text>
+              <TouchableOpacity
+                style={styles.exploreBtn}
+                onPress={() => router.replace("/search")}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.exploreBtnTxt}>Explore Verified Properties</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F9FA" },
-  header: { padding: 24, paddingTop: 60, backgroundColor: "#FFF", borderBottomWidth: 1, borderColor: "#EAEAEA" },
-  headerTitle: { fontSize: 28, fontWeight: "bold", color: "#111" },
-  headerSub: { fontSize: 14, color: "#666", marginTop: 4 },
-  card: { backgroundColor: "#FFF", borderRadius: 16, marginBottom: 16, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  cardImage: { width: "100%", height: 180, backgroundColor: "#EEE" },
-  heartBtn: { position: "absolute", top: 12, right: 12, backgroundColor: "#FFF", padding: 8, borderRadius: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5 },
-  cardBody: { padding: 16 },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  price: { fontSize: 20, fontWeight: "bold", color: "#2A85FF" },
-  badge: { backgroundColor: "#E8F5E9", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeTxt: { color: "#2E7D32", fontSize: 12, fontWeight: "bold" },
-  title: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 8 },
-  detailsRow: { flexDirection: "row", alignItems: "center" },
-  detailTxt: { fontSize: 14, color: "#666", marginLeft: 4 },
-  dot: { color: "#CCC", marginHorizontal: 4 },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 100 },
-  emptyTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginTop: 24 },
-  emptySub: { fontSize: 14, color: "#666", marginTop: 8, textAlign: "center", paddingHorizontal: 32 }
+  screen: { flex: 1, backgroundColor: AppTheme.colors.background },
+  container: { maxWidth: 720, width: "100%", alignSelf: "center", flex: 1 },
+  listPadding: { padding: 16, paddingBottom: 40 },
+  emptyContainer: { alignItems: "center", justifyContent: "center", marginTop: 80, padding: 24 },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: AppTheme.colors.divider,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: { fontSize: 20, fontWeight: "800", color: AppTheme.colors.text },
+  emptySub: { fontSize: 13, color: AppTheme.colors.textMuted, textAlign: "center", marginTop: 6, maxWidth: 300 },
+  exploreBtn: {
+    marginTop: 20,
+    backgroundColor: AppTheme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: AppTheme.radius.md,
+    ...AppTheme.shadows.soft,
+  },
+  exploreBtnTxt: { color: AppTheme.colors.white, fontWeight: "700", fontSize: 14 },
 });

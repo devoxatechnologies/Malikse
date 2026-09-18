@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { authService } from "../../src/services/authService";
-import { t } from "../../src/i18n/translations";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { UserRole } from "../../src/types/auth.types";
@@ -23,7 +22,7 @@ import { AppTheme } from "../../constants/theme";
 export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 920;
+  const isDesktop = width >= 960;
 
   const { language, toggleLanguage } = useLanguageStore();
   const authStore = useAuthStore();
@@ -32,7 +31,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showDevTools, setShowDevTools] = useState(true);
 
   const handleLogin = async () => {
     let resolvedPassword = password;
@@ -42,7 +40,7 @@ export default function LoginScreen() {
     }
 
     if (mobile.length < 10 || resolvedPassword.length < 6) {
-      Alert.alert("Invalid Input", "Please enter a valid 10-digit mobile number and a password of at least 6 characters.");
+      Alert.alert("Invalid Input", "Please enter your 10-digit mobile number and password.");
       return;
     }
 
@@ -51,7 +49,7 @@ export default function LoginScreen() {
       const user = await authService.login(mobile, resolvedPassword);
       routeByRole(user.role);
     } catch (e: any) {
-      Alert.alert("Login Failed", e.response?.data?.message || "Invalid mobile number or password. Please try again.");
+      Alert.alert("Sign In Failed", e.response?.data?.message || "Invalid mobile number or password.");
     } finally {
       setLoading(false);
     }
@@ -83,316 +81,236 @@ export default function LoginScreen() {
     <View style={styles.screen}>
       <View style={[styles.mainLayout, isDesktop && styles.desktopLayout]}>
         
-        {/* ================= LEFT HERO COLUMN (DESKTOP) ================= */}
+        {/* ================= LEFT SHOWCASE COLUMN (DESKTOP) ================= */}
         {isDesktop && (
           <View style={styles.heroColumn}>
+            {/* Rich Estate Photography */}
             <Image
-              source={require("../../assets/auth_hero_land.jpg")}
+              source={{ uri: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1600&q=85" }}
               style={styles.heroImage}
               resizeMode="cover"
             />
-            {/* Dark Emerald Gradient Overlay */}
+            {/* Cinematic Gradient: Subtle at top, rich at bottom for perfect readability */}
             <View style={styles.heroOverlay} />
 
-            {/* Content on top of image */}
             <View style={styles.heroContent}>
-              {/* Brand Logo Header */}
-              <View style={styles.heroBrandRow}>
-                <View style={styles.heroLogoCircle}>
-                  <FontAwesome5 name="shield-alt" size={20} color="#FFFFFF" />
+              {/* Brand Pill Header */}
+              <View style={styles.brandRow}>
+                <View style={styles.brandLogoBox}>
+                  <FontAwesome5 name="shield-alt" size={18} color="#FFFFFF" />
                 </View>
-                <Text style={styles.heroBrandText}>
-                  Malik<Text style={styles.heroBrandAccent}>Se</Text>
+                <Text style={styles.brandTitle}>
+                  Malik<Text style={{ color: "#34D399" }}>Se</Text>
                 </Text>
-                <View style={styles.heroBadge}>
-                  <MaterialIcons name="verified" size={14} color="#10B981" />
-                  <Text style={styles.heroBadgeText}>100% Owner Verified</Text>
+                <View style={styles.verifiedTag}>
+                  <MaterialIcons name="check-circle" size={13} color="#10B981" />
+                  <Text style={styles.verifiedTagText}>Govt Title Checked</Text>
                 </View>
               </View>
 
-              {/* Center Marketing Copy */}
-              <View style={styles.heroCenterCopy}>
-                <Text style={styles.heroHeading}>
-                  India's First Direct{"\n"}Owner-to-Buyer Land Marketplace
+              {/* Center Catchphrase */}
+              <View style={styles.heroCenter}>
+                <Text style={styles.heroTagline}>
+                  Direct Owner-to-Buyer{"\n"}Property Marketplace
                 </Text>
-                <Text style={styles.heroSubheading}>
-                  Say goodbye to fake listings, untraceable ownership, and unauthorized brokers. Every property is backed by government registry cross-checks, physical site GPS visits, and lawyer certification.
+                <Text style={styles.heroDescription}>
+                  Zero brokers. Zero fake listings. Every plot is physically verified with on-site GPS boundaries and revenue registry scrutiny.
                 </Text>
-
-                {/* 3 Pillars of Trust */}
-                <View style={styles.pillarsContainer}>
-                  <View style={styles.pillarItem}>
-                    <View style={styles.pillarIconWrap}>
-                      <MaterialIcons name="fingerprint" size={20} color="#34D399" />
-                    </View>
-                    <View style={styles.pillarTextWrap}>
-                      <Text style={styles.pillarTitle}>Biometric Owner KYC</Text>
-                      <Text style={styles.pillarDesc}>Only registered landowners can publish properties</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.pillarItem}>
-                    <View style={styles.pillarIconWrap}>
-                      <MaterialIcons name="location-pin" size={20} color="#38BDF8" />
-                    </View>
-                    <View style={styles.pillarTextWrap}>
-                      <Text style={styles.pillarTitle}>Physical GPS Verification</Text>
-                      <Text style={styles.pillarDesc}>Field advisors survey actual parcel boundaries</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.pillarItem}>
-                    <View style={styles.pillarIconWrap}>
-                      <MaterialIcons name="gavel" size={20} color="#FBBF24" />
-                    </View>
-                    <View style={styles.pillarTextWrap}>
-                      <Text style={styles.pillarTitle}>Legal Due Diligence</Text>
-                      <Text style={styles.pillarDesc}>Revenue office Jamabandi & title scrutiny</Text>
-                    </View>
-                  </View>
-                </View>
               </View>
 
-              {/* Bottom Social Proof */}
-              <View style={styles.heroFooter}>
-                <View style={styles.statPill}>
-                  <MaterialIcons name="trending-up" size={18} color="#10B981" />
-                  <Text style={styles.statText}>₹140+ Cr Verified Land Listed</Text>
+              {/* Bottom Glassmorphic Social Proof Testimonial Card */}
+              <View style={styles.glassCard}>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <MaterialIcons key={s} name="star" size={16} color="#FBBF24" />
+                  ))}
+                  <Text style={styles.starsLabel}>Verified Deal</Text>
                 </View>
-                <Text style={styles.heroCopyright}>&copy; 2026 MalikSe Technologies Inc.</Text>
+                <Text style={styles.quoteText}>
+                  "Found a 2,400 sq.ft commercial plot in Danapur directly through the owner. Saved ₹2.5 Lakhs in middleman brokerage."
+                </Text>
+                <View style={styles.authorRow}>
+                  <View style={styles.authorAvatar}>
+                    <Text style={styles.authorLetter}>R</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.authorName}>Rajesh Verma</Text>
+                    <Text style={styles.authorLoc}>Property Buyer &bull; Patna</Text>
+                  </View>
+                  <View style={styles.activeParcelsChip}>
+                    <Text style={styles.activeParcelsText}>1,400+ Verified Plots</Text>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
         )}
 
-        {/* ================= RIGHT FORM COLUMN ================= */}
+        {/* ================= RIGHT SIGN-IN COLUMN ================= */}
         <View style={styles.formColumn}>
+          {/* Top Bar with Navigation & Language */}
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.replace("/search")}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="arrow-back" size={18} color="#0F172A" />
+              <Text style={styles.backBtnText}>Marketplace</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.langPill}
+              onPress={toggleLanguage}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="translate" size={15} color="#059669" />
+              <Text style={styles.langPillText}>{language === "en" ? "हिन्दी" : "English"}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Form Scroll Container */}
           <ScrollView
             contentContainerStyle={styles.formScroll}
             showsVerticalScrollIndicator={false}
           >
-            {/* Top Navigation & Brand (for both Desktop & Mobile) */}
-            <View style={styles.formTopBar}>
-              <TouchableOpacity
-                style={styles.backLink}
-                onPress={() => router.replace("/search")}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="arrow-back" size={20} color={AppTheme.colors.text} />
-                <Text style={styles.backLinkText}>Back to Marketplace</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.langToggle}
-                onPress={toggleLanguage}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="translate" size={16} color={AppTheme.colors.primaryDark} />
-                <Text style={styles.langToggleText}>{language === "en" ? "हिन्दी" : "English"}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Mobile Header Branding (visible when hero image is hidden) */}
-            {!isDesktop && (
-              <View style={styles.mobileBrandHeader}>
-                <View style={styles.mobileLogoBox}>
-                  <FontAwesome5 name="shield-alt" size={22} color="#FFFFFF" />
-                </View>
-                <Text style={styles.mobileBrandName}>
-                  Malik<Text style={{ color: AppTheme.colors.primary }}>Se</Text>
-                </Text>
-                <Text style={styles.mobileBrandTag}>Verified Owner-to-Buyer Marketplace</Text>
-              </View>
-            )}
-
-            {/* Form Title & Context */}
-            <View style={styles.headerBlock}>
-              <Text style={styles.welcomeHeading}>Welcome back</Text>
-              <Text style={styles.welcomeSub}>
-                Sign in with your registered mobile number to manage your verified properties and buyer offers.
-              </Text>
-            </View>
-
-            {/* Actual Input Form */}
-            <View style={styles.formContent}>
-              {/* Mobile Input Group */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.inputLabel}>Mobile Number</Text>
-                <View style={styles.mobileInputRow}>
-                  <View style={styles.countryCodePill}>
-                    <Text style={styles.countryFlag}>🇮🇳</Text>
-                    <Text style={styles.countryCode}>+91</Text>
+            <View style={styles.formWrapper}>
+              {/* Mobile Brand Identity */}
+              {!isDesktop && (
+                <View style={styles.mobileHero}>
+                  <View style={styles.mobileLogoCircle}>
+                    <FontAwesome5 name="shield-alt" size={20} color="#FFFFFF" />
                   </View>
-                  <TextInput
-                    style={styles.mobileInput}
-                    value={mobile}
-                    onChangeText={setMobile}
-                    keyboardType="phone-pad"
-                    placeholder="10-digit mobile number"
-                    placeholderTextColor={AppTheme.colors.textMuted}
-                    maxLength={10}
-                    autoFocus={isDesktop}
-                  />
-                </View>
-              </View>
-
-              {/* Password Input Group */}
-              <View style={styles.fieldGroup}>
-                <View style={styles.labelWithAction}>
-                  <Text style={styles.inputLabel}>Password</Text>
-                  <TouchableOpacity activeOpacity={0.7}>
-                    <Text style={styles.forgotLink}>Forgot password?</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.passwordWrapper}>
-                  <MaterialIcons name="lock-outline" size={20} color={AppTheme.colors.textMuted} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    placeholder="Enter your password"
-                    placeholderTextColor={AppTheme.colors.textMuted}
-                    autoCapitalize="none"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.visibilityBtn}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialIcons
-                      name={showPassword ? "visibility" : "visibility-off"}
-                      size={20}
-                      color={AppTheme.colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Primary Submit Button */}
-              <TouchableOpacity
-                style={[styles.submitButton, loading && { opacity: 0.7 }]}
-                onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.submitButtonText}>
-                  {loading ? "Signing in..." : "Sign In to MalikSe"}
-                </Text>
-                {!loading && <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />}
-              </TouchableOpacity>
-
-              {/* Register Prompt */}
-              <View style={styles.registerPrompt}>
-                <Text style={styles.registerText}>Don't have an account yet?</Text>
-                <TouchableOpacity onPress={() => router.push("/register")} activeOpacity={0.7}>
-                  <Text style={styles.registerLink}>Create Account &rarr;</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Or Divider */}
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue without account</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Guest Exploration Option */}
-              <TouchableOpacity
-                style={styles.guestButton}
-                onPress={() => router.replace("/search")}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="explore" size={20} color={AppTheme.colors.primaryDark} />
-                <Text style={styles.guestButtonText}>Browse Verified Properties as Guest</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Developer Fast Demo Login Drawer */}
-            <View style={styles.devDrawer}>
-              <TouchableOpacity
-                style={styles.devDrawerHeader}
-                onPress={() => setShowDevTools(!showDevTools)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.devHeaderLeft}>
-                  <MaterialIcons name="bolt" size={16} color="#F59E0B" />
-                  <Text style={styles.devDrawerTitle}>Developer Quick Logins</Text>
-                </View>
-                <MaterialIcons
-                  name={showDevTools ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                  size={20}
-                  color={AppTheme.colors.textMuted}
-                />
-              </TouchableOpacity>
-
-              {showDevTools && (
-                <View style={styles.devGrid}>
-                  <TouchableOpacity
-                    style={styles.devPill}
-                    onPress={() => quickLogin("owner")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.devIconDot, { backgroundColor: "#D1FAE5" }]}>
-                      <MaterialIcons name="home" size={14} color="#059669" />
-                    </View>
-                    <View>
-                      <Text style={styles.devPillTitle}>Owner Portal</Text>
-                      <Text style={styles.devPillSub}>Post & manage land</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.devPill}
-                    onPress={() => quickLogin("buyer")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.devIconDot, { backgroundColor: "#DBEAFE" }]}>
-                      <MaterialIcons name="search" size={14} color="#2563EB" />
-                    </View>
-                    <View>
-                      <Text style={styles.devPillTitle}>Buyer Portal</Text>
-                      <Text style={styles.devPillSub}>Search & offers</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.devPill}
-                    onPress={() => quickLogin("advisor")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.devIconDot, { backgroundColor: "#EDE9FE" }]}>
-                      <MaterialIcons name="verified-user" size={14} color="#7C3AED" />
-                    </View>
-                    <View>
-                      <Text style={styles.devPillTitle}>Advisor Portal</Text>
-                      <Text style={styles.devPillSub}>GPS inspections</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.devPill}
-                    onPress={() => quickLogin("admin")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.devIconDot, { backgroundColor: "#FEE2E2" }]}>
-                      <MaterialIcons name="admin-panel-settings" size={14} color="#DC2626" />
-                    </View>
-                    <View>
-                      <Text style={styles.devPillTitle}>Admin Portal</Text>
-                      <Text style={styles.devPillSub}>Approvals & audit</Text>
-                    </View>
-                  </TouchableOpacity>
+                  <Text style={styles.mobileTitle}>
+                    Malik<Text style={{ color: "#059669" }}>Se</Text>
+                  </Text>
+                  <Text style={styles.mobileSub}>100% Verified Owner Marketplace</Text>
                 </View>
               )}
-            </View>
 
-            {/* Footer Trust Guarantee */}
-            <View style={styles.trustFooter}>
-              <MaterialIcons name="lock" size={14} color={AppTheme.colors.textMuted} />
-              <Text style={styles.trustFooterText}>
-                256-Bit SSL Encrypted &bull; Direct Owner Authentication
-              </Text>
+              {/* Clean Title */}
+              <View style={styles.titleBox}>
+                <Text style={styles.formHeading}>Sign In</Text>
+                <Text style={styles.formSubheading}>
+                  Enter your mobile number to access your verified listings and buyer conversations.
+                </Text>
+              </View>
+
+              {/* Inputs Container */}
+              <View style={styles.inputsBlock}>
+                {/* Mobile Number Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Mobile Number</Text>
+                  <View style={styles.phoneInputRow}>
+                    <View style={styles.flagBox}>
+                      <Text style={styles.flag}>🇮🇳</Text>
+                      <Text style={styles.prefix}>+91</Text>
+                    </View>
+                    <TextInput
+                      style={styles.phoneInput}
+                      value={mobile}
+                      onChangeText={setMobile}
+                      keyboardType="phone-pad"
+                      placeholder="98765 43210"
+                      placeholderTextColor="#94A3B8"
+                      maxLength={10}
+                      autoFocus={isDesktop}
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.passwordLabelRow}>
+                    <Text style={styles.label}>Password</Text>
+                    <TouchableOpacity activeOpacity={0.7}>
+                      <Text style={styles.forgotPass}>Forgot password?</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.passwordRow}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#94A3B8"
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeBtn}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons
+                        name={showPassword ? "visibility" : "visibility-off"}
+                        size={18}
+                        color="#64748B"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Primary Sign In Button */}
+                <TouchableOpacity
+                  style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+                  onPress={handleLogin}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.primaryBtnTxt}>
+                    {loading ? "Signing in..." : "Sign In to Account"}
+                  </Text>
+                  {!loading && <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />}
+                </TouchableOpacity>
+
+                {/* Alternative Actions: Register & Guest in clean single card */}
+                <View style={styles.linksBox}>
+                  <View style={styles.createAccountRow}>
+                    <Text style={styles.newToText}>New to MalikSe?</Text>
+                    <TouchableOpacity onPress={() => router.push("/register")} activeOpacity={0.7}>
+                      <Text style={styles.createAccountLink}>Create an Account &rarr;</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.orDivider}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orText}>or</Text>
+                    <View style={styles.orLine} />
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.guestLinkBtn}
+                    onPress={() => router.replace("/search")}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="explore" size={18} color="#059669" />
+                    <Text style={styles.guestLinkTxt}>Browse Properties as Guest</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Developer Fast Demo Switcher: Sleek, compact bottom strip */}
+              <View style={styles.demoBar}>
+                <View style={styles.demoBarHeader}>
+                  <MaterialIcons name="bolt" size={14} color="#D97706" />
+                  <Text style={styles.demoBarLabel}>Demo Roles:</Text>
+                </View>
+                <View style={styles.demoPillsRow}>
+                  <TouchableOpacity style={styles.demoPill} onPress={() => quickLogin("owner")}>
+                    <Text style={styles.demoPillTxt}>Owner</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.demoPill} onPress={() => quickLogin("buyer")}>
+                    <Text style={styles.demoPillTxt}>Buyer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.demoPill} onPress={() => quickLogin("advisor")}>
+                    <Text style={styles.demoPillTxt}>Advisor</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.demoPill} onPress={() => quickLogin("admin")}>
+                    <Text style={styles.demoPillTxt}>Admin</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </ScrollView>
         </View>
@@ -404,7 +322,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
   mainLayout: {
     flex: 1,
@@ -429,176 +347,178 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(6, 78, 59, 0.78)",
-    // Note: React Native Web supports CSS gradient via background fallback
-    backgroundImage: "linear-gradient(145deg, rgba(6, 78, 59, 0.88) 0%, rgba(15, 23, 42, 0.94) 100%)" as any,
+    backgroundColor: "rgba(6, 78, 59, 0.45)",
+    backgroundImage: "linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(6, 78, 59, 0.45) 40%, rgba(15, 23, 42, 0.88) 100%)" as any,
   },
   heroContent: {
     flex: 1,
-    padding: 48,
+    padding: 44,
     justifyContent: "space-between",
     position: "relative",
     zIndex: 10,
   },
-  heroBrandRow: {
+  brandRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-  heroLogoCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+  brandLogoBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
   },
-  heroBrandText: {
-    fontSize: 24,
+  brandTitle: {
+    fontSize: 22,
     fontWeight: "900",
     color: "#FFFFFF",
     letterSpacing: -0.5,
   },
-  heroBrandAccent: {
-    color: "#34D399",
-  },
-  heroBadge: {
+  verifiedTag: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: "rgba(16, 185, 129, 0.25)",
     borderWidth: 1,
     borderColor: "rgba(52, 211, 153, 0.4)",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 9999,
-    marginLeft: 12,
+    marginLeft: 8,
   },
-  heroBadgeText: {
+  verifiedTagText: {
     color: "#A7F3D0",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
-  heroCenterCopy: {
-    marginVertical: "auto",
-    maxWidth: 540,
+  heroCenter: {
+    maxWidth: 500,
   },
-  heroHeading: {
-    fontSize: 36,
+  heroTagline: {
+    fontSize: 32,
     fontWeight: "900",
     color: "#FFFFFF",
-    lineHeight: 46,
+    lineHeight: 40,
     letterSpacing: -0.5,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  heroSubheading: {
-    fontSize: 15,
-    color: "#CBD5E1",
-    lineHeight: 24,
-    marginBottom: 32,
+  heroDescription: {
+    fontSize: 14,
+    color: "#E2E8F0",
+    lineHeight: 22,
     fontWeight: "400",
   },
-  pillarsContainer: {
-    gap: 18,
-  },
-  pillarItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
-    padding: 14,
-    borderRadius: 14,
+  glassCard: {
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backdropFilter: "blur(12px)" as any,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 16,
+    padding: 20,
+    maxWidth: 520,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
   },
-  pillarIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  starsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 8,
+  },
+  starsLabel: {
+    color: "#FBBF24",
+    fontSize: 11,
+    fontWeight: "700",
+    marginLeft: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  quoteText: {
+    fontSize: 13,
+    color: "#F1F5F9",
+    lineHeight: 20,
+    fontStyle: "italic",
+    marginBottom: 14,
+  },
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  authorAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    marginRight: 10,
   },
-  pillarTextWrap: {
-    flex: 1,
-  },
-  pillarTitle: {
-    fontSize: 14,
-    fontWeight: "700",
+  authorLetter: {
     color: "#FFFFFF",
-    marginBottom: 2,
+    fontWeight: "800",
+    fontSize: 14,
   },
-  pillarDesc: {
-    fontSize: 12,
+  authorName: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  authorLoc: {
     color: "#94A3B8",
-    lineHeight: 18,
+    fontSize: 11,
   },
-  heroFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.12)",
-  },
-  statPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  activeParcelsChip: {
+    marginLeft: "auto",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 9999,
   },
-  statText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  heroCopyright: {
-    fontSize: 12,
-    color: "#64748B",
+  activeParcelsText: {
+    color: "#E2E8F0",
+    fontSize: 11,
+    fontWeight: "600",
   },
 
   /* ---------- FORM RIGHT COLUMN ---------- */
   formColumn: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
-  formScroll: {
-    paddingHorizontal: Platform.OS === "web" ? 48 : 24,
-    paddingVertical: 36,
-    maxWidth: 540,
-    width: "100%",
-    alignSelf: "center",
-  },
-  formTopBar: {
+  topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 32,
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    paddingBottom: 8,
   },
-  backLink: {
+  backBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  backLinkText: {
-    fontSize: 13,
+  backBtnText: {
+    fontSize: 12,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#0F172A",
   },
-  langToggle: {
+  langPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -609,276 +529,243 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
-  langToggleText: {
+  langPillText: {
     fontSize: 12,
     fontWeight: "700",
     color: "#065F46",
   },
-  mobileBrandHeader: {
-    alignItems: "center",
-    marginBottom: 24,
+  formScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: Platform.OS === "web" ? 40 : 20,
+    paddingVertical: 20,
   },
-  mobileLogoBox: {
-    width: 48,
-    height: 48,
+  formWrapper: {
+    maxWidth: 400,
+    width: "100%",
+    alignSelf: "center",
+  },
+  mobileHero: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  mobileLogoCircle: {
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    backgroundColor: AppTheme.colors.primary,
+    backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
-  mobileBrandName: {
-    fontSize: 24,
+  mobileTitle: {
+    fontSize: 22,
     fontWeight: "900",
     color: "#0F172A",
-    letterSpacing: -0.5,
   },
-  mobileBrandTag: {
+  mobileSub: {
     fontSize: 12,
     color: "#64748B",
     marginTop: 2,
   },
-  headerBlock: {
-    marginBottom: 28,
+  titleBox: {
+    marginBottom: 24,
   },
-  welcomeHeading: {
-    fontSize: 28,
+  formHeading: {
+    fontSize: 26,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.5,
   },
-  welcomeSub: {
-    fontSize: 14,
+  formSubheading: {
+    fontSize: 13,
     color: "#64748B",
-    marginTop: 6,
-    lineHeight: 22,
+    marginTop: 4,
+    lineHeight: 20,
   },
-  formContent: {
+  inputsBlock: {
     width: "100%",
   },
-  fieldGroup: {
-    marginBottom: 20,
+  inputGroup: {
+    marginBottom: 16,
   },
-  labelWithAction: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  inputLabel: {
+  label: {
     fontSize: 13,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  forgotLink: {
+  passwordLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  forgotPass: {
     fontSize: 12,
     color: "#059669",
     fontWeight: "600",
   },
-  mobileInputRow: {
+  phoneInputRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
-  countryCodePill: {
+  flagBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#F8FAFC",
     borderRightWidth: 1.5,
     borderRightColor: "#E2E8F0",
-    backgroundColor: "#F1F5F9",
   },
-  countryFlag: {
-    fontSize: 16,
+  flag: {
+    fontSize: 15,
   },
-  countryCode: {
-    fontSize: 14,
+  prefix: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#1E293B",
   },
-  mobileInput: {
+  phoneInput: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
     color: "#0F172A",
     fontWeight: "600",
     outlineStyle: "none" as any,
   },
-  passwordWrapper: {
+  passwordRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#E2E8F0",
-    borderRadius: 12,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 14,
-    fontSize: 15,
+    paddingVertical: 12,
+    fontSize: 14,
     color: "#0F172A",
-    fontWeight: "500",
     outlineStyle: "none" as any,
   },
-  visibilityBtn: {
+  eyeBtn: {
     padding: 6,
   },
-  submitButton: {
+  primaryBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     backgroundColor: "#059669",
-    paddingVertical: 15,
-    borderRadius: 12,
-    marginTop: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 6,
     shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 4,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  submitButtonText: {
+  primaryBtnTxt: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 0.2,
   },
-  registerPrompt: {
+  linksBox: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  createAccountRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    marginTop: 20,
   },
-  registerText: {
-    fontSize: 14,
+  newToText: {
+    fontSize: 13,
     color: "#64748B",
   },
-  registerLink: {
-    fontSize: 14,
+  createAccountLink: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#059669",
   },
-  dividerRow: {
+  orDivider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: 14,
+    width: "100%",
   },
-  dividerLine: {
+  orLine: {
     flex: 1,
     height: 1,
     backgroundColor: "#E2E8F0",
   },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "600",
-  },
-  guestButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#ECFDF5",
-    borderWidth: 1.5,
-    borderColor: "#A7F3D0",
-    paddingVertical: 13,
-    borderRadius: 12,
-  },
-  guestButtonText: {
-    color: "#065F46",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  /* ---------- DEV TOOLS DRAWER ---------- */
-  devDrawer: {
-    marginTop: 32,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-  },
-  devDrawerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  devHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  devDrawerTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#475569",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  devGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-  },
-  devPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 10,
-    padding: 10,
-    width: "48%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  devIconDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  devPillTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  devPillSub: {
-    fontSize: 10,
-    color: "#64748B",
-  },
-  trustFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 24,
-  },
-  trustFooterText: {
+  orText: {
+    marginHorizontal: 10,
     fontSize: 11,
     color: "#94A3B8",
-    fontWeight: "500",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  guestLinkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  guestLinkTxt: {
+    fontSize: 13,
+    color: "#059669",
+    fontWeight: "700",
+  },
+  demoBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 22,
+  },
+  demoBarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  demoBarLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748B",
+  },
+  demoPillsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  demoPill: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  demoPillTxt: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#334155",
   },
 });

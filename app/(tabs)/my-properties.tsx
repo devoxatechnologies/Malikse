@@ -692,12 +692,15 @@ export default function MyPropertiesScreen() {
 
             {/* 5. BOTTOM BOOSTER BANNER: Want faster verification? */}
             <View style={styles.boostBanner}>
-              <Image
-                source={boostBgImg}
-                style={styles.boostBannerBackground}
-                resizeMode="cover"
-              />
-              <View style={styles.boostBannerOverlay} />
+              {/* Right-aligned zoomed-out landscape scenery */}
+              <View style={styles.boostScenicWrap}>
+                <Image
+                  source={boostBgImg}
+                  style={styles.boostScenicImg}
+                  resizeMode="cover"
+                />
+                <View style={styles.boostScenicFade} />
+              </View>
 
               <View style={styles.boostBannerLeft}>
                 <View style={styles.boostIconCircle}>
@@ -895,7 +898,16 @@ const styles = StyleSheet.create({
   },
   heroBannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.55)",
+    pointerEvents: "none",
+    ...Platform.select({
+      web: {
+        background:
+          "linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 40%, rgba(255, 255, 255, 0.05) 75%, transparent 100%)",
+      } as any,
+      default: {
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
+      },
+    }),
   },
   heroLeftCol: {
     zIndex: 2,
@@ -906,13 +918,23 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.4,
+    ...Platform.select({
+      web: {
+        textShadow: "0 1px 3px rgba(255, 255, 255, 0.85)",
+      } as any,
+    }),
   },
   heroSubtitle: {
     fontSize: 12.5,
-    color: "#475569",
-    fontWeight: "500",
+    color: "#334155",
+    fontWeight: "600",
     marginTop: 4,
     lineHeight: 17,
+    ...Platform.select({
+      web: {
+        textShadow: "0 1px 2px rgba(255, 255, 255, 0.8)",
+      } as any,
+    }),
   },
   heroCursiveBox: {
     zIndex: 2,

@@ -7,10 +7,13 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  TextInput,
+  useWindowDimensions,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { propertyService } from "../../src/services/propertyService";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
@@ -21,16 +24,19 @@ const defaultAerialPhoto = require("../../assets/plot_patna_aerial.jpg");
 const DUMMY_MY_PROPERTIES = [
   {
     id: "prop_1",
+    idCode: "MSE00123",
     title: "Prime Land Plot in Patna, Bihar",
-    location: { district: "Patna", state: "Bihar", area: "Patna" },
+    location: { district: "Patna", state: "Bihar", area: "Danapur, Patna, Bihar" },
     sellableArea: 2400,
     price: 4500000,
     ratePerSqFt: 1875,
-    khata: "104",
-    khesra: "582",
     dimensions: "40 x 60 ft",
     roadWidth: "40 ft Road",
-    media: { photos: [require("../../assets/plot_patna_aerial.jpg")] },
+    facing: "East Facing",
+    type: "LAND",
+    category: "Residential",
+    media: { photos: [defaultAerialPhoto] },
+    photosCount: 8,
     status: "pending",
     date: "12 Sep 2026",
     offersCount: 3,
@@ -42,10 +48,14 @@ const DUMMY_MY_PROPERTIES = [
 export default function MyPropertiesScreen() {
   const router = useRouter();
   const { language } = useLanguageStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 980;
 
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "verified">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "verified" | "inactive">("all");
+  const [activeSidebarNav, setActiveSidebarNav] = useState<string>("listings");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchProperties();
@@ -70,12 +80,22 @@ export default function MyPropertiesScreen() {
   const filteredProperties = properties.filter((p) => {
     if (activeTab === "pending") return p.status !== "verified";
     if (activeTab === "verified") return p.status === "verified";
+    if (activeTab === "inactive") return p.status === "inactive";
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        p.title?.toLowerCase().includes(q) ||
+        p.location?.area?.toLowerCase().includes(q) ||
+        p.location?.district?.toLowerCase().includes(q)
+      );
+    }
     return true;
   });
 
   const totalCount = properties.length;
   const pendingCount = properties.filter((p) => p.status !== "verified").length;
   const verifiedCount = properties.filter((p) => p.status === "verified").length;
+  const inactiveCount = properties.filter((p) => p.status === "inactive").length;
 
   const formatPrice = (rawPrice: number) => {
     if (!rawPrice) return "₹45.00 Lakh";
@@ -86,7 +106,7 @@ export default function MyPropertiesScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Universal Brand AppHeader matching all pages */}
+      {/* Universal Brand AppHeader navbar */}
       <AppHeader
         showBack={false}
         showNavLinks={true}
@@ -94,302 +114,611 @@ export default function MyPropertiesScreen() {
         showPostPropertyBtn={true}
       />
 
-      {/* Scenic Countryside Background from user upload */}
-      <View style={styles.scenicBackgroundWrap} pointerEvents="none">
-        <Image
-          source={heroBgImg}
-          style={styles.scenicBackgroundImage}
-          resizeMode="cover"
-        />
-        <View style={styles.scenicBackgroundOverlay} />
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Centered Compact Column (maxWidth: 720, pixel-to-pixel matching mockup) */}
-        <View style={styles.container}>
-          {/* ================= PAGE HEADER SECTION ================= */}
-          <View style={styles.pageHeader}>
-            <View style={styles.pageHeaderRow}>
-              <View style={{ flex: 1, minWidth: 260 }}>
-                <Text style={styles.pageTitle}>
+        <View style={[styles.mainLayout, isDesktop && styles.mainLayoutDesktop]}>
+          {/* ================= LEFT EXECUTIVE SIDEBAR ================= */}
+          {isDesktop && (
+            <View style={styles.sidebar}>
+              {/* Navigation Menu List */}
+              <View style={styles.sidebarMenu}>
+                {/* Dashboard */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "dashboard" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("dashboard")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="space-dashboard"
+                    size={18}
+                    color={activeSidebarNav === "dashboard" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "dashboard" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "डैशबोर्ड" : "Dashboard"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* My Listings (Active) */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "listings" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("listings")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="grid-view"
+                    size={18}
+                    color={activeSidebarNav === "listings" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "listings" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "मेरी लिस्टिंग" : "My Listings"}
+                  </Text>
+                  <View style={styles.sidebarBadgeActive}>
+                    <Text style={styles.sidebarBadgeTextActive}>1</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Messages */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "messages" && styles.sidebarNavItemActive]}
+                  onPress={() => {
+                    setActiveSidebarNav("messages");
+                    router.push("/messages");
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="chat-bubble-outline"
+                    size={18}
+                    color={activeSidebarNav === "messages" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "messages" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "संदेश" : "Messages"}
+                  </Text>
+                  <View style={styles.sidebarBadge}>
+                    <Text style={styles.sidebarBadgeText}>3</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Offers */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "offers" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("offers")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="local-offer"
+                    size={18}
+                    color={activeSidebarNav === "offers" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "offers" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "ऑफ़र" : "Offers"}
+                  </Text>
+                  <View style={styles.sidebarBadge}>
+                    <Text style={styles.sidebarBadgeText}>3</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Verification */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "verification" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("verification")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="verified-user"
+                    size={18}
+                    color={activeSidebarNav === "verification" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "verification" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "सत्यापन" : "Verification"}
+                  </Text>
+                  <View style={styles.sidebarBadge}>
+                    <Text style={styles.sidebarBadgeText}>1</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Documents */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "documents" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("documents")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="description"
+                    size={18}
+                    color={activeSidebarNav === "documents" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "documents" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "दस्तावेज़" : "Documents"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Analytics */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "analytics" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("analytics")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="bar-chart"
+                    size={18}
+                    color={activeSidebarNav === "analytics" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "analytics" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "एनालिटिक्स" : "Analytics"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Settings */}
+                <TouchableOpacity
+                  style={[styles.sidebarNavItem, activeSidebarNav === "settings" && styles.sidebarNavItemActive]}
+                  onPress={() => setActiveSidebarNav("settings")}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="settings"
+                    size={18}
+                    color={activeSidebarNav === "settings" ? "#065F46" : "#64748B"}
+                  />
+                  <Text style={[styles.sidebarNavText, activeSidebarNav === "settings" && styles.sidebarNavTextActive]}>
+                    {language === "hi" ? "सेटिंग्स" : "Settings"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Sidebar Mini Promo Card: Grow with MalikSe */}
+              <View style={styles.sidebarPromoCard}>
+                <View style={styles.sidebarPromoIconCircle}>
+                  <MaterialIcons name="eco" size={16} color="#059669" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sidebarPromoTitle}>Grow with MalikSe</Text>
+                  <Text style={styles.sidebarPromoSubtitle}>
+                    More visibility.{"\n"}More genuine buyers.
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.sidebarPromoBtn} activeOpacity={0.8}>
+                  <MaterialIcons name="arrow-forward" size={14} color="#059669" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Sidebar Bottom Landscape Contour Graphic */}
+              <View style={styles.sidebarFooterGraphicWrap}>
+                {Platform.OS === "web" ? (
+                  <svg
+                    viewBox="0 0 220 90"
+                    width="100%"
+                    height="90"
+                    style={{ display: "block" }}
+                  >
+                    <defs>
+                      <linearGradient id="sideMtnGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.6" />
+                        <stop offset="100%" stopColor="#D1FAE5" stopOpacity="0.2" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,90 L0,50 Q45,25 90,45 Q135,20 180,48 Q200,42 220,55 L220,90 Z" fill="url(#sideMtnGrad)" />
+                  </svg>
+                ) : null}
+                <View style={styles.sidebarCursiveWrap}>
+                  <Text style={styles.sidebarCursiveText}>
+                    Verified Land{"\n"}Brighter Tomorrows
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* ================= RIGHT MAIN CONTENT AREA ================= */}
+          <View style={styles.mainContent}>
+            {/* 1. SCENIC HERO HEADER BANNER (With Uploaded Background) */}
+            <View style={styles.heroBannerCard}>
+              <Image
+                source={heroBgImg}
+                style={styles.heroBannerBackground}
+                resizeMode="cover"
+              />
+              <View style={styles.heroBannerOverlay} />
+
+              {/* Left Column: Title & Subtitle */}
+              <View style={styles.heroLeftCol}>
+                <Text style={styles.heroMainTitle}>
                   {t(language, "my_prop_page_title") || "My Property Listings"}
                 </Text>
-                <Text style={styles.pageSubtitle}>
-                  {t(language, "my_prop_subtitle") ||
-                    "Manage listings, track legal verification reports, and review buyer offers"}
+                <Text style={styles.heroSubtitle}>
+                  {language === "hi"
+                    ? "अपनी लिस्टिंग प्रबंधित करें, सत्यापन स्थिति ट्रैक करें और खरीदार ऑफ़र देखें — सब एक जगह।"
+                    : "Manage your listings, track verification status, and review buyer offers — all in one place."}
                 </Text>
               </View>
 
+              {/* Center Cursive Script */}
+              <View style={styles.heroCursiveBox}>
+                <Text style={styles.heroCursiveText}>
+                  List Today{"\n"}Build Tomorrow
+                </Text>
+              </View>
+
+              {/* Right Action Button */}
               <TouchableOpacity
-                style={styles.headerPostBtn}
+                style={styles.heroPostBtn}
                 onPress={() => router.push("/listing/create")}
                 activeOpacity={0.85}
               >
-                <MaterialIcons name="add" size={16} color="#FFFFFF" />
-                <Text style={styles.headerPostBtnText}>
+                <MaterialIcons name="add" size={17} color="#FFFFFF" />
+                <Text style={styles.heroPostBtnText}>
                   {t(language, "post_land_free") || "Post Land (Free)"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* ================= 1. COMPACT OVERVIEW METRICS ================= */}
-          <View style={styles.metricsRow}>
-            {/* Metric 1: Total */}
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{totalCount}</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_total") || "Total Listed"}</Text>
-            </View>
-
-            {/* Metric 2: Pending */}
-            <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#D97706" }]}>{pendingCount}</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_pending") || "Under Verification"}</Text>
-            </View>
-
-            {/* Metric 3: Verified */}
-            <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#059669" }]}>{verifiedCount}</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_verified") || "Verified & Live"}</Text>
-            </View>
-
-            {/* Metric 4: Active Offers */}
-            <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#2563EB" }]}>3</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_offers") || "Active Offers"}</Text>
-            </View>
-          </View>
-
-          {/* ================= 2. FILTER TABS ================= */}
-          <View style={styles.filterSection}>
-            <View style={styles.filterPills}>
-              <TouchableOpacity
-                style={[styles.filterPill, activeTab === "all" && styles.filterPillActive]}
-                onPress={() => setActiveTab("all")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterPillText, activeTab === "all" && styles.filterPillTextActive]}>
-                  {t(language, "my_prop_tab_all") || "All Listings"} ({totalCount})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.filterPill, activeTab === "pending" && styles.filterPillActive]}
-                onPress={() => setActiveTab("pending")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterPillText, activeTab === "pending" && styles.filterPillTextActive]}>
-                  {t(language, "my_prop_tab_pending") || "Under Verification"} ({pendingCount})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.filterPill, activeTab === "verified" && styles.filterPillActive]}
-                onPress={() => setActiveTab("verified")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterPillText, activeTab === "verified" && styles.filterPillTextActive]}>
-                  {t(language, "my_prop_tab_verified") || "Verified & Live"} ({verifiedCount})
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ================= 3. PROPERTY LISTINGS ================= */}
-          {loading ? (
-            <View style={styles.loaderCenter}>
-              <ActivityIndicator size="large" color="#059669" />
-              <Text style={{ marginTop: 12, color: "#64748B", fontSize: 13, fontWeight: "500" }}>
-                Loading properties...
-              </Text>
-            </View>
-          ) : filteredProperties.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIconCircle}>
-                <MaterialIcons name="landscape" size={32} color="#94A3B8" />
+            {/* 2. 4 OVERVIEW KPI METRIC CARDS (Exact match to Mockup) */}
+            <View style={styles.metricsRow}>
+              {/* Metric 1: Total Listed */}
+              <View style={styles.metricCard}>
+                <View style={[styles.metricIconCircle, { backgroundColor: "#ECFDF5" }]}>
+                  <MaterialIcons name="grid-view" size={18} color="#059669" />
+                </View>
+                <View style={styles.metricTextCol}>
+                  <Text style={styles.metricValue}>{totalCount}</Text>
+                  <Text style={styles.metricLabel}>{t(language, "my_prop_stat_total") || "Total Listed"}</Text>
+                  <Text style={styles.metricMicroSub}>Keep going!</Text>
+                </View>
               </View>
-              <Text style={styles.emptyHeading}>
-                {t(language, "my_properties_empty") || "No properties listed yet"}
-              </Text>
-              <Text style={styles.emptySubText}>
-                {t(language, "my_properties_empty_sub") ||
-                  "Post your land parcel to get verified and receive direct buyer inquiries."}
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={() => router.push("/listing/create")}
-                activeOpacity={0.85}
-              >
-                <MaterialIcons name="add" size={18} color="#FFFFFF" />
-                <Text style={styles.emptyBtnText}>
-                  {t(language, "post_land_free") || "Post Land (Free)"}
-                </Text>
-              </TouchableOpacity>
+
+              {/* Metric 2: Under Verification */}
+              <View style={styles.metricCard}>
+                <View style={[styles.metricIconCircle, { backgroundColor: "#FEF3C7" }]}>
+                  <MaterialIcons name="hourglass-top" size={18} color="#D97706" />
+                </View>
+                <View style={styles.metricTextCol}>
+                  <Text style={[styles.metricValue, { color: "#D97706" }]}>{pendingCount}</Text>
+                  <Text style={styles.metricLabel}>{t(language, "my_prop_stat_pending") || "Under Verification"}</Text>
+                  <Text style={[styles.metricMicroSub, { color: "#D97706" }]}>In progress</Text>
+                </View>
+              </View>
+
+              {/* Metric 3: Verified & Live */}
+              <View style={styles.metricCard}>
+                <View style={[styles.metricIconCircle, { backgroundColor: "#ECFDF5" }]}>
+                  <MaterialIcons name="check-circle" size={18} color="#059669" />
+                </View>
+                <View style={styles.metricTextCol}>
+                  <Text style={[styles.metricValue, { color: "#059669" }]}>{verifiedCount}</Text>
+                  <Text style={styles.metricLabel}>{t(language, "my_prop_stat_verified") || "Verified & Live"}</Text>
+                  <Text style={styles.metricMicroSub}>Will be visible soon</Text>
+                </View>
+              </View>
+
+              {/* Metric 4: Active Offers */}
+              <View style={styles.metricCard}>
+                <View style={[styles.metricIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                  <MaterialIcons name="people" size={18} color="#2563EB" />
+                </View>
+                <View style={styles.metricTextCol}>
+                  <Text style={[styles.metricValue, { color: "#2563EB" }]}>{3}</Text>
+                  <Text style={styles.metricLabel}>{t(language, "my_prop_stat_offers") || "Active Offers"}</Text>
+                  <Text style={styles.metricMicroSub}>Buyer interest</Text>
+                </View>
+              </View>
             </View>
-          ) : (
-            <View style={styles.cardsList}>
-              {filteredProperties.map((item) => {
-                const isVerified = item.status === "verified";
-                const imageSource =
-                  item.media?.photos?.[0] || defaultAerialPhoto;
-                const priceStr = formatPrice(Number(item.price) || 4500000);
-                const areaVal = item.sellableArea || item.totalArea || item.area || 2400;
-                const katthaVal = (Number(areaVal) / 1361.25).toFixed(2);
-                const ratePerSqFt =
-                  item.ratePerSqFt || Math.round(Number(item.price || 4500000) / Number(areaVal));
 
-                return (
-                  <View key={item.id || item._id} style={styles.card}>
-                    {/* Natural Photographic Thumbnail (Matching Mockup) */}
-                    <View style={styles.mediaWrap}>
-                      <Image
-                        source={typeof imageSource === "string" ? { uri: imageSource } : imageSource}
-                        style={styles.cardImg}
-                        resizeMode="cover"
-                      />
+            {/* 3. FILTER TABS & SEARCH ROW */}
+            <View style={styles.controlsRow}>
+              {/* Segment Pills */}
+              <View style={styles.filterPillsTrack}>
+                <TouchableOpacity
+                  style={[styles.filterPill, activeTab === "all" && styles.filterPillActive]}
+                  onPress={() => setActiveTab("all")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterPillText, activeTab === "all" && styles.filterPillTextActive]}>
+                    {t(language, "my_prop_tab_all") || "All Listings"} ({totalCount})
+                  </Text>
+                </TouchableOpacity>
 
-                      {/* Status Badge: In Verification (Amber) or Verified & Live (Green) */}
-                      <View style={[styles.statusBadge, isVerified ? styles.statusBadgeVerified : styles.statusBadgePending]}>
-                        <MaterialIcons
-                          name={isVerified ? "verified" : "hourglass-top"}
-                          size={13}
-                          color="#FFFFFF"
+                <TouchableOpacity
+                  style={[styles.filterPill, activeTab === "pending" && styles.filterPillActive]}
+                  onPress={() => setActiveTab("pending")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterPillText, activeTab === "pending" && styles.filterPillTextActive]}>
+                    {t(language, "my_prop_tab_pending") || "Under Verification"} ({pendingCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterPill, activeTab === "verified" && styles.filterPillActive]}
+                  onPress={() => setActiveTab("verified")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterPillText, activeTab === "verified" && styles.filterPillTextActive]}>
+                    {t(language, "my_prop_tab_verified") || "Verified & Live"} ({verifiedCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterPill, activeTab === "inactive" && styles.filterPillActive]}
+                  onPress={() => setActiveTab("inactive")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterPillText, activeTab === "inactive" && styles.filterPillTextActive]}>
+                    Inactive ({inactiveCount})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Right Side: Search Box & Filter Button */}
+              <View style={styles.searchFilterGroup}>
+                <View style={styles.searchBox}>
+                  <MaterialIcons name="search" size={17} color="#64748B" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={language === "hi" ? "अपनी लिस्टिंग खोजें..." : "Search your listings..."}
+                    placeholderTextColor="#94A3B8"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+
+                <TouchableOpacity style={styles.filtersBtn} activeOpacity={0.8}>
+                  <MaterialIcons name="filter-list" size={17} color="#475569" />
+                  <Text style={styles.filtersBtnText}>Filters</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 4. THE PROPERTY LISTING CARD (Horizontal Split Layout) */}
+            {loading ? (
+              <View style={styles.loaderCenter}>
+                <ActivityIndicator size="large" color="#059669" />
+                <Text style={{ marginTop: 12, color: "#64748B", fontSize: 13, fontWeight: "500" }}>
+                  Loading your properties...
+                </Text>
+              </View>
+            ) : filteredProperties.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <MaterialIcons name="landscape" size={36} color="#94A3B8" />
+                <Text style={styles.emptyHeading}>
+                  {t(language, "my_properties_empty") || "No properties listed yet"}
+                </Text>
+                <Text style={styles.emptySubText}>
+                  {t(language, "my_properties_empty_sub") ||
+                    "Post your land parcel to get verified and receive direct buyer inquiries."}
+                </Text>
+                <TouchableOpacity
+                  style={styles.heroPostBtn}
+                  onPress={() => router.push("/listing/create")}
+                  activeOpacity={0.85}
+                >
+                  <MaterialIcons name="add" size={17} color="#FFFFFF" />
+                  <Text style={styles.heroPostBtnText}>
+                    {t(language, "post_land_free") || "Post Land (Free)"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.cardsList}>
+                {filteredProperties.map((item) => {
+                  const isVerified = item.status === "verified";
+                  const imageSource = item.media?.photos?.[0] || defaultAerialPhoto;
+                  const priceStr = formatPrice(Number(item.price) || 4500000);
+                  const areaVal = item.sellableArea || item.totalArea || item.area || 2400;
+                  const katthaVal = (Number(areaVal) / 1361.25).toFixed(2);
+                  const ratePerSqFt =
+                    item.ratePerSqFt || Math.round(Number(item.price || 4500000) / Number(areaVal));
+                  const idCode = item.idCode || "MSE00123";
+
+                  return (
+                    <View key={item.id || item._id} style={styles.propertyCard}>
+                      {/* Left: Photo Slider Half */}
+                      <View style={styles.photoSliderHalf}>
+                        <Image
+                          source={typeof imageSource === "string" ? { uri: imageSource } : imageSource}
+                          style={styles.cardImage}
+                          resizeMode="cover"
                         />
-                        <Text style={styles.statusBadgeText}>
-                          {isVerified
-                            ? language === "hi" ? "सत्यापित एवं लाइव" : "Verified & Live"
-                            : language === "hi" ? "सत्यापन प्रक्रिया में" : "In Verification"}
-                        </Text>
-                      </View>
 
-                      {/* Clean Property Type Tag: LAND */}
-                      <View style={styles.typeBadge}>
-                        <Text style={styles.typeBadgeText}>
-                          {item.type ? item.type.toUpperCase() : "LAND"}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Card Content Details */}
-                    <View style={styles.cardBody}>
-                      {/* Price & Date Row */}
-                      <View style={styles.priceRow}>
-                        <View style={styles.priceCol}>
-                          <Text style={styles.priceMain}>{priceStr}</Text>
-                          <Text style={styles.priceSub}>₹{ratePerSqFt.toLocaleString("en-IN")} / sq.ft</Text>
-                        </View>
-                        <View style={styles.dateChip}>
-                          <MaterialIcons name="schedule" size={13} color="#64748B" />
-                          <Text style={styles.dateChipText}>{item.date || "12 Sep 2026"}</Text>
-                        </View>
-                      </View>
-
-                      {/* Title */}
-                      <Text style={styles.cardTitle} numberOfLines={2}>
-                        {item.title || "Prime Land Plot in Patna, Bihar"}
-                      </Text>
-
-                      {/* Location & Area Specs */}
-                      <View style={styles.metaRow}>
-                        <View style={styles.metaItem}>
-                          <MaterialIcons name="place" size={14} color="#059669" />
-                          <Text style={styles.metaText} numberOfLines={1}>
-                            {item.location?.district || "Patna"}
-                          </Text>
-                        </View>
-                        <View style={styles.metaDot} />
-                        <View style={styles.metaItem}>
-                          <MaterialIcons name="straighten" size={14} color="#059669" />
-                          <Text style={styles.metaText}>
-                            {areaVal} sq.ft ({katthaVal} Kattha)
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* 4-Pillar Verification Trust Strip */}
-                      <View style={styles.trustStrip}>
-                        <View style={[styles.trustPill, styles.trustPillComplete]}>
-                          <MaterialIcons name="check-circle" size={12} color="#059669" />
-                          <Text style={styles.trustPillCompleteText}>
-                            {t(language, "my_prop_kyc") || "Owner KYC"}
-                          </Text>
-                        </View>
-
-                        <View style={[styles.trustPill, styles.trustPillComplete]}>
-                          <MaterialIcons name="check-circle" size={12} color="#059669" />
-                          <Text style={styles.trustPillCompleteText}>
-                            {t(language, "my_prop_docs") || "Documents"}
-                          </Text>
-                        </View>
-
-                        <View style={[styles.trustPill, isVerified ? styles.trustPillComplete : styles.trustPillPending]}>
+                        {/* Top-Left: Status Badge */}
+                        <View style={[styles.statusBadge, isVerified ? styles.statusBadgeVerified : styles.statusBadgePending]}>
                           <MaterialIcons
-                            name={isVerified ? "check-circle" : "radio-button-unchecked"}
+                            name={isVerified ? "verified" : "hourglass-top"}
                             size={12}
-                            color={isVerified ? "#059669" : "#94A3B8"}
+                            color="#FFFFFF"
                           />
-                          <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
-                            {t(language, "my_prop_site") || "GPS Site Visit"}
+                          <Text style={styles.statusBadgeText}>
+                            {isVerified
+                              ? language === "hi" ? "सत्यापित एवं लाइव" : "Verified & Live"
+                              : language === "hi" ? "सत्यापन प्रक्रिया में" : "In Verification"}
                           </Text>
                         </View>
 
-                        <View style={[styles.trustPill, isVerified ? styles.trustPillComplete : styles.trustPillPending]}>
-                          <MaterialIcons
-                            name={isVerified ? "check-circle" : "radio-button-unchecked"}
-                            size={12}
-                            color={isVerified ? "#059669" : "#94A3B8"}
-                          />
-                          <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
-                            {t(language, "my_prop_lawyer") || "Legal / Lawyer"}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Action Buttons Row */}
-                      <View style={styles.cardActions}>
-                        {/* Primary View Details Button */}
-                        <TouchableOpacity
-                          style={styles.primaryActionBtn}
-                          onPress={() => router.push(`/property/${item.id || item._id || "prop_1"}`)}
-                          activeOpacity={0.85}
-                        >
-                          <Text style={styles.primaryActionBtnText}>
-                            {t(language, "my_prop_btn_details") || "View Full Details & Offers"}
-                          </Text>
-                          <MaterialIcons name="arrow-forward" size={15} color="#FFFFFF" />
+                        {/* Left & Right Chevrons */}
+                        <TouchableOpacity style={styles.sliderChevronLeft} activeOpacity={0.85}>
+                          <MaterialIcons name="chevron-left" size={17} color="#0F172A" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.sliderChevronRight} activeOpacity={0.85}>
+                          <MaterialIcons name="chevron-right" size={17} color="#0F172A" />
                         </TouchableOpacity>
 
-                        {/* Secondary Actions: Document Vault & Boundary Map */}
-                        <View style={styles.secondaryActions}>
+                        {/* Bottom-Left: Photo Count Pill */}
+                        <View style={styles.photoCountBadge}>
+                          <MaterialIcons name="photo-camera" size={11} color="#FFFFFF" />
+                          <Text style={styles.photoCountText}>1 / {item.photosCount || 8}</Text>
+                        </View>
+
+                        {/* Bottom-Right: View on Map & Heart Pill */}
+                        <View style={styles.photoActionOverlays}>
+                          <TouchableOpacity style={styles.viewOnMapPill} activeOpacity={0.85}>
+                            <MaterialIcons name="place" size={12} color="#FFFFFF" />
+                            <Text style={styles.viewOnMapText}>View on Map</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity style={styles.photoHeartBtn} activeOpacity={0.85}>
+                            <FontAwesome5 name="heart" size={12} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Right: Details Half */}
+                      <View style={styles.cardDetailsHalf}>
+                        {/* Top Row: Tags & ID & Menu */}
+                        <View style={styles.cardTopMetaRow}>
+                          <View style={styles.cardTagsGroup}>
+                            <View style={styles.landTypeTag}>
+                              <Text style={styles.landTypeTagText}>{item.type || "LAND"}</Text>
+                            </View>
+                            <View style={styles.residentialTag}>
+                              <Text style={styles.residentialTagText}>{item.category || "Residential"}</Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.cardIdMenuRow}>
+                            <Text style={styles.cardIdText}>ID #{idCode}</Text>
+                            <TouchableOpacity style={styles.moreMenuBtn} activeOpacity={0.7}>
+                              <MaterialIcons name="more-vert" size={18} color="#64748B" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        {/* Title */}
+                        <Text style={styles.propertyTitle} numberOfLines={1}>
+                          {item.title || "Prime Land Plot in Patna, Bihar"}
+                        </Text>
+
+                        {/* Location & Area Specs */}
+                        <View style={styles.locationSpecsRow}>
+                          <View style={styles.specItem}>
+                            <MaterialIcons name="place" size={15} color="#059669" />
+                            <Text style={styles.specText}>
+                              {item.location?.area || "Danapur, Patna, Bihar"}
+                            </Text>
+                          </View>
+
+                          <View style={[styles.specItem, { marginLeft: 16 }]}>
+                            <MaterialIcons name="straighten" size={15} color="#059669" />
+                            <Text style={styles.specText}>
+                              {areaVal} sq.ft ({katthaVal} Kattha)
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Price & Date Row */}
+                        <View style={styles.priceDateRow}>
+                          <View style={styles.priceCol}>
+                            <Text style={styles.mainPriceText}>{priceStr}</Text>
+                            <Text style={styles.subRateText}>₹{ratePerSqFt.toLocaleString("en-IN")} / sq.ft</Text>
+                          </View>
+
+                          <View style={styles.dateTagBox}>
+                            <MaterialIcons name="schedule" size={13} color="#64748B" />
+                            <Text style={styles.dateTagText}>{item.date || "12 Sep 2026"}</Text>
+                          </View>
+                        </View>
+
+                        {/* 4 Verification Trust Pills */}
+                        <View style={styles.trustPillsRow}>
+                          <View style={[styles.trustPill, styles.trustPillComplete]}>
+                            <MaterialIcons name="check-circle" size={13} color="#059669" />
+                            <Text style={styles.trustPillCompleteText}>Owner KYC</Text>
+                          </View>
+
+                          <View style={[styles.trustPill, styles.trustPillComplete]}>
+                            <MaterialIcons name="check-circle" size={13} color="#059669" />
+                            <Text style={styles.trustPillCompleteText}>Documents</Text>
+                          </View>
+
+                          <View style={[styles.trustPill, isVerified ? styles.trustPillComplete : styles.trustPillPending]}>
+                            <MaterialIcons
+                              name={isVerified ? "check-circle" : "radio-button-unchecked"}
+                              size={13}
+                              color={isVerified ? "#059669" : "#94A3B8"}
+                            />
+                            <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
+                              GPS Site Visit
+                            </Text>
+                          </View>
+
+                          <View style={[styles.trustPill, isVerified ? styles.trustPillComplete : styles.trustPillPending]}>
+                            <MaterialIcons
+                              name={isVerified ? "check-circle" : "radio-button-unchecked"}
+                              size={13}
+                              color={isVerified ? "#059669" : "#94A3B8"}
+                            />
+                            <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
+                              Legal / Lawyer
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Action Buttons Row */}
+                        <View style={styles.cardActionsRow}>
+                          {/* Primary View Details */}
                           <TouchableOpacity
-                            style={styles.mintActionBtn}
+                            style={styles.viewDetailsBtn}
+                            onPress={() => router.push(`/property/${item.id || item._id || "prop_1"}`)}
+                            activeOpacity={0.85}
+                          >
+                            <Text style={styles.viewDetailsBtnText}>View Full Details & Offers</Text>
+                            <MaterialIcons name="arrow-forward" size={15} color="#FFFFFF" />
+                          </TouchableOpacity>
+
+                          {/* Secondary: Document Vault */}
+                          <TouchableOpacity
+                            style={styles.mintBtn}
                             onPress={() => router.push(`/property/${item.id || item._id || "prop_1"}`)}
                             activeOpacity={0.8}
                           >
                             <MaterialIcons name="folder-shared" size={14} color="#065F46" />
-                            <Text style={styles.mintActionBtnText}>
-                              {t(language, "my_prop_btn_vault") || "Document Vault"}
-                            </Text>
+                            <Text style={styles.mintBtnText}>Document Vault</Text>
                           </TouchableOpacity>
 
+                          {/* Secondary: Boundary Map */}
                           <TouchableOpacity
-                            style={styles.mintActionBtn}
+                            style={styles.mintBtn}
                             onPress={() => router.push("/listing/create")}
                             activeOpacity={0.8}
                           >
                             <MaterialIcons name="map" size={14} color="#065F46" />
-                            <Text style={styles.mintActionBtnText}>
-                              {t(language, "my_prop_btn_boundary") || "Boundary Map"}
-                            </Text>
+                            <Text style={styles.mintBtnText}>Boundary Map</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
+            )}
+
+            {/* 5. BOTTOM BOOSTER BANNER: Want faster verification? */}
+            <View style={styles.boostBanner}>
+              <View style={styles.boostBannerLeft}>
+                <View style={styles.boostIconCircle}>
+                  <MaterialIcons name="insights" size={20} color="#065F46" />
+                </View>
+                <View style={styles.boostTextCol}>
+                  <Text style={styles.boostTitle}>
+                    {language === "hi" ? "क्या आपको त्वरित सत्यापन चाहिए?" : "Want faster verification?"}
+                  </Text>
+                  <Text style={styles.boostSubtitle}>
+                    {language === "hi"
+                      ? "अपने दस्तावेज़ पूरे करें और अपनी लिस्टिंग को लाइव करने के लिए साइट विज़िट शेड्यूल करें।"
+                      : "Complete your documents and schedule a site visit to get your listing live."}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.boostActionBtn}
+                onPress={() => router.push("/listing/create")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.boostActionBtnText}>
+                  {language === "hi" ? "सत्यापन पूरा करें" : "Complete Verification"}
+                </Text>
+                <MaterialIcons name="arrow-forward" size={15} color="#059669" />
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -400,123 +729,282 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#F8FAFC",
-    position: "relative",
-  },
-  scenicBackgroundWrap: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 310,
-    overflow: "hidden",
-    zIndex: 0,
-  },
-  scenicBackgroundImage: {
-    width: "100%",
-    height: "100%",
-    opacity: 0.88,
-  },
-  scenicBackgroundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(248, 250, 252, 0.76)",
   },
   scrollContainer: {
-    paddingBottom: 60,
-    zIndex: 1,
+    paddingBottom: 48,
   },
-  /* Compact Centered Container (maxWidth: 720, pixel-to-pixel matching mockup) */
-  container: {
+  mainLayout: {
     width: "100%",
-    maxWidth: 720,
+    maxWidth: 1380,
     alignSelf: "center",
-    paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
-
-  /* Page Header Section */
-  pageHeader: {
-    marginBottom: 18,
-  },
-  pageHeaderRow: {
+  mainLayoutDesktop: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-    flexWrap: "wrap",
+    gap: 20,
   },
-  pageTitle: {
+
+  /* ================= LEFT SIDEBAR ================= */
+  sidebar: {
+    width: 220,
+    backgroundColor: "transparent",
+  },
+  sidebarMenu: {
+    gap: 4,
+    marginBottom: 20,
+  },
+  sidebarNavItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  sidebarNavItemActive: {
+    backgroundColor: "#E6F4EA",
+  },
+  sidebarNavText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    flex: 1,
+  },
+  sidebarNavTextActive: {
+    color: "#065F46",
+    fontWeight: "700",
+  },
+  sidebarBadge: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: 9999,
+  },
+  sidebarBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  sidebarBadgeActive: {
+    backgroundColor: "#A7F3D0",
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: 9999,
+  },
+  sidebarBadgeTextActive: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+
+  /* Sidebar Promo Box */
+  sidebarPromoCard: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  sidebarPromoIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sidebarPromoTitle: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  sidebarPromoSubtitle: {
+    fontSize: 10.5,
+    color: "#64748B",
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  sidebarPromoBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /* Sidebar Bottom Graphic */
+  sidebarFooterGraphicWrap: {
+    position: "relative",
+    width: "100%",
+    height: 90,
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+  },
+  sidebarCursiveWrap: {
+    position: "absolute",
+    bottom: 6,
+    left: 8,
+  },
+  sidebarCursiveText: {
+    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, cursive" : "System",
+    fontSize: 13,
+    color: "#065F46",
+    fontStyle: "italic",
+    lineHeight: 16,
+    opacity: 0.8,
+  },
+
+  /* ================= RIGHT MAIN CONTENT ================= */
+  mainContent: {
+    flex: 1,
+  },
+
+  /* 1. Hero Banner */
+  heroBannerCard: {
+    width: "100%",
+    height: 120,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  heroBannerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  heroBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.55)",
+  },
+  heroLeftCol: {
+    zIndex: 2,
+    maxWidth: 480,
+  },
+  heroMainTitle: {
     fontSize: 24,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.4,
   },
-  pageSubtitle: {
-    fontSize: 13,
-    color: "#64748B",
+  heroSubtitle: {
+    fontSize: 12.5,
+    color: "#475569",
+    fontWeight: "500",
     marginTop: 4,
-    lineHeight: 18,
+    lineHeight: 17,
   },
-  headerPostBtn: {
+  heroCursiveBox: {
+    zIndex: 2,
+    alignItems: "center",
+    transform: [{ rotate: "-4deg" }],
+  },
+  heroCursiveText: {
+    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, cursive" : "System",
+    fontSize: 17,
+    color: "#065F46",
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  heroPostBtn: {
+    zIndex: 2,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
     backgroundColor: "#059669",
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 9999,
     shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
     elevation: 2,
   },
-  headerPostBtnText: {
+  heroPostBtnText: {
     color: "#FFFFFF",
     fontSize: 12.5,
     fontWeight: "800",
   },
 
-  /* 1. Compact Overview Metrics */
+  /* 2. 4 Metric Cards */
   metricsRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
+    gap: 12,
+    marginTop: 14,
+    flexWrap: "wrap",
   },
   metricCard: {
     flex: 1,
+    minWidth: 160,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
   },
+  metricIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  metricTextCol: {
+    flex: 1,
+  },
   metricValue: {
-    fontSize: 19,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "900",
     color: "#0F172A",
-    lineHeight: 23,
+    lineHeight: 24,
   },
   metricLabel: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 1,
+  },
+  metricMicroSub: {
     fontSize: 10.5,
-    fontWeight: "600",
     color: "#64748B",
-    marginTop: 2,
-    textAlign: "center",
+    marginTop: 1,
+    fontWeight: "500",
   },
 
-  /* 2. Filter Pills */
-  filterSection: {
-    marginBottom: 16,
+  /* 3. Filter & Search Controls */
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    gap: 12,
+    flexWrap: "wrap",
   },
-  filterPills: {
+  filterPillsTrack: {
     flexDirection: "row",
     backgroundColor: "#E2E8F0",
     padding: 3,
@@ -524,9 +1012,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   filterPill: {
-    flex: 1,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
@@ -540,7 +1027,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   filterPillText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: "600",
     color: "#64748B",
   },
@@ -548,12 +1035,52 @@ const styles = StyleSheet.create({
     color: "#065F46",
     fontWeight: "700",
   },
-
-  /* 3. Cards List */
-  cardsList: {
-    gap: 18,
+  searchFilterGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  card: {
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+    height: 36,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    width: 200,
+    gap: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: "#0F172A",
+    outlineStyle: "none",
+  } as any,
+  filtersBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    height: 36,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  filtersBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+  },
+
+  /* 4. The Property Listing Card */
+  cardsList: {
+    marginTop: 16,
+    gap: 16,
+  },
+  propertyCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     borderWidth: 1,
@@ -564,14 +1091,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
-  mediaWrap: {
-    height: 195,
-    width: "100%",
+  photoSliderHalf: {
+    width: "44%",
+    minWidth: 320,
+    minHeight: 260,
     position: "relative",
     backgroundColor: "#0F172A",
   },
-  cardImg: {
+  cardImage: {
     width: "100%",
     height: "100%",
   },
@@ -581,8 +1111,8 @@ const styles = StyleSheet.create({
     left: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 5,
+    gap: 4,
+    paddingVertical: 4.5,
     paddingHorizontal: 10,
     borderRadius: 9999,
     shadowColor: "#000",
@@ -591,7 +1121,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   statusBadgePending: {
-    backgroundColor: "#D97706",
+    backgroundColor: "#EA580C",
   },
   statusBadgeVerified: {
     backgroundColor: "#059669",
@@ -601,93 +1131,199 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  typeBadge: {
+  sliderChevronLeft: {
     position: "absolute",
-    bottom: 10,
+    left: 10,
+    top: "45%",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sliderChevronRight: {
+    position: "absolute",
+    right: 10,
+    top: "45%",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  photoCountBadge: {
+    position: "absolute",
+    bottom: 12,
     left: 12,
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
     paddingVertical: 3.5,
     paddingHorizontal: 8,
     borderRadius: 6,
   },
-  typeBadgeText: {
+  photoCountText: {
     color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  photoActionOverlays: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  viewOnMapPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 6,
+  },
+  viewOnMapText: {
+    color: "#FFFFFF",
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  photoHeartBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  /* Card Body */
-  cardBody: {
-    padding: 16,
-  },
-  priceRow: {
-    flexDirection: "row",
+  /* Card Details Half */
+  cardDetailsHalf: {
+    flex: 1,
+    minWidth: 320,
+    padding: 18,
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 6,
   },
-  priceCol: {},
-  priceMain: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.4,
-  },
-  priceSub: {
-    fontSize: 11.5,
-    color: "#64748B",
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  dateChip: {
+  cardTopMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "transparent",
-    paddingVertical: 2,
-    paddingHorizontal: 4,
+    justifyContent: "space-between",
   },
-  dateChipText: {
-    fontSize: 11.5,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  cardTitle: {
-    fontSize: 16.5,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 4,
-    marginBottom: 6,
-    lineHeight: 22,
-  },
-  metaRow: {
+  cardTagsGroup: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
     gap: 6,
-    marginBottom: 12,
   },
-  metaItem: {
+  landTypeTag: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  landTypeTagText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: 0.3,
+  },
+  residentialTag: {
+    backgroundColor: "#ECFDF5",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  residentialTagText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+  cardIdMenuRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  metaText: {
-    fontSize: 12,
+  cardIdText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  moreMenuBtn: {
+    padding: 2,
+  },
+
+  propertyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 6,
+    marginBottom: 4,
+    lineHeight: 23,
+  },
+  locationSpecsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  specItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  specText: {
+    fontSize: 12.5,
     color: "#475569",
     fontWeight: "600",
   },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: "#94A3B8",
-    marginHorizontal: 2,
+
+  priceDateRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  priceCol: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  mainPriceText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+  },
+  subRateText: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  dateTagBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dateTagText: {
+    fontSize: 11.5,
+    color: "#64748B",
+    fontWeight: "500",
   },
 
-  /* Trust Strip */
-  trustStrip: {
+  trustPillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
@@ -698,7 +1334,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingVertical: 4.5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     borderRadius: 9999,
     borderWidth: 1,
   },
@@ -707,7 +1343,7 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   trustPillCompleteText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "700",
     color: "#065F46",
   },
@@ -716,20 +1352,19 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   trustPillPendingText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
     color: "#64748B",
   },
 
-  /* Actions */
-  cardActions: {
+  cardActionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
     gap: 8,
   },
-  primaryActionBtn: {
+  viewDetailsBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -743,17 +1378,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  primaryActionBtnText: {
+  viewDetailsBtnText: {
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
   },
-  secondaryActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  mintActionBtn: {
+  mintBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -764,13 +1394,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 9999,
   },
-  mintActionBtnText: {
+  mintBtnText: {
     color: "#065F46",
     fontSize: 11.5,
     fontWeight: "700",
   },
 
-  /* Empty State */
+  /* 5. Bottom Booster Banner */
+  boostBanner: {
+    backgroundColor: "#E6F4EA",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  boostBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    minWidth: 260,
+  },
+  boostIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#A7F3D0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  boostTextCol: {
+    flex: 1,
+  },
+  boostTitle: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  boostSubtitle: {
+    fontSize: 12,
+    color: "#475569",
+    marginTop: 2,
+  },
+  boostActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#059669",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 9999,
+  },
+  boostActionBtnText: {
+    color: "#059669",
+    fontSize: 12.5,
+    fontWeight: "800",
+  },
+
+  /* States */
   loaderCenter: {
     paddingVertical: 40,
     alignItems: "center",
@@ -785,42 +1475,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 16,
-  },
-  emptyIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
+    gap: 10,
   },
   emptyHeading: {
     fontSize: 16,
     fontWeight: "800",
     color: "#0F172A",
-    marginBottom: 4,
   },
   emptySubText: {
     fontSize: 12.5,
     color: "#64748B",
     textAlign: "center",
     maxWidth: 300,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  emptyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#059669",
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 9999,
-  },
-  emptyBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12.5,
-    fontWeight: "700",
   },
 });

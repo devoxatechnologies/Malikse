@@ -1446,44 +1446,21 @@ const styles = StyleSheet.create({
     gap: 16,
     minHeight: 88,
   },
-  boostScenicWrap: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: "60%",
-    maxWidth: 620,
+  boostBannerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
     height: "100%",
-    overflow: "hidden",
-    pointerEvents: "none",
   },
-  boostScenicImg: {
-    position: "absolute",
-    right: 0,
-    bottom: -12,
-    width: 550,
-    height: 185,
-    ...Platform.select({
-      web: {
-        objectFit: "cover",
-        objectPosition: "86% 75%",
-      } as any,
-    }),
-  },
-  boostScenicFade: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  boostBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
     pointerEvents: "none",
     ...Platform.select({
       web: {
         background:
-          "linear-gradient(90deg, #E6F5EE 0%, #E6F5EE 15%, rgba(230, 245, 238, 0.85) 35%, rgba(230, 245, 238, 0.2) 65%, transparent 85%)",
+          "linear-gradient(90deg, #E6F5EE 0%, #E6F5EE 28%, rgba(230, 245, 238, 0.85) 45%, rgba(230, 245, 238, 0.2) 68%, transparent 85%)",
       } as any,
       default: {
-        backgroundColor: "rgba(230, 245, 238, 0.3)",
+        backgroundColor: "rgba(230, 245, 238, 0.35)",
       },
     }),
   },

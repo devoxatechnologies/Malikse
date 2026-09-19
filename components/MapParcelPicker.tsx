@@ -51,17 +51,17 @@ export default function MapParcelPicker({
 
   // Search input state
   const [searchLocation, setSearchLocation] = useState("");
-  // Current polygon points
+  // Current polygon points - default empty until user clicks/plots
   const [points, setPoints] = useState<LatLngPoint[]>(
-    initialPoints && initialPoints.length >= 3 ? initialPoints : DEFAULT_CADASTRAL_POLYGON
+    initialPoints && initialPoints.length > 0 ? initialPoints : []
   );
   // Undo & Redo History
   const [history, setHistory] = useState<LatLngPoint[][]>([]);
   const [redoHistory, setRedoHistory] = useState<LatLngPoint[][]>([]);
-  // Satellite vs Map
-  const [mapMode, setMapMode] = useState<"satellite" | "map">("satellite");
+  // Map Mode - default to standard Map view (not satellite)
+  const [mapMode, setMapMode] = useState<"satellite" | "map">("map");
 
-  // Keep parent in sync on initial mount
+  // Keep parent in sync on initial mount only if points exist
   useEffect(() => {
     if (points.length >= 3) {
       onParcelChange(points);
@@ -211,18 +211,31 @@ export default function MapParcelPicker({
       centerBadgeMarkerRef.current = null;
     }
 
-    if (pts.length < 2) return;
+    if (pts.length === 0) return;
 
-    // Draw Polygon with Translucent Green Fill & Emerald Border
-    const latLngPairs = pts.map((p) => [p.lat, p.lng]);
-    const poly = L.polygon(latLngPairs, {
-      color: "#10B981",
-      weight: 2.5,
-      fillColor: "#059669",
-      fillOpacity: 0.35,
-      lineJoin: "round",
-    }).addTo(map);
-    polygonLayerRef.current = poly;
+    // If 2 points, draw connecting guide line; if 3+ points, draw polygon
+    if (pts.length === 2) {
+      const line = L.polyline(
+        pts.map((p) => [p.lat, p.lng]),
+        {
+          color: "#10B981",
+          weight: 2.5,
+          dashArray: "6, 6",
+        }
+      ).addTo(map);
+      polygonLayerRef.current = line;
+    } else if (pts.length >= 3) {
+      // Draw Polygon with Translucent Green Fill & Emerald Border
+      const latLngPairs = pts.map((p) => [p.lat, p.lng]);
+      const poly = L.polygon(latLngPairs, {
+        color: "#10B981",
+        weight: 2.5,
+        fillColor: "#059669",
+        fillOpacity: 0.35,
+        lineJoin: "round",
+      }).addTo(map);
+      polygonLayerRef.current = poly;
+    }
 
     // Draw Draggable Vertex Handles (White circle with emerald border matching screenshot)
     const vertexIcon = L.divIcon({
@@ -398,7 +411,7 @@ export default function MapParcelPicker({
               position: "absolute",
               top: 0,
               left: 0,
-              backgroundColor: "#17221A",
+              backgroundColor: "#F1F5F9",
               borderRadius: 14,
             }}
           />
@@ -500,14 +513,18 @@ export default function MapParcelPicker({
           </TouchableOpacity>
         </View>
 
-        {/* OVERLAY: Bottom-Left Mode Switcher Pill (Satellite ⌵) */}
+        {/* OVERLAY: Bottom-Left Mode Switcher Pill (Map / Satellite ⌵) */}
         <TouchableOpacity
           style={styles.satelliteModePill}
           onPress={() => setMapMode((m) => (m === "satellite" ? "map" : "satellite"))}
           activeOpacity={0.8}
         >
           <View style={styles.satelliteThumbBox}>
-            <MaterialIcons name="satellite-alt" size={14} color="#065F46" />
+            <MaterialIcons
+              name={mapMode === "satellite" ? "satellite-alt" : "map"}
+              size={14}
+              color="#065F46"
+            />
           </View>
           <Text style={styles.satelliteModeText}>
             {mapMode === "satellite"
@@ -516,6 +533,18 @@ export default function MapParcelPicker({
           </Text>
           <MaterialIcons name="keyboard-arrow-down" size={16} color="#065F46" />
         </TouchableOpacity>
+
+        {/* OVERLAY: Empty State Prompt Hint when points === 0 */}
+        {points.length === 0 && (
+          <View style={styles.emptyHintPill}>
+            <MaterialIcons name="touch-app" size={16} color="#059669" />
+            <Text style={styles.emptyHintText}>
+              {language === "hi"
+                ? "प्लॉट की सीमा तय करने के लिए मानचित्र पर टैप करें"
+                : "Tap on the map to start plotting boundary outline"}
+            </Text>
+          </View>
+        )}
 
         {/* OVERLAY: Bottom-Right Scale Indicator Bar */}
         <View style={styles.scaleIndicator}>

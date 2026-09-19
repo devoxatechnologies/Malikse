@@ -692,15 +692,13 @@ export default function MyPropertiesScreen() {
 
             {/* 5. BOTTOM BOOSTER BANNER: Want faster verification? */}
             <View style={styles.boostBanner}>
-              {/* Right-aligned zoomed-out landscape scenery */}
-              <View style={styles.boostScenicWrap}>
-                <Image
-                  source={boostBgImg}
-                  style={styles.boostScenicImg}
-                  resizeMode="cover"
-                />
-                <View style={styles.boostScenicFade} />
-              </View>
+              {/* Full container panoramic landscape background */}
+              <Image
+                source={boostBgImg}
+                style={styles.boostBannerBackground}
+                resizeMode="cover"
+              />
+              <View style={styles.boostBannerOverlay} />
 
               <View style={styles.boostBannerLeft}>
                 <View style={styles.boostIconCircle}>

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "expo-router";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { AppTheme } from "../constants/theme";
 import { useLanguageStore } from "../src/store/languageStore";
+import { useAuthStore } from "../src/store/authStore";
 
 interface AppHeaderProps {
   title?: string;
@@ -164,7 +165,14 @@ export default function AppHeader({
           {showPostPropertyBtn && isDesktop && (
             <TouchableOpacity
               style={styles.postPropertyBtn}
-              onPress={() => router.push("/listing/create")}
+              onPress={() => {
+                const { authState, user } = useAuthStore.getState();
+                if (authState !== "AUTHENTICATED" || !user) {
+                  router.push("/login");
+                } else {
+                  router.push("/listing/create");
+                }
+              }}
               activeOpacity={0.8}
             >
               <MaterialIcons name="add-circle" size={16} color="#FFFFFF" />

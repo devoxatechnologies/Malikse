@@ -73,6 +73,39 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// POST /auth/demo-login (Fast Dev/Demo Switcher with real valid JWT)
+router.post("/demo-login", async (req, res) => {
+  try {
+    const { role = "owner" } = req.body;
+    const mobileMap: Record<string, string> = {
+      owner: "9999999991",
+      buyer: "9999999992",
+      advisor: "9999999993",
+      admin: "9999999994",
+    };
+    const demoMobile = mobileMap[role] || "9999999991";
+    let user = await User.findOne({ mobile: demoMobile });
+    if (!user) {
+      user = new User({
+        role,
+        name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)}`,
+        mobile: demoMobile,
+        email: `demo.${role}@malikse.in`,
+        isVerifiedIdentity: true,
+      });
+      await user.save();
+    }
+    const tokens = generateTokens(user);
+    res.json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: { id: user._id, role: user.role, name: user.name, mobile: user.mobile, email: user.email }
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // POST /auth/refresh
 router.post("/refresh", async (req, res) => {
   try {

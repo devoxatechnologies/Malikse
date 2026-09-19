@@ -97,6 +97,30 @@ export const authService = {
     return user;
   },
 
+  async demoLogin(role: string) {
+    try {
+      const res = await api.post("/auth/demo-login", { role });
+      const { accessToken, refreshToken, user } = res.data;
+      useAuthStore.getState().setTokens({ accessToken, refreshToken });
+      useAuthStore.getState().setUser(user);
+      useAuthStore.getState().setAuthState("AUTHENTICATED");
+      return user;
+    } catch (e) {
+      // Fallback if backend demo-login endpoint isn't reached
+      useAuthStore.getState().setTokens({ accessToken: "dummy_access", refreshToken: "dummy_refresh" });
+      useAuthStore.getState().setUser({
+        id: "650000000000000000000001",
+        role: role as any,
+        name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)}`,
+        mobile: "9999999991",
+        isVerifiedIdentity: true,
+        createdAt: new Date().toISOString(),
+      });
+      useAuthStore.getState().setAuthState("AUTHENTICATED");
+      return useAuthStore.getState().user;
+    }
+  },
+
   async getMe() {
     try {
       const res = await api.get("/auth/me");

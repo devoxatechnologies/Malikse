@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { propertyService } from "../../src/services/propertyService";
 import { documentService } from "../../src/services/documentService";
+import { useAuthStore } from "../../src/store/authStore";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import MapParcelPicker from "../../components/MapParcelPicker";
 import AppHeader from "../../components/AppHeader";
@@ -19,6 +20,7 @@ interface PickedDoc {
 
 export default function CreateListingScreen() {
   const router = useRouter();
+  const { authState, user, accessToken } = useAuthStore();
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -57,6 +59,17 @@ export default function CreateListingScreen() {
   };
 
   const handleCreateProperty = async () => {
+    if (authState !== "AUTHENTICATED" || !accessToken) {
+      const msg = "Please sign in as a Property Owner to register and publish your property.";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Sign In Required", msg);
+      }
+      router.push("/login");
+      return;
+    }
+
     if (parcelPoints.length < 3) {
       if (Platform.OS === "web") {
         alert("Please draw a polygon boundary with at least 3 points on the map");
@@ -87,6 +100,13 @@ export default function CreateListingScreen() {
       setPropertyId(prop.id);
       setStep(3);
     } catch (e: any) {
+      if (e.response?.status === 401) {
+        const msg = "Your session has expired or you are not signed in. Please sign in as a Property Owner to continue.";
+        if (Platform.OS === "web") alert(msg);
+        else Alert.alert("Sign In Required", msg);
+        router.push("/login");
+        return;
+      }
       const msg = e.response?.data?.message || "Failed to create property listing";
       if (Platform.OS === "web") alert(msg);
       else Alert.alert("Error", msg);
@@ -149,6 +169,13 @@ export default function CreateListingScreen() {
         ]);
       }
     } catch (e: any) {
+      if (e.response?.status === 401) {
+        const msg = "Your session has expired. Please sign in as a Property Owner to continue.";
+        if (Platform.OS === "web") alert(msg);
+        else Alert.alert("Sign In Required", msg);
+        router.push("/login");
+        return;
+      }
       const msg = e.response?.data?.message || "Failed to upload documents";
       if (Platform.OS === "web") alert(msg);
       else Alert.alert("Error", msg);
@@ -175,6 +202,28 @@ export default function CreateListingScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
+          {/* Unauthenticated Landowner Notice */}
+          {authState !== "AUTHENTICATED" && (
+            <View style={styles.authNoticeBanner}>
+              <View style={styles.authNoticeLeft}>
+                <MaterialIcons name="lock" size={20} color="#D97706" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.authNoticeTitle}>Landowner Sign-In Required</Text>
+                  <Text style={styles.authNoticeSub}>
+                    You must sign in as a registered Property Owner to register parcel boundaries & publish listings on MalikSe.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.authNoticeBtn} 
+                onPress={() => router.push("/login")}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.authNoticeBtnText}>Sign In Now &rarr;</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* STEP 1: Details & Pricing */}
           {step === 1 && (
             <View style={styles.card}>
@@ -667,5 +716,51 @@ const styles = StyleSheet.create({
   },
   typeChipTxtActive: {
     color: AppTheme.colors.white,
+  },
+  authNoticeBanner: {
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  authNoticeLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 260,
+  },
+  authNoticeTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#92400E",
+  },
+  authNoticeSub: {
+    fontSize: 12,
+    color: "#B45309",
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  authNoticeBtn: {
+    backgroundColor: "#059669",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  authNoticeBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
 });

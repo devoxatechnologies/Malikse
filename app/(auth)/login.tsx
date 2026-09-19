@@ -62,17 +62,12 @@ export default function LoginScreen() {
     else router.replace("/profile");
   };
 
-  const quickLogin = (role: UserRole) => {
-    authStore.setTokens({ accessToken: "dummy_access", refreshToken: "dummy_refresh" });
-    authStore.setUser({
-      id: "dummy_id",
-      role,
-      name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)}`,
-      mobile: "9999999999",
-      isVerifiedIdentity: true,
-      createdAt: new Date().toISOString(),
-    });
-    authStore.setAuthState("AUTHENTICATED");
+  const quickLogin = async (role: UserRole) => {
+    try {
+      await authService.demoLogin(role);
+    } catch {
+      // Handled internally in demoLogin
+    }
     routeByRole(role);
   };
 

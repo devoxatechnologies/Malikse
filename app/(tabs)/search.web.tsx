@@ -52,7 +52,7 @@ export default function SearchScreenWeb() {
         link.id = fontId;
         link.rel = "stylesheet";
         link.href =
-          "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap";
+          "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap";
         document.head.appendChild(link);
       }
 
@@ -516,6 +516,7 @@ export default function SearchScreenWeb() {
                   <Text style={styles.mapTopLeftText}>
                     {t(language, "location_patna_bihar") || "Patna, Bihar"}
                   </Text>
+                  <Text style={styles.mapPillDivider}>|</Text>
                   <TouchableOpacity onPress={handleResetLocation} activeOpacity={0.7}>
                     <Text style={styles.mapChangeLink}>{t(language, "map_change") || "Change"}</Text>
                   </TouchableOpacity>
@@ -890,24 +891,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroMainTitle: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.6,
     lineHeight: 40,
+    height: 40,
   },
   heroSubTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
     color: "#1E293B",
     marginTop: 4,
     marginBottom: 14,
+    lineHeight: 26,
+    height: 26,
   },
   trustBadgesRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 16,
+    flexWrap: "nowrap",
+    gap: 14,
+    height: 24,
   },
   trustBadgeItem: {
     flexDirection: "row",
@@ -915,25 +920,27 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   trustBadgeText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "600",
     color: "#1E293B",
+    lineHeight: 15,
   },
 
   /* Right Corner: Cursive script + Stat Card */
   heroRightCorner: {
     alignItems: "flex-end",
-    gap: 10,
+    gap: 8,
     marginLeft: 20,
   },
   cursiveHeroScript: {
-    fontFamily: Platform.OS === "web" ? "Caveat, 'Segoe Script', cursive" : "System",
-    fontSize: 22,
+    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, 'Segoe Script', cursive" : "System",
+    fontSize: 21,
     fontWeight: "700",
     color: "#166534",
     fontStyle: "italic",
     textAlign: "right",
-    lineHeight: 24,
+    lineHeight: 23,
+    height: 48,
     transform: [{ rotate: "-4deg" }],
   },
   floatingStatCard: {
@@ -941,9 +948,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#E6F4EA",
     borderRadius: 9999,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    gap: 10,
+    height: 48,
+    width: 175,
+    paddingHorizontal: 12,
+    justifyContent: "space-between",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -975,6 +983,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#047857",
+    lineHeight: 13,
   },
 
   /* ================= SEARCH BAR STRADDLING SECTION LINE ================= */
@@ -1000,19 +1009,22 @@ const styles = StyleSheet.create({
   locationSelector: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#E6F4EA",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    height: 40,
+    width: 145,
+    paddingHorizontal: 10,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
     marginLeft: 2,
+    justifyContent: "center",
   },
   locationSelectorText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "800",
     color: "#065F46",
+    lineHeight: 15,
   },
   searchBarDivider: {
     width: 1,
@@ -1025,6 +1037,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
+    height: 40,
   },
   searchInput: {
     flex: 1,
@@ -1038,8 +1051,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#E6F4EA",
     borderRadius: 9999,
-    paddingVertical: 9,
-    paddingHorizontal: 22,
+    height: 40,
+    width: 110,
+    justifyContent: "center",
+    paddingHorizontal: 12,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
@@ -1052,6 +1067,7 @@ const styles = StyleSheet.create({
     color: "#065F46",
     fontSize: 13,
     fontWeight: "800",
+    lineHeight: 16,
   },
 
   /* ================= LOWER BODY CONTAINER ================= */
@@ -1070,6 +1086,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
     gap: 12,
+    height: 38,
   },
   categoryPillsScroll: {
     flexDirection: "row",
@@ -1080,11 +1097,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingVertical: 7,
-    paddingHorizontal: 14,
+    height: 36,
+    paddingHorizontal: 13,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
+    justifyContent: "center",
   },
   categoryPillActive: {
     backgroundColor: "#D1FAE5",
@@ -1099,6 +1117,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "700",
     color: "#065F46",
+    lineHeight: 16,
   },
   categoryPillTextActive: {
     color: "#065F46",
@@ -1113,8 +1132,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingVertical: 7,
-    paddingHorizontal: 14,
+    height: 36,
+    minWidth: 88,
+    justifyContent: "center",
+    paddingHorizontal: 12,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
@@ -1123,6 +1144,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "700",
     color: "#065F46",
+    lineHeight: 16,
   },
 
   /* ================= SIDE-BY-SIDE EQUAL CONTAINER CARDS ================= */
@@ -1302,20 +1324,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    height: 32,
   },
   listingsTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.3,
+    lineHeight: 22,
   },
   viewAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: "#E6F4EA",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    height: 30,
+    width: 92,
+    justifyContent: "center",
+    paddingHorizontal: 8,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
@@ -1324,11 +1350,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: "#065F46",
+    lineHeight: 15,
   },
   listingsSubtitle: {
     fontSize: 11.5,
     color: "#64748B",
     marginTop: 4,
+    lineHeight: 16,
+    height: 16,
+    overflow: "hidden",
   },
   listingsContainer: {
     marginTop: 14,
@@ -1347,6 +1377,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
+    height: 145,
   },
   cardImageCol: {
     width: 210,
@@ -1367,8 +1398,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF3C7",
     borderWidth: 1,
     borderColor: "#FDE68A",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 9999,
   },
   featuredBadgeText: {
@@ -1424,44 +1455,54 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     justifyContent: "space-between",
+    height: 145,
   },
   cardTitle: {
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
-    lineHeight: 20,
+    lineHeight: 18,
+    height: 18,
+    overflow: "hidden",
   },
   cardLocationRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
+    height: 16,
   },
   cardLocationText: {
     fontSize: 11.5,
     color: "#065F46",
     fontWeight: "600",
+    lineHeight: 14,
   },
   chipsRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 5,
-    marginTop: 8,
+    flexWrap: "nowrap",
+    gap: 4,
+    marginTop: 6,
+    height: 24,
+    overflow: "hidden",
   },
   chipPillMint: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
+    height: 22,
+    justifyContent: "center",
   },
   chipPillMintText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "700",
     color: "#065F46",
+    lineHeight: 12,
   },
 
   /* Price & CTA */
@@ -1469,22 +1510,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 10,
+    marginTop: 6,
+    height: 34,
   },
   priceAmount: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "900",
     color: "#065F46",
     letterSpacing: -0.3,
+    lineHeight: 22,
   },
   viewDetailsBtn: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingVertical: 7,
-    paddingHorizontal: 16,
+    height: 32,
+    width: 124,
+    justifyContent: "center",
+    paddingHorizontal: 8,
     borderRadius: 9999,
-    gap: 5,
+    gap: 4,
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
     shadowColor: "#059669",
@@ -1495,7 +1540,14 @@ const styles = StyleSheet.create({
   },
   viewDetailsBtnText: {
     color: "#065F46",
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "800",
+    lineHeight: 14,
+  },
+  mapPillDivider: {
+    color: "#A7F3D0",
+    marginHorizontal: 5,
+    fontWeight: "700",
+    fontSize: 12,
   },
 });

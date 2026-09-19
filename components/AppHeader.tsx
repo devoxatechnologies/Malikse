@@ -190,7 +190,7 @@ export default function AppHeader({
                 >
                   <MaterialIcons name="add" size={17} color="#065F46" />
                   <Text style={styles.postPropertyBtnText}>
-                    {t(language, "post_land_free") || "+ Post Land (Free)"}
+                    {t(language, "post_land_free") || "Post Land (Free)"}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -262,6 +262,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
+    height: Platform.OS === "web" ? 64 : undefined,
+    justifyContent: "center",
   },
   container: {
     flexDirection: "row",
@@ -275,6 +277,8 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
+    width: 215,
+    overflow: "hidden",
   },
   backButton: {
     flexDirection: "row",
@@ -325,6 +329,8 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "500",
     marginTop: 1,
+    lineHeight: 14,
+    height: 14,
   },
 
   /* Center Nav Links (Desktop) */
@@ -402,15 +408,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 12,
+    gap: 8,
+    width: 375,
   },
   postPropertyBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#E6F4EA",
-    paddingVertical: 7,
-    paddingHorizontal: 16,
+    height: 36,
+    paddingHorizontal: 12,
     borderRadius: 9999,
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
@@ -419,11 +426,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 2,
+    justifyContent: "center",
   },
   postPropertyBtnText: {
     color: "#065F46",
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: "800",
+    lineHeight: 15,
   },
   iconBtn: {
     width: 36,
@@ -439,33 +448,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 6,
+    height: 36,
+    width: 94,
+    justifyContent: "center",
     borderRadius: 9999,
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    gap: 6,
+    gap: 5,
   },
   langSymbol: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: "800",
     color: "#065F46",
+    lineHeight: 15,
   },
   langText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: "800",
     color: "#065F46",
+    lineHeight: 15,
   },
   userProfilePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 8,
     borderRadius: 9999,
     backgroundColor: "#E6F4EA",
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
+    justifyContent: "center",
   },
   userAvatarCircle: {
     width: 24,

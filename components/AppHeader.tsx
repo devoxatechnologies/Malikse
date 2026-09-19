@@ -139,20 +139,36 @@ export default function AppHeader({
 
             {/* Saved */}
             <TouchableOpacity
-              style={[styles.navLink, pathname === "/saved" && styles.navLinkActive]}
+              style={[
+                styles.navLink,
+                pathname === "/saved"
+                  ? {
+                      backgroundColor: "#ECFDF5",
+                      borderRadius: 9999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderWidth: 1,
+                      borderColor: "#A7F3D0",
+                    }
+                  : null,
+              ]}
               onPress={() => router.push("/saved")}
               activeOpacity={0.8}
             >
               <MaterialIcons
-                name="favorite-border"
-                size={16}
-                color={pathname === "/saved" ? "#0B4D3C" : "#475569"}
+                name={pathname === "/saved" ? "favorite" : "favorite-border"}
+                size={15}
+                color={pathname === "/saved" ? "#059669" : "#475569"}
                 style={{ marginRight: 4 }}
               />
-              <Text style={[styles.navLinkText, pathname === "/saved" && styles.navLinkTextActive]}>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  pathname === "/saved" && { color: "#065F46", fontWeight: "700" },
+                ]}
+              >
                 {t(language, "nav_saved_plots") || "Saved"}
               </Text>
-              {pathname === "/saved" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
 
             {/* Insights */}

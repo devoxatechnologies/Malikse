@@ -102,22 +102,43 @@ export default function MyPropertiesScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* App Header with unified style */}
+      {/* Universal Brand AppHeader matching all other pages */}
       <AppHeader
-        title={t(language, "my_prop_page_title") || "My Property Listings"}
-        subtitle={
-          t(language, "my_prop_subtitle") ||
-          "Manage listings & verification reports"
-        }
-        showBack={true}
-        fallbackRoute="/search"
-        showPostPropertyBtn={true}
+        showBack={false}
+        showNavLinks={true}
         showLanguageToggle={true}
+        showPostPropertyBtn={true}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Centered Compact Column - matching search.tsx & saved.tsx (maxWidth: 720) */}
         <View style={styles.container}>
+          {/* ================= PAGE HEADER SECTION ================= */}
+          <View style={styles.pageHeader}>
+            <View style={styles.pageHeaderRow}>
+              <View style={{ flex: 1, minWidth: 260 }}>
+                <Text style={styles.pageTitle}>
+                  {t(language, "my_prop_page_title") || "My Property Listings"}
+                </Text>
+                <Text style={styles.pageSubtitle}>
+                  {t(language, "my_prop_subtitle") ||
+                    "Manage listings, track legal verification reports, and review buyer offers"}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.headerPostBtn}
+                onPress={() => router.push("/listing/create")}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.headerPostBtnText}>
+                  {t(language, "post_land_free") || "Post Land"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* ================= 1. COMPACT OVERVIEW METRICS ================= */}
           <View style={styles.metricsRow}>
             {/* Metric 1: Total */}
@@ -430,7 +451,50 @@ const styles = StyleSheet.create({
     maxWidth: 720,
     alignSelf: "center",
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 18,
+  },
+
+  /* Page Header Section */
+  pageHeader: {
+    marginBottom: 18,
+  },
+  pageHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#0F172A",
+    letterSpacing: -0.4,
+  },
+  pageSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  headerPostBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#059669",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 9999,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerPostBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
 
   /* 1. Compact Overview Metrics */

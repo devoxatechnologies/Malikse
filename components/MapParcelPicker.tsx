@@ -24,15 +24,6 @@ interface MapParcelPickerProps {
   areaSqFt?: number | string;
 }
 
-// Default plot boundary matching the user screenshot (Patna / Danapur prime plotted land)
-const DEFAULT_CADASTRAL_POLYGON: LatLngPoint[] = [
-  { lat: 25.6158, lng: 85.0478 },
-  { lat: 25.6164, lng: 85.0494 },
-  { lat: 25.6151, lng: 85.0498 },
-  { lat: 25.6148, lng: 85.0491 },
-  { lat: 25.6145, lng: 85.0480 },
-];
-
 export default function MapParcelPicker({
   initialPoints,
   onParcelChange,
@@ -47,7 +38,10 @@ export default function MapParcelPicker({
   const tileLayerRef = useRef<any>(null);
   const polygonLayerRef = useRef<any>(null);
   const markerLayersRef = useRef<any[]>([]);
+  const midpointLayersRef = useRef<any[]>([]);
+  const dimensionLayersRef = useRef<any[]>([]);
   const centerBadgeMarkerRef = useRef<any>(null);
+  const mouseGuideLineRef = useRef<any>(null);
 
   // Search input state
   const [searchLocation, setSearchLocation] = useState("");
@@ -55,16 +49,86 @@ export default function MapParcelPicker({
   const [points, setPoints] = useState<LatLngPoint[]>(
     initialPoints && initialPoints.length > 0 ? initialPoints : []
   );
+  // Drawing closed state
+  const [isDrawingClosed, setIsDrawingClosed] = useState<boolean>(
+    Boolean(initialPoints && initialPoints.length >= 3)
+  );
   // Undo & Redo History
   const [history, setHistory] = useState<LatLngPoint[][]>([]);
   const [redoHistory, setRedoHistory] = useState<LatLngPoint[][]>([]);
   // Map Mode - default to standard Map view (not satellite)
   const [mapMode, setMapMode] = useState<"satellite" | "map">("map");
+  // Live cursor guide distance in feet
+  const [cursorDistanceFt, setCursorDistanceFt] = useState<number | null>(null);
 
-  // Keep parent in sync on initial mount only if points exist
+  // Synced refs for event listeners
+  const pointsRef = useRef<LatLngPoint[]>(points);
+  pointsRef.current = points;
+  const isClosedRef = useRef<boolean>(isDrawingClosed);
+  isClosedRef.current = isDrawingClosed;
+
+  // Keep parent in sync
   useEffect(() => {
     if (points.length >= 3) {
       onParcelChange(points);
+    }
+  }, [points]);
+
+  // Inject CSS animations for smooth vertex hover and first-point pulse ring
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const styleId = "malikse-smooth-plot-styles";
+    if (!document.getElementById(styleId)) {
+      const styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      styleEl.innerHTML = `
+        .parcel-vertex-handle {
+          width: 14px;
+          height: 14px;
+          background-color: #FFFFFF;
+          border: 2.5px solid #10B981;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          cursor: grab;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .parcel-vertex-handle:hover {
+          transform: scale(1.35);
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+        }
+        .parcel-first-vertex-pulse {
+          width: 16px;
+          height: 16px;
+          background-color: #FFFFFF;
+          border: 3px solid #059669;
+          border-radius: 50%;
+          cursor: pointer;
+          animation: parcel-pulse 1.3s infinite ease-in-out;
+        }
+        @keyframes parcel-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); transform: scale(1); }
+          70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); transform: scale(1.2); }
+          100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); transform: scale(1); }
+        }
+        .parcel-midpoint-handle {
+          width: 11px;
+          height: 11px;
+          background-color: rgba(255, 255, 255, 0.95);
+          border: 2px solid #10B981;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+          transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        .parcel-midpoint-handle:hover {
+          transform: scale(1.4);
+          background-color: #10B981;
+        }
+        .leaflet-container {
+          cursor: crosshair !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
     }
   }, []);
 
@@ -80,29 +144,68 @@ export default function MapParcelPicker({
     return { lat: sumLat / pts.length, lng: sumLng / pts.length };
   };
 
-  // Compute rough geodesic polygon area in sq.ft if dynamic
-  const calculateAreaSqFt = (pts: LatLngPoint[]) => {
-    if (pts.length < 3) return areaSqFt ? `${areaSqFt} sq.ft` : "0 sq.ft";
-    // Shoelace formula with Earth radius approximation (meters -> sq.ft)
+  // Distance between 2 coordinates in feet & meters
+  const getEdgeDistance = (p1: LatLngPoint, p2: LatLngPoint) => {
+    const R = 6371e3; // meters
+    const φ1 = (p1.lat * Math.PI) / 180;
+    const φ2 = (p2.lat * Math.PI) / 180;
+    const Δφ = ((p2.lat - p1.lat) * Math.PI) / 180;
+    const Δλ = ((p2.lng - p1.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const meters = R * c;
+    const feet = Math.round(meters * 3.28084);
+    return { feet, meters: Math.round(meters) };
+  };
+
+  // Compute rough geodesic polygon area in sq.ft, Kattha, and Decimal
+  const getAreaDetails = (pts: LatLngPoint[]) => {
+    if (pts.length < 3) return null;
     const R = 6378137;
     let area = 0;
-    if (pts.length > 2) {
-      for (let i = 0; i < pts.length; i++) {
-        const j = (i + 1) % pts.length;
-        const p1 = pts[i];
-        const p2 = pts[j];
-        const lat1 = (p1.lat * Math.PI) / 180;
-        const lat2 = (p2.lat * Math.PI) / 180;
-        const lon1 = (p1.lng * Math.PI) / 180;
-        const lon2 = (p2.lng * Math.PI) / 180;
-        area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
-      }
-      area = (Math.abs(area) * R * R) / 2;
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i + 1) % pts.length;
+      const p1 = pts[i];
+      const p2 = pts[j];
+      const lat1 = (p1.lat * Math.PI) / 180;
+      const lat2 = (p2.lat * Math.PI) / 180;
+      const lon1 = (p1.lng * Math.PI) / 180;
+      const lon2 = (p2.lng * Math.PI) / 180;
+      area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
     }
+    area = (Math.abs(area) * R * R) / 2;
     const sqMeters = Math.round(area);
     const sqFt = Math.round(sqMeters * 10.7639);
-    return sqFt > 100 ? `${sqFt.toLocaleString("en-IN")} ${language === "hi" ? "वर्गफ़ीट" : "sq.ft"}` : `${areaSqFt} ${language === "hi" ? "वर्गफ़ीट" : "sq.ft"}`;
+    const kattha = (sqFt / 1361.25).toFixed(2);
+    const decimal = (sqFt / 435.6).toFixed(2);
+    const formattedSqFt = sqFt.toLocaleString("en-IN");
+    return {
+      sqFt,
+      kattha,
+      decimal,
+      formattedSqFt,
+      badgeText: `${formattedSqFt} sq.ft (${kattha} ${language === "hi" ? "कट्ठा" : "Kattha"})`,
+      fullText: `${formattedSqFt} sq.ft • ${kattha} ${language === "hi" ? "कट्ठा" : "Kattha"} • ${decimal} ${language === "hi" ? "डेसिमल" : "Decimal"}`,
+    };
   };
+
+  // Keyboard Shortcuts (Undo with Ctrl+Z / Backspace, Cancel with Esc)
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        handleUndo();
+      } else if (e.key === "Escape") {
+        handleClear();
+      } else if (e.key === "Enter" && points.length >= 3 && !isDrawingClosed) {
+        handleFinishBoundary();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [points, history, isDrawingClosed]);
 
   // Initialize interactive Leaflet map instance
   useEffect(() => {
@@ -130,7 +233,7 @@ export default function MapParcelPicker({
       });
       mapInstanceRef.current = map;
 
-      // Google Earth Satellite tiles (Hybrid with plot demarcations & roads)
+      // Google Maps Tile Layer
       const googleTileUrl =
         mapMode === "satellite"
           ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
@@ -144,14 +247,92 @@ export default function MapParcelPicker({
 
       // Map Click to Add New Boundary Point
       map.on("click", (e: any) => {
+        // If drawing is already closed, don't add points on map click; user can drag handles
+        if (isClosedRef.current && pointsRef.current.length >= 3) return;
+
         const newPt: LatLngPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+
         setPoints((prev) => {
+          // If user clicked close to the first point when having >= 3 points, snap & close
+          if (prev.length >= 3) {
+            const distToFirst = getEdgeDistance(prev[0], newPt);
+            if (distToFirst.feet < 30) {
+              setIsDrawingClosed(true);
+              isClosedRef.current = true;
+              if (mouseGuideLineRef.current) {
+                map.removeLayer(mouseGuideLineRef.current);
+                mouseGuideLineRef.current = null;
+              }
+              setCursorDistanceFt(null);
+              return prev;
+            }
+          }
+
           setHistory((h) => [...h, prev]);
           setRedoHistory([]);
           const updated = [...prev, newPt];
           onParcelChange(updated);
           return updated;
         });
+      });
+
+      // Live Rubber-Band Guide Line to Mouse Cursor
+      map.on("mousemove", (e: any) => {
+        const curPts = pointsRef.current;
+        if (curPts.length > 0 && !isClosedRef.current) {
+          const lastPt = curPts[curPts.length - 1];
+          const curPt = { lat: e.latlng.lat, lng: e.latlng.lng };
+
+          if (!mouseGuideLineRef.current) {
+            mouseGuideLineRef.current = L.polyline(
+              [
+                [lastPt.lat, lastPt.lng],
+                [curPt.lat, curPt.lng],
+              ],
+              {
+                color: "#10B981",
+                weight: 2,
+                dashArray: "5, 5",
+                opacity: 0.85,
+              }
+            ).addTo(map);
+          } else {
+            mouseGuideLineRef.current.setLatLngs([
+              [lastPt.lat, lastPt.lng],
+              [curPt.lat, curPt.lng],
+            ]);
+          }
+
+          const dist = getEdgeDistance(lastPt, curPt);
+          setCursorDistanceFt(dist.feet);
+        } else if (mouseGuideLineRef.current) {
+          map.removeLayer(mouseGuideLineRef.current);
+          mouseGuideLineRef.current = null;
+          setCursorDistanceFt(null);
+        }
+      });
+
+      // Mouse Out: hide rubber band line
+      map.on("mouseout", () => {
+        if (mouseGuideLineRef.current) {
+          map.removeLayer(mouseGuideLineRef.current);
+          mouseGuideLineRef.current = null;
+        }
+        setCursorDistanceFt(null);
+      });
+
+      // Double-Click to Finish Shape
+      map.on("dblclick", (e: any) => {
+        e.originalEvent?.stopPropagation();
+        if (pointsRef.current.length >= 3) {
+          setIsDrawingClosed(true);
+          isClosedRef.current = true;
+          if (mouseGuideLineRef.current) {
+            map.removeLayer(mouseGuideLineRef.current);
+            mouseGuideLineRef.current = null;
+          }
+          setCursorDistanceFt(null);
+        }
       });
 
       renderParcel(L, map, points);
@@ -186,25 +367,31 @@ export default function MapParcelPicker({
     });
   }, [mapMode]);
 
-  // Re-render polygon & vertex markers when points or language changes
+  // Re-render polygon & vertex markers when points or closed status changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     import("leaflet").then((leafletModule) => {
       const L = (leafletModule as any).default || leafletModule;
       renderParcel(L, mapInstanceRef.current, points);
     });
-  }, [points, language]);
+  }, [points, isDrawingClosed, language]);
 
-  // Render Polygon, Draggable Vertex Handles, and Center Area Pill Badge
+  // Render Polygon, Draggable Vertex Handles, Midpoint Handles, Dimension Labels & Centroid Badge
   const renderParcel = (L: any, map: any, pts: LatLngPoint[]) => {
     // Clear old polygon layer
     if (polygonLayerRef.current) {
       map.removeLayer(polygonLayerRef.current);
       polygonLayerRef.current = null;
     }
-    // Clear old markers
+    // Clear old corner markers
     markerLayersRef.current.forEach((m) => map.removeLayer(m));
     markerLayersRef.current = [];
+    // Clear old midpoint markers
+    midpointLayersRef.current.forEach((m) => map.removeLayer(m));
+    midpointLayersRef.current = [];
+    // Clear old dimension markers
+    dimensionLayersRef.current.forEach((m) => map.removeLayer(m));
+    dimensionLayersRef.current = [];
     // Clear old center badge
     if (centerBadgeMarkerRef.current) {
       map.removeLayer(centerBadgeMarkerRef.current);
@@ -213,19 +400,18 @@ export default function MapParcelPicker({
 
     if (pts.length === 0) return;
 
-    // If 2 points, draw connecting guide line; if 3+ points, draw polygon
-    if (pts.length === 2) {
+    // 1. Draw connecting polyline or filled polygon
+    if (pts.length === 2 || (pts.length >= 3 && !isDrawingClosed)) {
       const line = L.polyline(
         pts.map((p) => [p.lat, p.lng]),
         {
           color: "#10B981",
           weight: 2.5,
-          dashArray: "6, 6",
+          dashArray: isDrawingClosed ? undefined : "6, 6",
         }
       ).addTo(map);
       polygonLayerRef.current = line;
-    } else if (pts.length >= 3) {
-      // Draw Polygon with Translucent Green Fill & Emerald Border
+    } else if (pts.length >= 3 && isDrawingClosed) {
       const latLngPairs = pts.map((p) => [p.lat, p.lng]);
       const poly = L.polygon(latLngPairs, {
         color: "#10B981",
@@ -237,38 +423,56 @@ export default function MapParcelPicker({
       polygonLayerRef.current = poly;
     }
 
-    // Draw Draggable Vertex Handles (White circle with emerald border matching screenshot)
-    const vertexIcon = L.divIcon({
+    // 2. Draw Draggable Corner Vertex Handles
+    const normalVertexIcon = L.divIcon({
       className: "parcel-vertex-icon",
-      html: `<div style="
-        width: 14px;
-        height: 14px;
-        background-color: #FFFFFF;
-        border: 2.5px solid #10B981;
-        border-radius: 50%;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.35);
-        cursor: grab;
-      "></div>`,
+      html: `<div class="parcel-vertex-handle"></div>`,
       iconSize: [14, 14],
       iconAnchor: [7, 7],
     });
 
+    const firstVertexPulseIcon = L.divIcon({
+      className: "parcel-first-vertex-icon",
+      html: `<div class="parcel-first-vertex-pulse" title="${
+        language === "hi" ? "सीमा पूरी करने के लिए क्लिक करें" : "Click to complete boundary"
+      }"></div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    });
+
     pts.forEach((p, idx) => {
+      // First vertex pulses when >= 3 points are placed and shape isn't closed yet
+      const isFirstSnapTarget = idx === 0 && pts.length >= 3 && !isDrawingClosed;
       const marker = L.marker([p.lat, p.lng], {
-        icon: vertexIcon,
+        icon: isFirstSnapTarget ? firstVertexPulseIcon : normalVertexIcon,
         draggable: true,
       }).addTo(map);
 
-      // Drag vertex to update boundary
+      // Real-time 60fps drag update without full layer rebuild
       marker.on("drag", (ev: any) => {
         const newLat = ev.latlng.lat;
         const newLng = ev.latlng.lng;
-        setPoints((prev) => {
-          const updated = [...prev];
-          updated[idx] = { lat: newLat, lng: newLng };
-          onParcelChange(updated);
-          return updated;
-        });
+        const updatedPts = [...pointsRef.current];
+        updatedPts[idx] = { lat: newLat, lng: newLng };
+        pointsRef.current = updatedPts;
+
+        // Directly update polygon geometry
+        if (polygonLayerRef.current) {
+          polygonLayerRef.current.setLatLngs(
+            updatedPts.map((pt) => [pt.lat, pt.lng])
+          );
+        }
+
+        // Directly update center badge
+        if (centerBadgeMarkerRef.current && updatedPts.length >= 3) {
+          const newCentroid = calculateCentroid(updatedPts);
+          centerBadgeMarkerRef.current.setLatLng([newCentroid.lat, newCentroid.lng]);
+          const areaInfo = getAreaDetails(updatedPts);
+          if (areaInfo) {
+            const badgeEl = document.querySelector(".parcel-center-badge-inner");
+            if (badgeEl) badgeEl.textContent = areaInfo.badgeText;
+          }
+        }
       });
 
       marker.on("dragstart", () => {
@@ -276,10 +480,27 @@ export default function MapParcelPicker({
         setRedoHistory([]);
       });
 
-      // Click to remove vertex if > 3 points
+      marker.on("dragend", () => {
+        setPoints([...pointsRef.current]);
+        onParcelChange(pointsRef.current);
+      });
+
+      // Click on first vertex when >= 3 points snaps and completes the shape
       marker.on("click", (ev: any) => {
         ev.originalEvent?.stopPropagation();
-        if (pts.length > 3) {
+        if (idx === 0 && pts.length >= 3 && !isDrawingClosed) {
+          setIsDrawingClosed(true);
+          isClosedRef.current = true;
+          if (mouseGuideLineRef.current) {
+            map.removeLayer(mouseGuideLineRef.current);
+            mouseGuideLineRef.current = null;
+          }
+          setCursorDistanceFt(null);
+          return;
+        }
+
+        // If shape is closed and > 3 points, clicking a vertex removes it
+        if (pts.length > 3 && isDrawingClosed) {
           setHistory((h) => [...h, pts]);
           setRedoHistory([]);
           const updated = pts.filter((_, i) => i !== idx);
@@ -291,35 +512,158 @@ export default function MapParcelPicker({
       markerLayersRef.current.push(marker);
     });
 
-    // Draw Center Dark Area Pill Badge (e.g. "2,400 sq.ft")
-    if (pts.length >= 3) {
-      const centroid = calculateCentroid(pts);
-      const areaLabel = calculateAreaSqFt(pts);
-      const centerBadgeIcon = L.divIcon({
-        className: "parcel-center-badge",
-        html: `<div style="
-          background-color: rgba(15, 23, 42, 0.85);
-          color: #FFFFFF;
-          padding: 5px 12px;
-          border-radius: 8px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: 0.2px;
-          white-space: nowrap;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-          pointer-events: none;
-        ">${areaLabel}</div>`,
-        iconSize: [80, 26],
-        iconAnchor: [40, 13],
-      });
+    // 3. Draw Edge Dimension Labels & Midpoint Handles
+    if (pts.length >= 2) {
+      const edgeCount = isDrawingClosed ? pts.length : pts.length - 1;
+      for (let i = 0; i < edgeCount; i++) {
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % pts.length];
+        const midLat = (p1.lat + p2.lat) / 2;
+        const midLng = (p1.lng + p2.lng) / 2;
+        const dist = getEdgeDistance(p1, p2);
 
-      const badgeMarker = L.marker([centroid.lat, centroid.lng], {
-        icon: centerBadgeIcon,
-        interactive: false,
-      }).addTo(map);
-      centerBadgeMarkerRef.current = badgeMarker;
+        // Edge Dimension Pill
+        const dimIcon = L.divIcon({
+          className: "parcel-dim-label",
+          html: `<div style="
+            background-color: rgba(255, 255, 255, 0.92);
+            border: 1px solid #CBD5E1;
+            color: #0F172A;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+            white-space: nowrap;
+            pointer-events: none;
+            letter-spacing: 0.2px;
+          ">${dist.feet} ft</div>`,
+          iconSize: [40, 16],
+          iconAnchor: [20, 8],
+        });
+
+        const dimMarker = L.marker([midLat, midLng], {
+          icon: dimIcon,
+          interactive: false,
+        }).addTo(map);
+        dimensionLayersRef.current.push(dimMarker);
+
+        // Interactive Midpoint '+' Handle (Virtual Vertex for smooth refinement)
+        if (isDrawingClosed && pts.length >= 3) {
+          const midHandleIcon = L.divIcon({
+            className: "parcel-midpoint-icon",
+            html: `<div class="parcel-midpoint-handle" title="${
+              language === "hi" ? "नया कोना जोड़ने के लिए क्लिक करें" : "Click to insert new corner"
+            }"></div>`,
+            iconSize: [11, 11],
+            iconAnchor: [5, 5],
+          });
+
+          const midMarker = L.marker([midLat, midLng], {
+            icon: midHandleIcon,
+            draggable: true,
+          }).addTo(map);
+
+          // Clicking or dragging midpoint inserts a new vertex
+          midMarker.on("click", (ev: any) => {
+            ev.originalEvent?.stopPropagation();
+            insertMidpointVertex(i, midLat, midLng);
+          });
+
+          midMarker.on("dragstart", () => {
+            insertMidpointVertex(i, midLat, midLng);
+          });
+
+          midpointLayersRef.current.push(midMarker);
+        }
+      }
+    }
+
+    // 4. Draw Center Dark Area Pill Badge (Sq.Ft + Kattha)
+    if (pts.length >= 3 && isDrawingClosed) {
+      const centroid = calculateCentroid(pts);
+      const areaInfo = getAreaDetails(pts);
+      if (areaInfo) {
+        const centerBadgeIcon = L.divIcon({
+          className: "parcel-center-badge",
+          html: `<div style="
+            background-color: rgba(15, 23, 42, 0.88);
+            color: #FFFFFF;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            border: 1.5px solid rgba(16, 185, 129, 0.8);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          ">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background-color:#10B981;"></span>
+            <span class="parcel-center-badge-inner">${areaInfo.badgeText}</span>
+          </div>`,
+          iconSize: [130, 28],
+          iconAnchor: [65, 14],
+        });
+
+        const badgeMarker = L.marker([centroid.lat, centroid.lng], {
+          icon: centerBadgeIcon,
+          interactive: false,
+        }).addTo(map);
+        centerBadgeMarkerRef.current = badgeMarker;
+      }
+    }
+  };
+
+  // Insert a new vertex from a midpoint handle
+  const insertMidpointVertex = (insertIndex: number, lat: number, lng: number) => {
+    setPoints((prev) => {
+      setHistory((h) => [...h, prev]);
+      setRedoHistory([]);
+      const updated = [
+        ...prev.slice(0, insertIndex + 1),
+        { lat, lng },
+        ...prev.slice(insertIndex + 1),
+      ];
+      onParcelChange(updated);
+      return updated;
+    });
+  };
+
+  // Quick 1-Click Standard 4-Corner Plot (2,400 sq.ft)
+  const handleDropStandardRectangle = () => {
+    if (!mapInstanceRef.current) return;
+    const center = mapInstanceRef.current.getCenter();
+    const dLat = 0.00008;
+    const dLng = 0.00014;
+    const rectPoints: LatLngPoint[] = [
+      { lat: center.lat + dLat, lng: center.lng - dLng },
+      { lat: center.lat + dLat, lng: center.lng + dLng },
+      { lat: center.lat - dLat, lng: center.lng + dLng },
+      { lat: center.lat - dLat, lng: center.lng - dLng },
+    ];
+    setHistory((h) => [...h, points]);
+    setRedoHistory([]);
+    setPoints(rectPoints);
+    setIsDrawingClosed(true);
+    isClosedRef.current = true;
+    onParcelChange(rectPoints);
+  };
+
+  // Finish / Close Boundary Manually
+  const handleFinishBoundary = () => {
+    if (points.length >= 3) {
+      setIsDrawingClosed(true);
+      isClosedRef.current = true;
+      if (mouseGuideLineRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(mouseGuideLineRef.current);
+        mouseGuideLineRef.current = null;
+      }
+      setCursorDistanceFt(null);
     }
   };
 
@@ -330,6 +674,10 @@ export default function MapParcelPicker({
     setRedoHistory((r) => [...r, points]);
     setHistory((h) => h.slice(0, -1));
     setPoints(previous);
+    if (previous.length < 3) {
+      setIsDrawingClosed(false);
+      isClosedRef.current = false;
+    }
     onParcelChange(previous);
   };
 
@@ -348,6 +696,13 @@ export default function MapParcelPicker({
     setHistory((h) => [...h, points]);
     setRedoHistory([]);
     setPoints([]);
+    setIsDrawingClosed(false);
+    isClosedRef.current = false;
+    if (mouseGuideLineRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(mouseGuideLineRef.current);
+      mouseGuideLineRef.current = null;
+    }
+    setCursorDistanceFt(null);
     onParcelChange([]);
   };
 
@@ -397,6 +752,27 @@ export default function MapParcelPicker({
     mapInstanceRef.current.flyTo(targetCoord, 17, { duration: 1.2 });
   };
 
+  // Get current guidance message for status pill
+  const getGuidanceText = () => {
+    if (points.length === 0) {
+      return t(language, "plot_hint_0") || "Tap anywhere on map to place 1st boundary corner";
+    }
+    if (points.length === 1) {
+      return cursorDistanceFt
+        ? `${t(language, "plot_hint_1") || "Tap to place 2nd corner"} (${cursorDistanceFt} ft)`
+        : t(language, "plot_hint_1") || "Tap to place 2nd corner (live distance guide)";
+    }
+    if (points.length === 2) {
+      return t(language, "plot_hint_2") || "Tap 3rd corner to form property boundary";
+    }
+    if (points.length >= 3 && !isDrawingClosed) {
+      return t(language, "plot_hint_closing") || "Click the pulsing 1st point to close boundary";
+    }
+    return t(language, "plot_hint_done") || "Boundary complete! Drag corner points or '+' to fine-tune";
+  };
+
+  const areaDetails = getAreaDetails(points);
+
   return (
     <View style={styles.workspaceContainer}>
       {/* ================= LEFT / MAIN: MAP CANVASES WITH OVERLAYS ================= */}
@@ -412,7 +788,7 @@ export default function MapParcelPicker({
               top: 0,
               left: 0,
               backgroundColor: "#F1F5F9",
-              borderRadius: 14,
+              borderRadius: 16,
             }}
           />
         ) : (
@@ -440,8 +816,41 @@ export default function MapParcelPicker({
           </TouchableOpacity>
         </View>
 
-        {/* OVERLAY: Top-Right Drawing Tools Bar (Undo, Redo, Delete) */}
+        {/* OVERLAY: Top-Right Toolbar (Quick Template, Finish, Undo, Redo, Delete) */}
         <View style={styles.mapDrawingToolbar}>
+          {/* Quick 4-Corner Plot Button */}
+          <TouchableOpacity
+            style={styles.quickPresetBtn}
+            onPress={handleDropStandardRectangle}
+            activeOpacity={0.8}
+            accessibilityLabel="Drop Standard Plot"
+          >
+            <MaterialIcons name="crop-square" size={15} color="#065F46" />
+            <Text style={styles.quickPresetBtnText}>
+              {language === "hi" ? "त्वरित प्लॉट" : "Quick Plot"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Finish Boundary Button (when >= 3 points and not closed) */}
+          {points.length >= 3 && !isDrawingClosed && (
+            <>
+              <View style={styles.toolDivider} />
+              <TouchableOpacity
+                style={styles.finishShapeBtn}
+                onPress={handleFinishBoundary}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="check" size={15} color="#FFFFFF" />
+                <Text style={styles.finishShapeBtnText}>
+                  {language === "hi" ? "पूरा करें" : "Complete"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <View style={styles.toolDivider} />
+
+          {/* Undo */}
           <TouchableOpacity
             style={[styles.toolBtn, history.length === 0 && styles.toolBtnDisabled]}
             onPress={handleUndo}
@@ -451,13 +860,14 @@ export default function MapParcelPicker({
           >
             <FontAwesome5
               name="undo-alt"
-              size={14}
+              size={13}
               color={history.length === 0 ? "#94A3B8" : "#065F46"}
             />
           </TouchableOpacity>
 
           <View style={styles.toolDivider} />
 
+          {/* Redo */}
           <TouchableOpacity
             style={[styles.toolBtn, redoHistory.length === 0 && styles.toolBtnDisabled]}
             onPress={handleRedo}
@@ -467,20 +877,21 @@ export default function MapParcelPicker({
           >
             <FontAwesome5
               name="redo-alt"
-              size={14}
+              size={13}
               color={redoHistory.length === 0 ? "#94A3B8" : "#065F46"}
             />
           </TouchableOpacity>
 
           <View style={styles.toolDivider} />
 
+          {/* Clear */}
           <TouchableOpacity
             style={styles.toolBtn}
             onPress={handleClear}
             activeOpacity={0.7}
             accessibilityLabel="Clear Boundary"
           >
-            <FontAwesome5 name="trash-alt" size={14} color="#EF4444" />
+            <FontAwesome5 name="trash-alt" size={13} color="#EF4444" />
           </TouchableOpacity>
         </View>
 
@@ -534,17 +945,13 @@ export default function MapParcelPicker({
           <MaterialIcons name="keyboard-arrow-down" size={16} color="#065F46" />
         </TouchableOpacity>
 
-        {/* OVERLAY: Empty State Prompt Hint when points === 0 */}
-        {points.length === 0 && (
-          <View style={styles.emptyHintPill}>
-            <MaterialIcons name="touch-app" size={16} color="#059669" />
-            <Text style={styles.emptyHintText}>
-              {language === "hi"
-                ? "प्लॉट की सीमा तय करने के लिए मानचित्र पर टैप करें"
-                : "Tap on the map to start plotting boundary outline"}
-            </Text>
-          </View>
-        )}
+        {/* OVERLAY: Live Interactive Guidance Status Pill */}
+        <View style={styles.liveGuidancePill}>
+          <View style={styles.pulsingStatusDot} />
+          <Text style={styles.liveGuidanceText} numberOfLines={1}>
+            {getGuidanceText()}
+          </Text>
+        </View>
 
         {/* OVERLAY: Bottom-Right Scale Indicator Bar */}
         <View style={styles.scaleIndicator}>
@@ -618,7 +1025,7 @@ export default function MapParcelPicker({
         {/* Card 2: Need Help? */}
         <View style={[styles.sidebarCard, styles.needHelpCard]}>
           <View style={styles.sidebarTitleRow}>
-            <MaterialIcons name="help-outline" size={17} color="#059669" style={{ marginRight: 6 }} />
+            <MaterialIcons name="help" size={18} color="#059669" style={{ marginRight: 6 }} />
             <Text style={styles.sidebarHeading}>{t(language, "need_help") || "Need Help?"}</Text>
           </View>
           <Text style={styles.needHelpDesc}>
@@ -670,14 +1077,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
-    width: 320,
-    maxWidth: "75%",
+    width: 310,
+    maxWidth: "70%",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
     zIndex: 1000,
   },
   mapSearchInput: {
@@ -688,7 +1095,7 @@ const styles = StyleSheet.create({
     outlineStyle: "none" as any,
   },
 
-  /* Overlay: Top-Right Drawing Tools Bar (Undo, Redo, Delete) */
+  /* Overlay: Top-Right Drawing Tools Bar */
   mapDrawingToolbar: {
     position: "absolute",
     top: 14,
@@ -702,27 +1109,59 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
     zIndex: 1000,
+    gap: 2,
+  },
+  quickPresetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E6F4EA",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  quickPresetBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#065F46",
+  },
+  finishShapeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#059669",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  finishShapeBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   toolBtn: {
-    width: 34,
-    height: 32,
+    width: 32,
+    height: 30,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 7,
+    borderRadius: 6,
   },
   toolBtnDisabled: {
-    opacity: 0.45,
+    opacity: 0.4,
   },
   toolDivider: {
     width: 1,
     height: 18,
     backgroundColor: "#E2E8F0",
+    marginHorizontal: 2,
   },
 
-  /* Overlay: Middle-Left Navigation Controls (Zoom, Crosshair, Layers) */
+  /* Overlay: Middle-Left Navigation Controls */
   mapLeftControls: {
     position: "absolute",
     top: 68,
@@ -766,7 +1205,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
 
-  /* Overlay: Bottom-Left Mode Switcher Pill (Satellite ⌵) */
+  /* Overlay: Bottom-Left Mode Switcher Pill (Map / Satellite ⌵) */
   satelliteModePill: {
     position: "absolute",
     bottom: 14,
@@ -796,6 +1235,43 @@ const styles = StyleSheet.create({
   },
   satelliteModeText: {
     fontSize: 12,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+
+  /* Overlay: Live Interactive Guidance Status Pill */
+  liveGuidancePill: {
+    position: "absolute",
+    bottom: 14,
+    alignSelf: "center",
+    left: "50%",
+    transform: [{ translateX: -190 }],
+    width: 380,
+    maxWidth: "88%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    zIndex: 1000,
+  },
+  pulsingStatusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#10B981",
+  },
+  liveGuidanceText: {
+    fontSize: 11.5,
     fontWeight: "700",
     color: "#065F46",
   },
@@ -888,36 +1364,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     lineHeight: 16,
-  },
-
-  /* Empty state floating pill */
-  emptyHintPill: {
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    left: "50%",
-    transform: [{ translateX: -190 }],
-    width: 380,
-    maxWidth: "88%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 9999,
-    borderWidth: 1.5,
-    borderColor: "#A7F3D0",
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    zIndex: 1000,
-  },
-  emptyHintText: {
-    fontSize: 12.5,
-    fontWeight: "700",
-    color: "#065F46",
   },
 });

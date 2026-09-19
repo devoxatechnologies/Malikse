@@ -16,6 +16,8 @@ import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
 
+const heroBgImg = require("../../assets/marketplace_hero_bg.png");
+
 interface SavedPropertyItem {
   id: string;
   title: string;
@@ -95,15 +97,13 @@ export default function SavedScreen() {
         {/* ================= 2. HERO BANNER ================= */}
         <View style={styles.heroWrapper}>
           <View style={styles.heroCard}>
-            {/* Background Landscape Photo */}
+            {/* Background Landscape Photo (Matching home page aesthetic) */}
             <Image
-              source={{
-                uri: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1600&q=85",
-              }}
+              source={heroBgImg}
               style={styles.heroBackground}
               resizeMode="cover"
             />
-            {/* Soft Translucent Light Overlay to preserve high contrast */}
+            {/* Soft Translucent Light Gradient Overlay */}
             <View style={styles.heroOverlay} />
 
             {/* Left Content Column */}
@@ -267,10 +267,10 @@ export default function SavedScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Card 2: Promo / Value Proposition Mini Card */}
+            {/* Card 2: Promo / Value Proposition Mini Card (Cleanly proportioned) */}
             <View style={styles.promoCard}>
               <View style={styles.promoHeartCircle}>
-                <MaterialIcons name="favorite" size={16} color="#059669" />
+                <MaterialIcons name="favorite" size={15} color="#059669" />
               </View>
               <Text style={styles.promoTitle}>
                 {t(language, "saved_promo_title") || "Shortlist. Compare."}
@@ -278,16 +278,53 @@ export default function SavedScreen() {
               <Text style={styles.promoSubtitle}>
                 {t(language, "saved_promo_sub") || "Make the right move."}
               </Text>
-              {/* Decorative miniature landscape graphic */}
-              <View style={styles.promoGraphic}>
-                <View style={styles.promoHillBack} />
-                <View style={styles.promoHillFront} />
-                <View style={styles.promoHouseIcon}>
-                  <MaterialIcons name="home" size={18} color="#065F46" />
-                </View>
-                <View style={styles.promoTreeIcon}>
-                  <MaterialIcons name="park" size={14} color="#059669" />
-                </View>
+
+              {/* Refined Minimalist Landscape Vector Graphic */}
+              <View style={styles.promoGraphicWrap}>
+                {Platform.OS === "web" ? (
+                  <svg
+                    viewBox="0 0 200 68"
+                    width="100%"
+                    height="68"
+                    style={{ display: "block", overflow: "hidden", borderBottomLeftRadius: 13, borderBottomRightRadius: 13 }}
+                  >
+                    <defs>
+                      <linearGradient id="hillBackGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#86EFAC" stopOpacity="0.8" />
+                        <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.9" />
+                      </linearGradient>
+                      <linearGradient id="hillFrontGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22C55E" stopOpacity="0.9" />
+                        <stop offset="100%" stopColor="#15803D" stopOpacity="1" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Back Rolling Hill */}
+                    <path d="M0,68 L0,36 Q55,14 125,28 Q165,36 200,30 L200,68 Z" fill="url(#hillBackGrad)" />
+
+                    {/* Back Trees */}
+                    <circle cx="28" cy="24" r="8" fill="#15803D" />
+                    <rect x="26.5" y="30" width="3" height="8" fill="#78350F" />
+                    <circle cx="44" cy="20" r="10" fill="#166534" />
+                    <rect x="42.5" y="28" width="3" height="9" fill="#78350F" />
+
+                    {/* Front Hill */}
+                    <path d="M0,68 L0,45 Q70,24 140,40 Q175,48 200,42 L200,68 Z" fill="url(#hillFrontGrad)" />
+
+                    {/* Front Tree */}
+                    <circle cx="78" cy="34" r="7" fill="#14532D" />
+                    <rect x="76.5" y="40" width="3" height="8" fill="#78350F" />
+
+                    {/* Modern Clean House on Right Slope */}
+                    <polygon points="158,28 176,16 194,28" fill="#065F46" />
+                    <rect x="162" y="28" width="28" height="20" fill="#FFFFFF" />
+                    <rect x="166" y="32" width="7" height="7" fill="#93C5FD" />
+                    <rect x="178" y="34" width="8" height="14" fill="#047857" />
+                    <rect x="186" y="20" width="3" height="8" fill="#991B1B" />
+                  </svg>
+                ) : (
+                  <View style={styles.fallbackPromoGraphic} />
+                )}
               </View>
             </View>
           </View>
@@ -609,8 +646,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1240,
     alignSelf: "center",
-    height: 190,
-    borderRadius: 16,
+    height: 195,
+    borderRadius: 18,
     overflow: "hidden",
     position: "relative",
     justifyContent: "center",
@@ -623,7 +660,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: "rgba(255, 255, 255, 0.42)",
   },
   heroLeftContent: {
     maxWidth: 420,
@@ -783,15 +820,15 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
 
-  /* PROMO MINI CARD */
+  /* PROMO MINI CARD (Cleanly proportioned) */
   promoCard: {
     backgroundColor: "#F0FDF4",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#BBF7D0",
-    padding: 14,
+    paddingTop: 14,
+    paddingHorizontal: 14,
     marginTop: 16,
-    position: "relative",
     overflow: "hidden",
   },
   promoHeartCircle: {
@@ -799,6 +836,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: "#DCFCE7",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -812,40 +851,19 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: "#475569",
     marginTop: 2,
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  promoGraphic: {
-    height: 38,
+  promoGraphicWrap: {
     width: "100%",
-    position: "relative",
+    marginTop: 4,
+    marginHorizontal: -14,
+    marginBottom: -1,
   },
-  promoHillBack: {
-    position: "absolute",
-    bottom: -10,
-    right: 10,
-    width: 90,
-    height: 45,
-    borderRadius: 45,
-    backgroundColor: "#BBF7D0",
-  },
-  promoHillFront: {
-    position: "absolute",
-    bottom: -15,
-    left: -10,
-    width: 130,
-    height: 55,
-    borderRadius: 55,
+  fallbackPromoGraphic: {
+    height: 38,
     backgroundColor: "#86EFAC",
-  },
-  promoHouseIcon: {
-    position: "absolute",
-    bottom: 2,
-    right: 22,
-  },
-  promoTreeIcon: {
-    position: "absolute",
-    bottom: 2,
-    left: 28,
+    borderBottomLeftRadius: 13,
+    borderBottomRightRadius: 13,
   },
 
   /* CONTENT AREA */

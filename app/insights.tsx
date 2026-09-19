@@ -157,14 +157,10 @@ export default function InsightsScreen() {
 
   return (
     <View style={styles.screen}>
+      {/* Universal Brand AppHeader matching all other pages */}
       <AppHeader
-        title={t(language, "insights_page_title") || "Land Market Insights"}
-        subtitle={
-          t(language, "insights_page_subtitle") ||
-          "Bihar & Patna land price trends, government MVR rates & legal diligence guide"
-        }
-        showBack={true}
-        fallbackRoute="/search"
+        showBack={false}
+        showNavLinks={true}
         showLanguageToggle={true}
         showPostPropertyBtn={true}
       />
@@ -172,6 +168,29 @@ export default function InsightsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Properly proportioned container (maxWidth: 1080px for desktop, 94% width) */}
         <View style={styles.container}>
+          {/* ================= PAGE HEADER SECTION ================= */}
+          <View style={styles.pageHeader}>
+            <View style={styles.pageHeaderRow}>
+              <View style={{ flex: 1, minWidth: 260 }}>
+                <View style={styles.titleWithBadge}>
+                  <Text style={styles.pageTitle}>
+                    {t(language, "insights_page_title") || "Land Market Insights"}
+                  </Text>
+                  <View style={styles.verifiedBadge}>
+                    <MaterialIcons name="insights" size={14} color="#059669" />
+                    <Text style={styles.verifiedBadgeText}>
+                      {language === "hi" ? "सरकारी MVR एवं ट्रेंड्स" : "Govt MVR & Market Pulse"}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.pageSubtitle}>
+                  {t(language, "insights_page_subtitle") ||
+                    "Bihar & Patna land price trends, government MVR rates & legal diligence guide"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* ================= 1. KEY MARKET PULSE METRICS ================= */}
           <View style={styles.metricsRow}>
             <View style={styles.metricCard}>
@@ -753,6 +772,52 @@ const styles = StyleSheet.create({
     maxWidth: 1080,
     alignSelf: "center",
     paddingTop: 20,
+  },
+
+  /* Page Header Section */
+  pageHeader: {
+    marginBottom: 20,
+  },
+  pageHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  titleWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#0F172A",
+    letterSpacing: -0.4,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#065F46",
+  },
+  pageSubtitle: {
+    fontSize: 13.5,
+    color: "#64748B",
+    marginTop: 4,
+    lineHeight: 19,
   },
 
   /* 1. Key Metrics */

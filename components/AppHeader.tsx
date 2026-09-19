@@ -43,6 +43,11 @@ export default function AppHeader({
   const { language, toggleLanguage } = useLanguageStore();
   const { user, authState } = useAuthStore();
 
+  const isExploreActive = pathname === "/search" || pathname === "/" || pathname === "/(tabs)/search";
+  const isMyListingsActive = pathname === "/my-properties" || pathname === "/(tabs)/my-properties" || Boolean(pathname?.includes("my-properties"));
+  const isSavedActive = pathname === "/saved" || pathname === "/(tabs)/saved" || Boolean(pathname?.includes("saved"));
+  const isInsightsActive = pathname === "/insights" || Boolean(pathname?.includes("insights"));
+
   const handleBack = () => {
     if (onBackPress) {
       onBackPress();
@@ -113,23 +118,23 @@ export default function AppHeader({
           </View>
         ) : isDesktop && showNavLinks ? (
           <View style={styles.navLinksRow}>
-            {/* Explore Plots (Active with bold bottom underline) */}
+            {/* Explore Plots */}
             <TouchableOpacity
-              style={[styles.navLink, pathname === "/search" && styles.navLinkActive]}
+              style={[styles.navLink, isExploreActive && styles.navLinkActive]}
               onPress={() => router.replace("/search")}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navLinkText, pathname === "/search" && styles.navLinkTextActive]}>
+              <Text style={[styles.navLinkText, isExploreActive && styles.navLinkTextActive]}>
                 {t(language, "nav_explore_plots") || "Explore Plots"}
               </Text>
-              {pathname === "/search" && <View style={styles.activeIndicator} />}
+              {isExploreActive && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
 
             {/* My Listings */}
             <TouchableOpacity
               style={[
                 styles.navLink,
-                pathname === "/my-properties"
+                isMyListingsActive
                   ? {
                       backgroundColor: "#ECFDF5",
                       borderRadius: 9999,
@@ -146,7 +151,7 @@ export default function AppHeader({
               <Text
                 style={[
                   styles.navLinkText,
-                  pathname === "/my-properties" && { color: "#065F46", fontWeight: "700" },
+                  isMyListingsActive && { color: "#065F46", fontWeight: "700" },
                 ]}
               >
                 {t(language, "nav_my_listings") || "My Listings"}
@@ -157,7 +162,7 @@ export default function AppHeader({
             <TouchableOpacity
               style={[
                 styles.navLink,
-                pathname === "/saved"
+                isSavedActive
                   ? {
                       backgroundColor: "#ECFDF5",
                       borderRadius: 9999,
@@ -172,15 +177,15 @@ export default function AppHeader({
               activeOpacity={0.8}
             >
               <MaterialIcons
-                name={pathname === "/saved" ? "favorite" : "favorite-border"}
+                name={isSavedActive ? "favorite" : "favorite-border"}
                 size={15}
-                color={pathname === "/saved" ? "#059669" : "#475569"}
+                color={isSavedActive ? "#059669" : "#475569"}
                 style={{ marginRight: 4 }}
               />
               <Text
                 style={[
                   styles.navLinkText,
-                  pathname === "/saved" && { color: "#065F46", fontWeight: "700" },
+                  isSavedActive && { color: "#065F46", fontWeight: "700" },
                 ]}
               >
                 {t(language, "nav_saved_plots") || "Saved"}
@@ -189,14 +194,30 @@ export default function AppHeader({
 
             {/* Insights */}
             <TouchableOpacity
-              style={[styles.navLink, pathname === "/insights" && styles.navLinkActive]}
+              style={[
+                styles.navLink,
+                isInsightsActive
+                  ? {
+                      backgroundColor: "#ECFDF5",
+                      borderRadius: 9999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderWidth: 1,
+                      borderColor: "#A7F3D0",
+                    }
+                  : null,
+              ]}
               onPress={() => router.push("/insights")}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navLinkText, pathname === "/insights" && styles.navLinkTextActive]}>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  isInsightsActive && { color: "#065F46", fontWeight: "700" },
+                ]}
+              >
                 {t(language, "nav_insights") || "Insights"}
               </Text>
-              {pathname === "/insights" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
           </View>
         ) : null}

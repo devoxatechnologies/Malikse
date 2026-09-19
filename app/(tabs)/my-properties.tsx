@@ -317,7 +317,6 @@ export default function MyPropertiesScreen() {
                 source={heroBgImg}
                 style={styles.heroBannerBackground}
                 resizeMode="cover"
-                blurRadius={Platform.OS === "web" ? 0 : 2}
               />
               <View style={styles.heroBannerOverlay} />
 
@@ -898,8 +897,6 @@ const styles = StyleSheet.create({
       web: {
         objectFit: "cover",
         objectPosition: "center center",
-        filter: "blur(2px)",
-        transform: "scale(1.04)",
       } as any,
     }),
   },

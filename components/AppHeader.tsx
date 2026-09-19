@@ -46,6 +46,7 @@ export default function AppHeader({
   const isExploreActive = pathname === "/search" || pathname === "/" || pathname === "/(tabs)/search";
   const isMyListingsActive = pathname === "/my-properties" || pathname === "/(tabs)/my-properties" || Boolean(pathname?.includes("my-properties"));
   const isSavedActive = pathname === "/saved" || pathname === "/(tabs)/saved" || Boolean(pathname?.includes("saved"));
+  const isMessagesActive = pathname === "/messages" || pathname === "/(tabs)/messages" || Boolean(pathname?.includes("messages"));
   const isInsightsActive = pathname === "/insights" || Boolean(pathname?.includes("insights"));
 
   const handleBack = () => {
@@ -190,6 +191,45 @@ export default function AppHeader({
               >
                 {t(language, "nav_saved_plots") || "Saved"}
               </Text>
+            </TouchableOpacity>
+
+            {/* Messages */}
+            <TouchableOpacity
+              style={[
+                styles.navLink,
+                isMessagesActive
+                  ? {
+                      backgroundColor: "#ECFDF5",
+                      borderRadius: 9999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderWidth: 1,
+                      borderColor: "#A7F3D0",
+                    }
+                  : null,
+              ]}
+              onPress={() => router.push("/messages")}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.navLinkText,
+                  isMessagesActive && { color: "#065F46", fontWeight: "700" },
+                ]}
+              >
+                {t(language, "nav_messages") || "Messages"}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: "#059669",
+                  borderRadius: 9999,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1,
+                  marginLeft: 5,
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 10.5, fontWeight: "700" }}>3</Text>
+              </View>
             </TouchableOpacity>
 
             {/* Insights */}

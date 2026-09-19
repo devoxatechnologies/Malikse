@@ -19,6 +19,7 @@ import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
 
 const heroBgImg = require("../../assets/my_listings_hero_bg.png");
+const boostBgImg = require("../../assets/verification_boost_bg.png");
 const defaultAerialPhoto = require("../../assets/plot_patna_aerial.jpg");
 
 const DUMMY_MY_PROPERTIES = [
@@ -691,9 +692,16 @@ export default function MyPropertiesScreen() {
 
             {/* 5. BOTTOM BOOSTER BANNER: Want faster verification? */}
             <View style={styles.boostBanner}>
+              <Image
+                source={boostBgImg}
+                style={styles.boostBannerBackground}
+                resizeMode="cover"
+              />
+              <View style={styles.boostBannerOverlay} />
+
               <View style={styles.boostBannerLeft}>
                 <View style={styles.boostIconCircle}>
-                  <MaterialIcons name="insights" size={20} color="#065F46" />
+                  <MaterialIcons name="insights" size={20} color="#047857" />
                 </View>
                 <View style={styles.boostTextCol}>
                   <Text style={styles.boostTitle}>
@@ -1402,31 +1410,59 @@ const styles = StyleSheet.create({
 
   /* 5. Bottom Booster Banner */
   boostBanner: {
-    backgroundColor: "#E6F4EA",
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#E6F5EE",
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#A7F3D0",
     paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    marginTop: 22,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 16,
+    minHeight: 88,
+  },
+  boostBannerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    ...Platform.select({
+      web: {
+        objectFit: "cover",
+        objectPosition: "82% 70%",
+      } as any,
+    }),
+  },
+  boostBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    pointerEvents: "none",
+    ...Platform.select({
+      web: {
+        background:
+          "linear-gradient(90deg, #E6F5EE 0%, #E6F5EE 46%, rgba(230, 245, 238, 0.92) 58%, rgba(230, 245, 238, 0.35) 70%, rgba(230, 245, 238, 0.05) 84%, transparent 100%)",
+      } as any,
+      default: {
+        backgroundColor: "rgba(230, 245, 238, 0.4)",
+      },
+    }),
   },
   boostBannerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     flex: 1,
-    minWidth: 260,
+    minWidth: 280,
+    zIndex: 2,
   },
   boostIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#A7F3D0",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#C6F6D5",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1434,30 +1470,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   boostTitle: {
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
+    letterSpacing: -0.2,
   },
   boostSubtitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: "#475569",
     marginTop: 2,
+    lineHeight: 16,
+    fontWeight: "500",
   },
   boostActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
     borderColor: "#059669",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
     borderRadius: 9999,
+    zIndex: 2,
+    ...Platform.select({
+      web: {
+        cursor: "pointer",
+        boxShadow: "0 1px 3px rgba(5, 150, 105, 0.08)",
+      } as any,
+    }),
   },
   boostActionBtnText: {
     color: "#059669",
-    fontSize: 12.5,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   /* States */

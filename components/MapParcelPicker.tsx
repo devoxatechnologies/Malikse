@@ -635,27 +635,27 @@ const styles = StyleSheet.create({
   workspaceContainer: {
     width: "100%",
     flexDirection: Platform.OS === "web" ? "row" : "column",
-    gap: 20,
+    gap: 24,
     alignItems: "stretch",
   },
 
   /* Left / Main Map Canvas */
   mapCanvasCard: {
     flex: 1,
-    minHeight: 480,
-    height: 480,
-    borderRadius: 14,
+    minHeight: 520,
+    height: 520,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#18231C",
+    backgroundColor: "#F1F5F9",
   },
   fallbackBox: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    height: 480,
+    height: 520,
     backgroundColor: "#F8FAFC",
   },
 

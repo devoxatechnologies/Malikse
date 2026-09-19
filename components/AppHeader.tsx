@@ -158,7 +158,7 @@ export default function AppHeader({
             {/* Insights */}
             <TouchableOpacity
               style={[styles.navLink, pathname === "/insights" && styles.navLinkActive]}
-              onPress={() => router.push("/search")}
+              onPress={() => router.push("/insights")}
               activeOpacity={0.8}
             >
               <Text style={[styles.navLinkText, pathname === "/insights" && styles.navLinkTextActive]}>

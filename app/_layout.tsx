@@ -28,6 +28,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="property/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="listing/create" options={{ headerShown: false }} />
+        <Stack.Screen name="insights" options={{ headerShown: false }} />
         <Stack.Screen name="advisor" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />

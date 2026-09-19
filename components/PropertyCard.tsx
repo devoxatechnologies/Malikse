@@ -4,6 +4,8 @@ import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Property } from "../src/types/property.types";
 import { AppTheme } from "../constants/theme";
+import { useLanguageStore } from "../src/store/languageStore";
+import { t } from "../src/i18n/translations";
 
 interface PropertyCardProps {
   property: Property | any;
@@ -19,16 +21,18 @@ const FALLBACK_IMAGES = [
 
 export default function PropertyCard({ property, onSave, isSaved }: PropertyCardProps) {
   const router = useRouter();
+  const { language } = useLanguageStore();
 
   const handlePress = () => {
     router.push(`/property/${property.id || property._id}`);
   };
 
   const rawPrice = Number(property.price) || 0;
+  const lakhText = t(language, "unit_lakh") || "Lakh";
   const formattedPrice = rawPrice >= 10000000 
     ? `₹${(rawPrice / 10000000).toFixed(2)} Cr` 
     : rawPrice >= 100000 
-    ? `₹${(rawPrice / 100000).toFixed(2)} Lakh` 
+    ? `₹${(rawPrice / 100000).toFixed(2)} ${lakhText}` 
     : `₹${rawPrice.toLocaleString("en-IN")}`;
 
   const imageUri = property.media?.photos?.[0] || property.image || FALLBACK_IMAGES[0];
@@ -37,11 +41,12 @@ export default function PropertyCard({ property, onSave, isSaved }: PropertyCard
     ? property.location 
     : `${property.location?.district || "Patna"}, ${property.location?.state || "Bihar"}`;
   
+  const sqftText = t(language, "unit_sqft") || "sq.ft";
   const areaStr = property.sellableArea 
-    ? `${property.sellableArea} sq.ft` 
+    ? `${property.sellableArea} ${sqftText}` 
     : property.totalArea 
-    ? `${property.totalArea} sq.ft` 
-    : property.area || "2,400 sq.ft";
+    ? `${property.totalArea} ${sqftText}` 
+    : `2,400 ${sqftText}`;
 
   return (
     <TouchableOpacity
@@ -62,7 +67,7 @@ export default function PropertyCard({ property, onSave, isSaved }: PropertyCard
             color={AppTheme.colors.white}
           />
           <Text style={styles.statusBadgeText}>
-            {isVerified ? "Verified Owner" : "In Verification"}
+            {isVerified ? (language === "hi" ? "सत्यापित मालिक" : "Verified Owner") : (language === "hi" ? "सत्यापन जारी" : "In Verification")}
           </Text>
         </View>
 
@@ -114,32 +119,40 @@ export default function PropertyCard({ property, onSave, isSaved }: PropertyCard
         <View style={styles.trustSignals}>
           <View style={[styles.trustPill, styles.trustPillActive]}>
             <MaterialIcons name="fingerprint" size={12} color={AppTheme.colors.badgeIdentity} />
-            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeIdentity }]}>ID KYC</Text>
+            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeIdentity }]}>
+              {language === "hi" ? "KYC जाँचा" : "ID KYC"}
+            </Text>
           </View>
           <View style={[styles.trustPill, styles.trustPillActive]}>
             <MaterialIcons name="description" size={12} color={AppTheme.colors.badgeDocument} />
-            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeDocument }]}>Registry</Text>
+            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeDocument }]}>
+              {t(language, "badge_registry") || "Registry"}
+            </Text>
           </View>
           <View style={[styles.trustPill, styles.trustPillActive]}>
             <MaterialIcons name="location-pin" size={12} color={AppTheme.colors.badgeSite} />
-            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeSite }]}>GPS Visit</Text>
+            <Text style={[styles.trustPillText, { color: AppTheme.colors.badgeSite }]}>
+              {t(language, "badge_gps_visit") || "GPS Visit"}
+            </Text>
           </View>
           <View style={[styles.trustPill, isVerified ? styles.trustPillActive : styles.trustPillMuted]}>
             <MaterialIcons name="gavel" size={12} color={isVerified ? AppTheme.colors.badgeLawyer : AppTheme.colors.textMuted} />
-            <Text style={[styles.trustPillText, { color: isVerified ? AppTheme.colors.badgeLawyer : AppTheme.colors.textMuted }]}>Legal</Text>
+            <Text style={[styles.trustPillText, { color: isVerified ? AppTheme.colors.badgeLawyer : AppTheme.colors.textMuted }]}>
+              {language === "hi" ? "कानूनी" : "Legal"}
+            </Text>
           </View>
         </View>
 
         {/* Price & Action Footer */}
         <View style={styles.footer}>
           <View>
-            <Text style={styles.priceLabel}>Price</Text>
+            <Text style={styles.priceLabel}>{t(language, "prop_price") || "Price"}</Text>
             <Text style={styles.price}>{formattedPrice}</Text>
           </View>
 
           <View style={styles.viewBtn}>
-            <Text style={styles.viewBtnText}>View Details</Text>
-            <MaterialIcons name="arrow-forward" size={16} color={AppTheme.colors.white} />
+            <Text style={styles.viewBtnText}>{t(language, "view_details") || "View Details"}</Text>
+            <MaterialIcons name="arrow-forward" size={15} color="#065F46" />
           </View>
         </View>
       </View>
@@ -300,15 +313,17 @@ const styles = StyleSheet.create({
   viewBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppTheme.colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: AppTheme.radius.md,
+    backgroundColor: "#E6F4EA",
+    paddingHorizontal: 15,
+    paddingVertical: 7,
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     gap: 6,
   },
   viewBtnText: {
-    color: AppTheme.colors.white,
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#065F46",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
 });

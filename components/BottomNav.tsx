@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, useWindowDimensions
 import { usePathname, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuthStore } from "../src/store/authStore";
+import { useLanguageStore } from "../src/store/languageStore";
 
 import BiharHeritageWatermark from "./BiharHeritageWatermark";
 
@@ -12,6 +13,7 @@ export default function BottomNav() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 800;
   const { authState } = useAuthStore();
+  const { language } = useLanguageStore();
 
   const isHomeActive = pathname === "/search" || pathname === "/";
   const isSavedActive = pathname === "/saved";
@@ -25,7 +27,11 @@ export default function BottomNav() {
           {/* Left Watermark: Bihar Heritage Monument Skyline (Golghar, Mahabodhi) + caption */}
           <View style={styles.leftWatermark}>
             <BiharHeritageWatermark width={140} height={42} opacity={0.45} />
-            <Text style={styles.watermarkText}>Building Trust in{"\n"}Every Square Foot</Text>
+            <Text style={styles.watermarkText}>
+              {language === "hi"
+                ? "हर वर्गफ़ीट में\nविश्वास का निर्माण"
+                : "Building Trust in\nEvery Square Foot"}
+            </Text>
           </View>
 
           {/* Center Floating Dock */}
@@ -42,7 +48,7 @@ export default function BottomNav() {
                 color={isHomeActive ? "#059669" : "#64748B"}
               />
               <Text style={[styles.dockLabel, isHomeActive && styles.dockLabelActive]}>
-                Home
+                {language === "hi" ? "होम" : "Home"}
               </Text>
               {isHomeActive && <View style={styles.dockActiveBar} />}
             </TouchableOpacity>
@@ -59,7 +65,7 @@ export default function BottomNav() {
                 color={isSavedActive ? "#059669" : "#64748B"}
               />
               <Text style={[styles.dockLabel, isSavedActive && styles.dockLabelActive]}>
-                Saved
+                {language === "hi" ? "सहेजे गए" : "Saved"}
               </Text>
               {isSavedActive && <View style={styles.dockActiveBar} />}
             </TouchableOpacity>
@@ -80,7 +86,7 @@ export default function BottomNav() {
                 <MaterialIcons name="add" size={22} color="#FFFFFF" />
               </View>
               <Text style={[styles.dockLabel, { color: "#065F46", fontWeight: "700" }]}>
-                Post
+                {language === "hi" ? "पोस्ट" : "Post"}
               </Text>
             </TouchableOpacity>
 
@@ -96,7 +102,7 @@ export default function BottomNav() {
                 color={isMessagesActive ? "#059669" : "#64748B"}
               />
               <Text style={[styles.dockLabel, isMessagesActive && styles.dockLabelActive]}>
-                Messages
+                {language === "hi" ? "संदेश" : "Messages"}
               </Text>
               {isMessagesActive && <View style={styles.dockActiveBar} />}
             </TouchableOpacity>
@@ -119,7 +125,7 @@ export default function BottomNav() {
                 color={isProfileActive ? "#059669" : "#64748B"}
               />
               <Text style={[styles.dockLabel, isProfileActive && styles.dockLabelActive]}>
-                Profile
+                {language === "hi" ? "प्रोफ़ाइल" : "Profile"}
               </Text>
               {isProfileActive && <View style={styles.dockActiveBar} />}
             </TouchableOpacity>
@@ -128,7 +134,9 @@ export default function BottomNav() {
           {/* Right Watermark: Cursive Signature */}
           <View style={styles.rightWatermark}>
             <Text style={styles.cursiveTagline}>
-              Verified Land{"\n"}Brighter Tomorrows
+              {language === "hi"
+                ? "सत्यापित ज़मीन\nउज्ज्वल भविष्य"
+                : "Verified Land\nBrighter Tomorrows"}
             </Text>
           </View>
         </View>
@@ -142,12 +150,16 @@ export default function BottomNav() {
       <View style={styles.mobileContainer}>
         <TouchableOpacity style={styles.tab} onPress={() => router.replace("/search")} activeOpacity={0.7}>
           <MaterialIcons name="home" size={22} color={isHomeActive ? "#059669" : "#64748B"} />
-          <Text style={[styles.label, isHomeActive && styles.activeLabel]}>Home</Text>
+          <Text style={[styles.label, isHomeActive && styles.activeLabel]}>
+            {language === "hi" ? "होम" : "Home"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tab} onPress={() => router.push("/saved")} activeOpacity={0.7}>
           <MaterialIcons name="favorite-border" size={22} color={isSavedActive ? "#059669" : "#64748B"} />
-          <Text style={[styles.label, isSavedActive && styles.activeLabel]}>Saved</Text>
+          <Text style={[styles.label, isSavedActive && styles.activeLabel]}>
+            {language === "hi" ? "सहेजे गए" : "Saved"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -164,12 +176,16 @@ export default function BottomNav() {
           <View style={styles.dockPostBtn}>
             <MaterialIcons name="add" size={20} color="#FFFFFF" />
           </View>
-          <Text style={[styles.label, { color: "#065F46", fontWeight: "700" }]}>Post</Text>
+          <Text style={[styles.label, { color: "#065F46", fontWeight: "700" }]}>
+            {language === "hi" ? "पोस्ट" : "Post"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tab} onPress={() => router.push("/messages")} activeOpacity={0.7}>
           <MaterialIcons name="chat-bubble-outline" size={22} color={isMessagesActive ? "#059669" : "#64748B"} />
-          <Text style={[styles.label, isMessagesActive && styles.activeLabel]}>Messages</Text>
+          <Text style={[styles.label, isMessagesActive && styles.activeLabel]}>
+            {language === "hi" ? "संदेश" : "Messages"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -184,7 +200,9 @@ export default function BottomNav() {
           activeOpacity={0.7}
         >
           <MaterialIcons name="person-outline" size={22} color={isProfileActive ? "#059669" : "#64748B"} />
-          <Text style={[styles.label, isProfileActive && styles.activeLabel]}>Profile</Text>
+          <Text style={[styles.label, isProfileActive && styles.activeLabel]}>
+            {language === "hi" ? "प्रोफ़ाइल" : "Profile"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

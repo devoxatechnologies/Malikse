@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import AppHeader from "../../components/AppHeader";
 import { useAuthStore } from "../../src/store/authStore";
+import { useLanguageStore } from "../../src/store/languageStore";
+import { t } from "../../src/i18n/translations";
 
 // Exact uploaded landscape background and high quality land plot imagery
 const heroBgImg = require("../../assets/marketplace_hero_bg.png");
@@ -25,6 +27,7 @@ export default function SearchScreenWeb() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const { authState } = useAuthStore();
+  const { language } = useLanguageStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -106,7 +109,7 @@ export default function SearchScreenWeb() {
       // ================= REAL PLOT CADASTRAL BOUNDARIES (Google Earth Polygons) =================
       plotLayersRef.current = [];
 
-      // Plot 1: 2,400 sq.ft Land in Patna (Verified Boundary Box)
+      // Plot 1: 2,400 sq.ft Land in Patna
       const plot1Polygon = L.polygon(
         [
           [25.6158, 85.0468],
@@ -124,7 +127,11 @@ export default function SearchScreenWeb() {
       ).addTo(map);
 
       plot1Polygon.bindTooltip(
-        "<div style='font-family: sans-serif; font-size: 11px; font-weight: 700; color: #064E3B;'>Plot #1: 2400 sq.ft (KYC Checked)</div>",
+        `<div style='font-family: sans-serif; font-size: 11px; font-weight: 700; color: #064E3B;'>${
+          language === "hi"
+            ? "प्लॉट #1: 2400 वर्गफ़ीट (KYC सत्यापित)"
+            : "Plot #1: 2400 sq.ft (KYC Checked)"
+        }</div>`,
         { permanent: false, direction: "top" }
       );
       plotLayersRef.current.push(plot1Polygon);
@@ -147,7 +154,11 @@ export default function SearchScreenWeb() {
       ).addTo(map);
 
       plot2Polygon.bindTooltip(
-        "<div style='font-family: sans-serif; font-size: 11px; font-weight: 700; color: #064E3B;'>Plot #2: 1200 sq.ft (Registry Verified)</div>",
+        `<div style='font-family: sans-serif; font-size: 11px; font-weight: 700; color: #064E3B;'>${
+          language === "hi"
+            ? "प्लॉट #2: 1200 वर्गफ़ीट (रजिस्ट्री जांची गई)"
+            : "Plot #2: 1200 sq.ft (Registry Verified)"
+        }</div>`,
         { permanent: false, direction: "top" }
       );
       plotLayersRef.current.push(plot2Polygon);
@@ -156,36 +167,36 @@ export default function SearchScreenWeb() {
       const plotLocations = [
         {
           id: "patna_plot_1",
-          title: "LAND in Patna, Bihar",
-          price: "₹60.00 Lakh",
-          area: "2400 sq.ft",
+          title: language === "hi" ? "पटना, बिहार में ज़मीन" : "LAND in Patna, Bihar",
+          price: language === "hi" ? "₹60.00 लाख" : "₹60.00 Lakh",
+          area: language === "hi" ? "2400 वर्गफ़ीट" : "2400 sq.ft",
           lat: 25.6152,
           lng: 85.0485,
           isCentral: true,
         },
         {
           id: "danapur_plot_2",
-          title: "Residential Plot near Danapur",
-          price: "₹42.00 Lakh",
-          area: "1200 sq.ft",
+          title: language === "hi" ? "दानापुर के पास आवासीय प्लॉट" : "Residential Plot near Danapur",
+          price: language === "hi" ? "₹42.00 लाख" : "₹42.00 Lakh",
+          area: language === "hi" ? "1200 वर्गफ़ीट" : "1200 sq.ft",
           lat: 25.6188,
           lng: 85.0394,
           isCentral: false,
         },
         {
           id: "bihta_plot_3",
-          title: "Commercial Land near Bihta Airport",
-          price: "₹85.00 Lakh",
-          area: "3600 sq.ft",
+          title: language === "hi" ? "बिहटा एयरपोर्ट के पास ज़मीन" : "Commercial Land near Bihta Airport",
+          price: language === "hi" ? "₹85.00 लाख" : "₹85.00 Lakh",
+          area: language === "hi" ? "3600 वर्गफ़ीट" : "3600 sq.ft",
           lat: 25.5684,
           lng: 84.8582,
           isCentral: false,
         },
         {
           id: "hajipur_plot_4",
-          title: "Highway Plotted Parcel Hajipur",
-          price: "₹35.00 Lakh",
-          area: "1800 sq.ft",
+          title: language === "hi" ? "हाजीपुर हाईवे प्लॉट" : "Highway Plotted Parcel Hajipur",
+          price: language === "hi" ? "₹35.00 लाख" : "₹35.00 Lakh",
+          area: language === "hi" ? "1800 वर्गफ़ीट" : "1800 sq.ft",
           lat: 25.6858,
           lng: 85.2146,
           isCentral: false,
@@ -193,12 +204,15 @@ export default function SearchScreenWeb() {
       ];
 
       plotLocations.forEach((loc) => {
+        const tooltipText =
+          language === "hi" ? "इस क्षेत्र में संपत्तियां देखें" : "Explore Properties<br/>in this Area";
+
         const pinHtml = `
           <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%);">
             ${
               loc.isCentral
                 ? `<div style="background-color: #064E3B; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-align: center; white-space: nowrap; margin-bottom: 6px; position: relative;">
-                    Explore Properties<br/>in this Area
+                    ${tooltipText}
                     <div style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #064E3B;"></div>
                   </div>`
                 : ""
@@ -230,7 +244,7 @@ export default function SearchScreenWeb() {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [language]);
 
   // Dynamically update Google Earth tile mode (Hybrid Satellite <-> Roadmap)
   useEffect(() => {
@@ -277,12 +291,12 @@ export default function SearchScreenWeb() {
   };
 
   const categories = [
-    { id: "all", label: "All Properties", icon: "grid-view" },
-    { id: "plots", label: "Plots & Land", icon: "terrain" },
-    { id: "flats", label: "Flats & Houses", icon: "apartment" },
-    { id: "commercial", label: "Commercial", icon: "storefront" },
-    { id: "agricultural", label: "Agricultural", icon: "eco" },
-    { id: "patna_region", label: "Patna Region", icon: "location-on" },
+    { id: "all", label: t(language, "cat_all") || "All Properties", icon: "grid-view" },
+    { id: "plots", label: t(language, "cat_plots") || "Plots & Land", icon: "terrain" },
+    { id: "flats", label: t(language, "cat_flats") || "Flats & Houses", icon: "apartment" },
+    { id: "commercial", label: t(language, "cat_commercial") || "Commercial", icon: "storefront" },
+    { id: "agricultural", label: t(language, "cat_agricultural") || "Agricultural", icon: "eco" },
+    { id: "patna_region", label: t(language, "cat_patna_region") || "Patna Region", icon: "location-on" },
   ];
 
   return (
@@ -313,29 +327,41 @@ export default function SearchScreenWeb() {
             <View style={styles.heroTopRow}>
               {/* Left Column: Heading & Trust Badges */}
               <View style={styles.heroTitlesBlock}>
-                <Text style={styles.heroMainTitle}>Find Genuine Land & Plots</Text>
-                <Text style={styles.heroSubTitle}>Direct from Verified Owners</Text>
+                <Text style={styles.heroMainTitle}>
+                  {t(language, "hero_title") || "Find Genuine Land & Plots"}
+                </Text>
+                <Text style={styles.heroSubTitle}>
+                  {t(language, "hero_subtitle") || "Direct from Verified Owners"}
+                </Text>
 
                 {/* 4 Trust Badges */}
                 <View style={styles.trustBadgesRow}>
                   <View style={styles.trustBadgeItem}>
                     <MaterialIcons name="verified-user" size={15} color="#059669" />
-                    <Text style={styles.trustBadgeText}>100% Jamabandi & Registry Checked</Text>
+                    <Text style={styles.trustBadgeText}>
+                      {t(language, "trust_jamabandi") || "100% Jamabandi & Registry Checked"}
+                    </Text>
                   </View>
 
                   <View style={styles.trustBadgeItem}>
                     <MaterialIcons name="gps-fixed" size={15} color="#059669" />
-                    <Text style={styles.trustBadgeText}>GPS Verified Locations</Text>
+                    <Text style={styles.trustBadgeText}>
+                      {t(language, "trust_gps") || "GPS Verified Locations"}
+                    </Text>
                   </View>
 
                   <View style={styles.trustBadgeItem}>
                     <MaterialIcons name="people" size={16} color="#059669" />
-                    <Text style={styles.trustBadgeText}>Zero Brokerage</Text>
+                    <Text style={styles.trustBadgeText}>
+                      {t(language, "trust_zero_brokerage") || "Zero Brokerage"}
+                    </Text>
                   </View>
 
                   <View style={styles.trustBadgeItem}>
                     <MaterialIcons name="description" size={15} color="#059669" />
-                    <Text style={styles.trustBadgeText}>Direct Owner Contact</Text>
+                    <Text style={styles.trustBadgeText}>
+                      {t(language, "trust_direct_owner") || "Direct Owner Contact"}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -343,7 +369,7 @@ export default function SearchScreenWeb() {
               {/* Right Column: Handwritten Script + Floating Stat Card */}
               <View style={styles.heroRightCorner}>
                 <Text style={styles.cursiveHeroScript}>
-                  Real Land{"\n"}Real Opportunities
+                  {t(language, "hero_script") || "Real Land\nReal Opportunities"}
                 </Text>
 
                 <TouchableOpacity
@@ -352,13 +378,15 @@ export default function SearchScreenWeb() {
                   activeOpacity={0.85}
                 >
                   <View style={styles.statIconCircle}>
-                    <MaterialIcons name="check" size={17} color="#FFFFFF" />
+                    <MaterialIcons name="check" size={17} color="#065F46" />
                   </View>
                   <View style={styles.statTextCol}>
                     <Text style={styles.statNumber}>1,400+</Text>
-                    <Text style={styles.statLabel}>Verified Parcels</Text>
+                    <Text style={styles.statLabel}>
+                      {t(language, "stat_verified_parcels") || "Verified Parcels"}
+                    </Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
+                  <MaterialIcons name="chevron-right" size={20} color="#065F46" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -366,40 +394,46 @@ export default function SearchScreenWeb() {
             {/* ================= COMPOSITE ELEVATED SEARCH BAR (STRADDLES SECTION LINE) ================= */}
             <View style={styles.searchBarWrapper}>
               <View style={styles.searchBarCard}>
-                {/* Location Selector Pill */}
+                {/* Location Selector Pill Styled with Mint Pill Design */}
                 <TouchableOpacity style={styles.locationSelector} activeOpacity={0.8}>
-                  <MaterialIcons name="place" size={18} color="#059669" />
-                  <Text style={styles.locationSelectorText}>Patna, Bihar</Text>
-                  <MaterialIcons name="keyboard-arrow-down" size={18} color="#64748B" />
+                  <MaterialIcons name="place" size={18} color="#065F46" />
+                  <Text style={styles.locationSelectorText}>
+                    {t(language, "location_patna_bihar") || "Patna, Bihar"}
+                  </Text>
+                  <MaterialIcons name="keyboard-arrow-down" size={18} color="#065F46" />
                 </TouchableOpacity>
 
                 <View style={styles.searchBarDivider} />
 
                 {/* Search Query Input */}
                 <View style={styles.searchInputContainer}>
-                  <MaterialIcons name="search" size={20} color="#94A3B8" style={{ marginRight: 8 }} />
+                  <MaterialIcons name="search" size={20} color="#065F46" style={{ marginRight: 8, opacity: 0.6 }} />
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search by location, landmark, plot ID..."
+                    placeholder={
+                      t(language, "search_input_placeholder") || "Search by location, landmark, plot ID..."
+                    }
                     placeholderTextColor="#94A3B8"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                   />
                   {searchQuery ? (
                     <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
-                      <MaterialIcons name="close" size={16} color="#94A3B8" />
+                      <MaterialIcons name="close" size={16} color="#065F46" />
                     </TouchableOpacity>
                   ) : null}
                 </View>
 
-                {/* Search Button */}
+                {/* Search Button with Unified Pill Design */}
                 <TouchableOpacity
                   style={styles.searchActionBtn}
                   onPress={() => {}}
                   activeOpacity={0.85}
                 >
-                  <MaterialIcons name="search" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.searchActionBtnText}>Search</Text>
+                  <MaterialIcons name="search" size={18} color="#065F46" style={{ marginRight: 6 }} />
+                  <Text style={styles.searchActionBtnText}>
+                    {t(language, "search_action_btn") || "Search"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -408,7 +442,7 @@ export default function SearchScreenWeb() {
 
         {/* ================= LOWER BODY: CATEGORIES & EQUAL CONTAINER CARDS ================= */}
         <View style={styles.lowerBodyContainer}>
-          {/* Category Filter Toolbar */}
+          {/* Category Filter Toolbar - Unified Mint Pill Button Styling */}
           <View style={styles.filterToolbar}>
             {/* Left category pills */}
             <ScrollView
@@ -428,7 +462,7 @@ export default function SearchScreenWeb() {
                     <MaterialIcons
                       name={cat.icon as any}
                       size={15}
-                      color={isActive ? "#065F46" : "#475569"}
+                      color={isActive ? "#065F46" : "#065F46"}
                       style={{ marginRight: 6 }}
                     />
                     <Text
@@ -441,17 +475,17 @@ export default function SearchScreenWeb() {
               })}
             </ScrollView>
 
-            {/* Right Filter Actions: Sort By & Filters */}
+            {/* Right Filter Actions: Sort By & Filters in Unified Mint Pill Design */}
             <View style={styles.rightFilterActions}>
               <TouchableOpacity style={styles.filterActionPill} activeOpacity={0.8}>
-                <MaterialIcons name="swap-vert" size={17} color="#475569" style={{ marginRight: 4 }} />
-                <Text style={styles.filterActionText}>Sort by</Text>
-                <MaterialIcons name="keyboard-arrow-down" size={17} color="#64748B" />
+                <MaterialIcons name="swap-vert" size={17} color="#065F46" style={{ marginRight: 4 }} />
+                <Text style={styles.filterActionText}>{t(language, "sort_by") || "Sort by"}</Text>
+                <MaterialIcons name="keyboard-arrow-down" size={17} color="#065F46" />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.filterActionPill} activeOpacity={0.8}>
-                <MaterialIcons name="tune" size={16} color="#475569" style={{ marginRight: 5 }} />
-                <Text style={styles.filterActionText}>Filters</Text>
+                <MaterialIcons name="tune" size={16} color="#065F46" style={{ marginRight: 5 }} />
+                <Text style={styles.filterActionText}>{t(language, "filters") || "Filters"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -476,12 +510,14 @@ export default function SearchScreenWeb() {
                   />
                 ) : null}
 
-                {/* OVERLAY: Top-Left Location Selector */}
+                {/* OVERLAY: Top-Left Location Selector Pill */}
                 <View style={styles.mapTopLeftPill}>
-                  <MaterialIcons name="place" size={15} color="#059669" />
-                  <Text style={styles.mapTopLeftText}>Patna, Bihar</Text>
+                  <MaterialIcons name="place" size={15} color="#065F46" />
+                  <Text style={styles.mapTopLeftText}>
+                    {t(language, "location_patna_bihar") || "Patna, Bihar"}
+                  </Text>
                   <TouchableOpacity onPress={handleResetLocation} activeOpacity={0.7}>
-                    <Text style={styles.mapChangeLink}>Change</Text>
+                    <Text style={styles.mapChangeLink}>{t(language, "map_change") || "Change"}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -493,7 +529,7 @@ export default function SearchScreenWeb() {
                       onPress={handleZoomIn}
                       activeOpacity={0.7}
                     >
-                      <MaterialIcons name="add" size={18} color="#1E293B" />
+                      <MaterialIcons name="add" size={18} color="#065F46" />
                     </TouchableOpacity>
                     <View style={styles.zoomDivider} />
                     <TouchableOpacity
@@ -501,7 +537,7 @@ export default function SearchScreenWeb() {
                       onPress={handleZoomOut}
                       activeOpacity={0.7}
                     >
-                      <MaterialIcons name="remove" size={18} color="#1E293B" />
+                      <MaterialIcons name="remove" size={18} color="#065F46" />
                     </TouchableOpacity>
                   </View>
 
@@ -510,11 +546,11 @@ export default function SearchScreenWeb() {
                     onPress={handleResetLocation}
                     activeOpacity={0.7}
                   >
-                    <MaterialIcons name="my-location" size={18} color="#1E293B" />
+                    <MaterialIcons name="my-location" size={18} color="#065F46" />
                   </TouchableOpacity>
                 </View>
 
-                {/* OVERLAY: Bottom-Left Map / Satellite Toggle (Satellite active by default) */}
+                {/* OVERLAY: Bottom-Left Map / Satellite Toggle with Mint Pill Styling */}
                 <View style={styles.mapBottomLeftToggle}>
                   <TouchableOpacity
                     style={[styles.modeToggleBtn, mapMode === "map" && styles.modeToggleActive]}
@@ -522,7 +558,7 @@ export default function SearchScreenWeb() {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.modeToggleText, mapMode === "map" && styles.modeToggleTextActive]}>
-                      Map
+                      {t(language, "map_btn_map") || "Map"}
                     </Text>
                   </TouchableOpacity>
 
@@ -532,17 +568,19 @@ export default function SearchScreenWeb() {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.modeToggleText, mapMode === "satellite" && styles.modeToggleTextActive]}>
-                      Satellite
+                      {t(language, "map_btn_satellite") || "Satellite"}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* OVERLAY: Bottom-Right Real Land Parcel Stat Card */}
+                {/* OVERLAY: Bottom-Right Real Land Parcel Stat Card in Mint Pill Styling */}
                 <View style={styles.mapBottomRightPill}>
-                  <MaterialIcons name="satellite-alt" size={18} color="#059669" style={{ marginRight: 7 }} />
+                  <MaterialIcons name="satellite-alt" size={18} color="#065F46" style={{ marginRight: 7 }} />
                   <Text style={styles.mapBottomRightText}>
-                    Google Earth Live Imagery{"\n"}
-                    <Text style={{ fontWeight: "800", color: "#0F172A" }}>Demarcated Land Parcels</Text>
+                    {language === "hi" ? "Google Earth लाइव सैटेलाइट\n" : "Google Earth Live Imagery\n"}
+                    <Text style={{ fontWeight: "800", color: "#065F46" }}>
+                      {language === "hi" ? "सीमांकित ज़मीन के प्लॉट" : "Demarcated Land Parcels"}
+                    </Text>
                   </Text>
                 </View>
               </View>
@@ -553,18 +591,21 @@ export default function SearchScreenWeb() {
               {/* Panel Header */}
               <View style={styles.listingsHeader}>
                 <View style={styles.listingsHeaderTopRow}>
-                  <Text style={styles.listingsTitle}>Available Listings (1,240+)</Text>
+                  <Text style={styles.listingsTitle}>
+                    {t(language, "listings_heading") || "Available Listings (1,240+)"}
+                  </Text>
                   <TouchableOpacity
                     style={styles.viewAllBtn}
                     onPress={() => router.push("/search")}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.viewAllText}>View All</Text>
-                    <MaterialIcons name="arrow-forward" size={15} color="#059669" />
+                    <Text style={styles.viewAllText}>{t(language, "view_all") || "View All"}</Text>
+                    <MaterialIcons name="arrow-forward" size={15} color="#065F46" />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.listingsSubtitle}>
-                  Direct from verified owners &bull; No middlemen &bull; 100% secure
+                  {t(language, "listings_sub") ||
+                    "Direct from verified owners • No middlemen • 100% secure"}
                 </Text>
               </View>
 
@@ -583,7 +624,9 @@ export default function SearchScreenWeb() {
                     {/* Top-Left Featured Crown Badge */}
                     <View style={styles.featuredBadge}>
                       <FontAwesome5 name="crown" size={10} color="#B45309" style={{ marginRight: 4 }} />
-                      <Text style={styles.featuredBadgeText}>Featured</Text>
+                      <Text style={styles.featuredBadgeText}>
+                        {t(language, "featured_badge") || "Featured"}
+                      </Text>
                     </View>
 
                     {/* Top-Right Favorite Heart Button */}
@@ -619,39 +662,53 @@ export default function SearchScreenWeb() {
                   {/* Right Details Column */}
                   <View style={styles.cardDetailsCol}>
                     <View>
-                      <Text style={styles.cardTitle}>LAND in Patna, Bihar</Text>
+                      <Text style={styles.cardTitle}>
+                        {t(language, "plot_1_title") || "LAND in Patna, Bihar"}
+                      </Text>
                       <View style={styles.cardLocationRow}>
-                        <MaterialIcons name="place" size={13} color="#64748B" style={{ marginRight: 3 }} />
-                        <Text style={styles.cardLocationText}>Patna, Bihar</Text>
+                        <MaterialIcons name="place" size={13} color="#065F46" style={{ marginRight: 3 }} />
+                        <Text style={styles.cardLocationText}>
+                          {t(language, "plot_1_location") || "Patna, Bihar"}
+                        </Text>
                       </View>
 
-                      {/* Trust & Spec Chips */}
+                      {/* Trust & Spec Chips with Mint Pill Aesthetic */}
                       <View style={styles.chipsRow}>
-                        <View style={styles.chipNeutral}>
-                          <MaterialIcons name="grid-on" size={12} color="#475569" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipNeutralText}>2400 sq.ft</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="grid-on" size={12} color="#065F46" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            2400 {t(language, "unit_sqft") || "sq.ft"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipKyc}>
+                        <View style={styles.chipPillMint}>
                           <MaterialIcons name="verified" size={12} color="#059669" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipKycText}>KYC Verified</Text>
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_kyc") || "KYC Verified"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipRegistry}>
-                          <MaterialIcons name="receipt-long" size={12} color="#2563EB" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipRegistryText}>Registry</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="receipt-long" size={12} color="#047857" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_registry") || "Registry"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipGps}>
-                          <MaterialIcons name="location-searching" size={12} color="#7C3AED" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipGpsText}>GPS Visit</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="location-searching" size={12} color="#065F46" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_gps_visit") || "GPS Visit"}
+                          </Text>
                         </View>
                       </View>
                     </View>
 
-                    {/* Bottom Price & View Details Button */}
+                    {/* Bottom Price & View Details Button in Pill Design */}
                     <View style={styles.cardPriceRow}>
-                      <Text style={styles.priceAmount}>₹60.00 Lakh</Text>
+                      <Text style={styles.priceAmount}>
+                        ₹60.00 {t(language, "unit_lakh") || "Lakh"}
+                      </Text>
                       <TouchableOpacity
                         style={styles.viewDetailsBtn}
                         onPress={() => {
@@ -661,8 +718,10 @@ export default function SearchScreenWeb() {
                         }}
                         activeOpacity={0.85}
                       >
-                        <Text style={styles.viewDetailsBtnText}>View Details</Text>
-                        <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                        <Text style={styles.viewDetailsBtnText}>
+                          {t(language, "view_details") || "View Details"}
+                        </Text>
+                        <MaterialIcons name="arrow-forward" size={14} color="#065F46" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -711,39 +770,53 @@ export default function SearchScreenWeb() {
                   {/* Right Details Column */}
                   <View style={styles.cardDetailsCol}>
                     <View>
-                      <Text style={styles.cardTitle}>Residential Plot near Danapur</Text>
+                      <Text style={styles.cardTitle}>
+                        {t(language, "plot_2_title") || "Residential Plot near Danapur"}
+                      </Text>
                       <View style={styles.cardLocationRow}>
-                        <MaterialIcons name="place" size={13} color="#64748B" style={{ marginRight: 3 }} />
-                        <Text style={styles.cardLocationText}>Danapur, Patna</Text>
+                        <MaterialIcons name="place" size={13} color="#065F46" style={{ marginRight: 3 }} />
+                        <Text style={styles.cardLocationText}>
+                          {t(language, "plot_2_location") || "Danapur, Patna"}
+                        </Text>
                       </View>
 
-                      {/* Trust & Spec Chips */}
+                      {/* Trust & Spec Chips with Mint Pill Aesthetic */}
                       <View style={styles.chipsRow}>
-                        <View style={styles.chipNeutral}>
-                          <MaterialIcons name="grid-on" size={12} color="#475569" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipNeutralText}>1200 sq.ft</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="grid-on" size={12} color="#065F46" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            1200 {t(language, "unit_sqft") || "sq.ft"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipKyc}>
+                        <View style={styles.chipPillMint}>
                           <MaterialIcons name="verified" size={12} color="#059669" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipKycText}>KYC Verified</Text>
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_kyc") || "KYC Verified"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipRegistry}>
-                          <MaterialIcons name="receipt-long" size={12} color="#2563EB" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipRegistryText}>Registry</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="receipt-long" size={12} color="#047857" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_registry") || "Registry"}
+                          </Text>
                         </View>
 
-                        <View style={styles.chipGps}>
-                          <MaterialIcons name="location-searching" size={12} color="#7C3AED" style={{ marginRight: 3 }} />
-                          <Text style={styles.chipGpsText}>GPS Visit</Text>
+                        <View style={styles.chipPillMint}>
+                          <MaterialIcons name="location-searching" size={12} color="#065F46" style={{ marginRight: 3 }} />
+                          <Text style={styles.chipPillMintText}>
+                            {t(language, "badge_gps_visit") || "GPS Visit"}
+                          </Text>
                         </View>
                       </View>
                     </View>
 
-                    {/* Bottom Price & View Details Button */}
+                    {/* Bottom Price & View Details Button in Pill Design */}
                     <View style={styles.cardPriceRow}>
-                      <Text style={styles.priceAmount}>₹42.00 Lakh</Text>
+                      <Text style={styles.priceAmount}>
+                        ₹42.00 {t(language, "unit_lakh") || "Lakh"}
+                      </Text>
                       <TouchableOpacity
                         style={styles.viewDetailsBtn}
                         onPress={() => {
@@ -753,8 +826,10 @@ export default function SearchScreenWeb() {
                         }}
                         activeOpacity={0.85}
                       >
-                        <Text style={styles.viewDetailsBtnText}>View Details</Text>
-                        <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                        <Text style={styles.viewDetailsBtnText}>
+                          {t(language, "view_details") || "View Details"}
+                        </Text>
+                        <MaterialIcons name="arrow-forward" size={14} color="#065F46" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -864,24 +939,26 @@ const styles = StyleSheet.create({
   floatingStatCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 10,
+    backgroundColor: "#E6F4EA",
+    borderRadius: 9999,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    gap: 10,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
   },
   statIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#059669",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#D1FAE5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -889,15 +966,15 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   statNumber: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "900",
-    color: "#0F172A",
-    lineHeight: 18,
+    color: "#065F46",
+    lineHeight: 17,
   },
   statLabel: {
     fontSize: 11,
-    fontWeight: "500",
-    color: "#64748B",
+    fontWeight: "600",
+    color: "#047857",
   },
 
   /* ================= SEARCH BAR STRADDLING SECTION LINE ================= */
@@ -910,38 +987,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 9999,
     padding: 6,
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
+    borderColor: "#A7F3D0",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
     elevation: 5,
   },
   locationSelector: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    backgroundColor: "#E6F4EA",
     paddingHorizontal: 16,
     paddingVertical: 10,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    marginLeft: 2,
   },
   locationSelectorText: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#065F46",
   },
   searchBarDivider: {
     width: 1,
     height: 26,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: "#A7F3D0",
+    marginHorizontal: 4,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   searchInput: {
     flex: 1,
@@ -953,19 +1036,21 @@ const styles = StyleSheet.create({
   searchActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#056B4D",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    shadowColor: "#056B4D",
+    backgroundColor: "#E6F4EA",
+    borderRadius: 9999,
+    paddingVertical: 9,
+    paddingHorizontal: 22,
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.12,
     shadowRadius: 5,
     elevation: 2,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
   },
   searchActionBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13.5,
+    color: "#065F46",
+    fontSize: 13,
     fontWeight: "800",
   },
 
@@ -978,7 +1063,7 @@ const styles = StyleSheet.create({
     paddingTop: 46,
   },
 
-  /* Category Filter Toolbar */
+  /* Category Filter Toolbar - Unified Mint Pill Button Styling */
   filterToolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -994,21 +1079,26 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#A7F3D0",
   },
   categoryPillActive: {
     backgroundColor: "#D1FAE5",
-    borderColor: "#A7F3D0",
+    borderColor: "#059669",
+    borderWidth: 1.5,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   categoryPillText: {
     fontSize: 12.5,
-    fontWeight: "600",
-    color: "#475569",
+    fontWeight: "700",
+    color: "#065F46",
   },
   categoryPillTextActive: {
     color: "#065F46",
@@ -1022,17 +1112,17 @@ const styles = StyleSheet.create({
   filterActionPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#A7F3D0",
   },
   filterActionText: {
     fontSize: 12.5,
-    fontWeight: "600",
-    color: "#475569",
+    fontWeight: "700",
+    color: "#065F46",
   },
 
   /* ================= SIDE-BY-SIDE EQUAL CONTAINER CARDS ================= */
@@ -1069,13 +1159,13 @@ const styles = StyleSheet.create({
     left: 14,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 9999,
     gap: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1084,14 +1174,15 @@ const styles = StyleSheet.create({
   },
   mapTopLeftText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontWeight: "800",
+    color: "#065F46",
   },
   mapChangeLink: {
     fontSize: 11.5,
-    fontWeight: "700",
-    color: "#059669",
+    fontWeight: "800",
+    color: "#047857",
     marginLeft: 4,
+    textDecorationLine: "underline",
   },
   mapTopRightControls: {
     position: "absolute",
@@ -1102,10 +1193,10 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   zoomPill: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    backgroundColor: "#E6F4EA",
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1113,24 +1204,24 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
   zoomBtn: {
-    width: 32,
-    height: 30,
+    width: 34,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },
   zoomDivider: {
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: "#A7F3D0",
   },
   crosshairBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#E6F4EA",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1141,11 +1232,11 @@ const styles = StyleSheet.create({
     bottom: 14,
     left: 14,
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    backgroundColor: "#E6F4EA",
+    borderRadius: 9999,
     padding: 3,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1154,20 +1245,22 @@ const styles = StyleSheet.create({
   },
   modeToggleBtn: {
     paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
   },
   modeToggleActive: {
-    backgroundColor: "#0B4D3C",
+    backgroundColor: "#D1FAE5",
+    borderWidth: 1,
+    borderColor: "#059669",
   },
   modeToggleText: {
     fontSize: 11.5,
-    fontWeight: "600",
-    color: "#475569",
+    fontWeight: "700",
+    color: "#065F46",
   },
   modeToggleTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+    color: "#065F46",
+    fontWeight: "800",
   },
   mapBottomRightPill: {
     position: "absolute",
@@ -1175,12 +1268,12 @@ const styles = StyleSheet.create({
     right: 14,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1189,8 +1282,9 @@ const styles = StyleSheet.create({
   },
   mapBottomRightText: {
     fontSize: 10.5,
-    color: "#475569",
+    color: "#065F46",
     lineHeight: 13,
+    fontWeight: "600",
   },
 
   /* ---------------- RIGHT: AVAILABLE LISTINGS PANEL (SAME CONTAINER SIZE) ---------------- */
@@ -1219,11 +1313,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    backgroundColor: "#E6F4EA",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
   },
   viewAllText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#059669",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#065F46",
   },
   listingsSubtitle: {
     fontSize: 11.5,
@@ -1269,7 +1369,7 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 9999,
   },
   featuredBadgeText: {
     fontSize: 10,
@@ -1296,7 +1396,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.65)",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 9999,
   },
   imageCountText: {
     color: "#FFFFFF",
@@ -1338,8 +1438,8 @@ const styles = StyleSheet.create({
   },
   cardLocationText: {
     fontSize: 11.5,
-    color: "#64748B",
-    fontWeight: "500",
+    color: "#065F46",
+    fontWeight: "600",
   },
   chipsRow: {
     flexDirection: "row",
@@ -1348,65 +1448,20 @@ const styles = StyleSheet.create({
     gap: 5,
     marginTop: 8,
   },
-  chipNeutral: {
+  chipPillMint: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 7,
+    backgroundColor: "#E6F4EA",
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  chipNeutralText: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    color: "#475569",
-  },
-  chipKyc: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
-  chipKycText: {
+  chipPillMintText: {
     fontSize: 10.5,
     fontWeight: "700",
-    color: "#059669",
-  },
-  chipRegistry: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-  },
-  chipRegistryText: {
-    fontSize: 10.5,
-    fontWeight: "700",
-    color: "#2563EB",
-  },
-  chipGps: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FAF5FF",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-  },
-  chipGpsText: {
-    fontSize: 10.5,
-    fontWeight: "700",
-    color: "#7C3AED",
+    color: "#065F46",
   },
 
   /* Price & CTA */
@@ -1425,20 +1480,22 @@ const styles = StyleSheet.create({
   viewDetailsBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0B4D3C",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    gap: 4,
-    shadowColor: "#0B4D3C",
+    paddingHorizontal: 16,
+    borderRadius: 9999,
+    gap: 5,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 2,
   },
   viewDetailsBtnText: {
-    color: "#FFFFFF",
+    color: "#065F46",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 });

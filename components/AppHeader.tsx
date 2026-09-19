@@ -5,6 +5,7 @@ import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { AppTheme } from "../constants/theme";
 import { useLanguageStore } from "../src/store/languageStore";
 import { useAuthStore } from "../src/store/authStore";
+import { t } from "../src/i18n/translations";
 
 interface AppHeaderProps {
   title?: string;
@@ -52,7 +53,7 @@ export default function AppHeader({
     }
   };
 
-  const displayName = user?.name || "Nikhil kumar";
+  const displayName = user?.name || (language === "hi" ? "निखिल कुमार" : "Nikhil kumar");
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
@@ -68,7 +69,9 @@ export default function AppHeader({
               accessibilityLabel="Go back"
             >
               <MaterialIcons name="arrow-back" size={20} color="#1E293B" />
-              {Platform.OS === "web" && <Text style={styles.backText}>Back</Text>}
+              {Platform.OS === "web" && (
+                <Text style={styles.backText}>{language === "hi" ? "वापस" : "Back"}</Text>
+              )}
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -81,7 +84,9 @@ export default function AppHeader({
               </View>
               <View style={styles.brandTextCol}>
                 <Text style={styles.brandName}>MalikSe</Text>
-                <Text style={styles.brandTagline}>Your Land. A Safer Future.</Text>
+                <Text style={styles.brandTagline}>
+                  {t(language, "brand_tagline") || "Your Land. A Safer Future."}
+                </Text>
               </View>
             </TouchableOpacity>
           )}
@@ -115,7 +120,7 @@ export default function AppHeader({
               activeOpacity={0.8}
             >
               <Text style={[styles.navLinkText, pathname === "/search" && styles.navLinkTextActive]}>
-                Explore Plots
+                {t(language, "nav_explore_plots") || "Explore Plots"}
               </Text>
               {pathname === "/search" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
@@ -127,7 +132,7 @@ export default function AppHeader({
               activeOpacity={0.8}
             >
               <Text style={[styles.navLinkText, pathname === "/my-properties" && styles.navLinkTextActive]}>
-                My Listings
+                {t(language, "nav_my_listings") || "My Listings"}
               </Text>
               {pathname === "/my-properties" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
@@ -145,7 +150,7 @@ export default function AppHeader({
                 style={{ marginRight: 4 }}
               />
               <Text style={[styles.navLinkText, pathname === "/saved" && styles.navLinkTextActive]}>
-                Saved
+                {t(language, "nav_saved_plots") || "Saved"}
               </Text>
               {pathname === "/saved" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
@@ -157,7 +162,7 @@ export default function AppHeader({
               activeOpacity={0.8}
             >
               <Text style={[styles.navLinkText, pathname === "/insights" && styles.navLinkTextActive]}>
-                Insights
+                {t(language, "nav_insights") || "Insights"}
               </Text>
               {pathname === "/insights" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
@@ -183,20 +188,22 @@ export default function AppHeader({
                   }}
                   activeOpacity={0.85}
                 >
-                  <MaterialIcons name="add" size={17} color="#FFFFFF" />
-                  <Text style={styles.postPropertyBtnText}>Post Land (Free)</Text>
+                  <MaterialIcons name="add" size={17} color="#065F46" />
+                  <Text style={styles.postPropertyBtnText}>
+                    {t(language, "post_land_free") || "+ Post Land (Free)"}
+                  </Text>
                 </TouchableOpacity>
               )}
 
-              {/* Language Pill (e.g. "文A हिंदी") */}
+              {/* Language Pill (exact user screenshot: "文A हिंदी" or "文A Eng") */}
               {showLanguageToggle && (
                 <TouchableOpacity
                   style={styles.langBtn}
                   onPress={toggleLanguage}
                   activeOpacity={0.8}
                 >
-                  <MaterialIcons name="translate" size={15} color="#065F46" />
-                  <Text style={styles.langText}>{language === "en" ? "हिंदी" : "EN"}</Text>
+                  <Text style={styles.langSymbol}>文A</Text>
+                  <Text style={styles.langText}>{language === "en" ? "हिंदी" : "Eng"}</Text>
                 </TouchableOpacity>
               )}
 
@@ -220,7 +227,7 @@ export default function AppHeader({
                     <Text style={styles.userProfileName} numberOfLines={1}>
                       {displayName}
                     </Text>
-                    <MaterialIcons name="keyboard-arrow-down" size={18} color="#64748B" />
+                    <MaterialIcons name="keyboard-arrow-down" size={17} color="#065F46" />
                   </>
                 )}
               </TouchableOpacity>
@@ -272,18 +279,18 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#E6F4EA",
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: 4,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    gap: 5,
   },
   backText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1E293B",
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#065F46",
   },
   /* Left Brand */
   brandRow: {
@@ -401,75 +408,82 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#0B4D3C",
-    paddingVertical: 8,
+    backgroundColor: "#E6F4EA",
+    paddingVertical: 7,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    shadowColor: "#0B4D3C",
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 2,
   },
   postPropertyBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#065F46",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
   iconBtn: {
     width: 36,
     height: 36,
-    borderRadius: 8,
-    backgroundColor: "#F1F5F9",
+    borderRadius: 9999,
+    backgroundColor: "#E6F4EA",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
   },
   langBtn: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6F4EA",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 9999,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    gap: 5,
+    gap: 6,
+  },
+  langSymbol: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#065F46",
   },
   langText: {
     fontSize: 12.5,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#065F46",
   },
   userProfilePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 7,
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     borderRadius: 9999,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    backgroundColor: "#E6F4EA",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
   },
   userAvatarCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#0B4D3C",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#065F46",
     justifyContent: "center",
     alignItems: "center",
   },
   userAvatarText: {
     color: "#FFFFFF",
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: "800",
   },
   userProfileName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#065F46",
     maxWidth: 130,
   },
 });

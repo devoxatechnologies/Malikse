@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -32,20 +32,167 @@ export default function SearchScreenWeb() {
   const [selectedPin, setSelectedPin] = useState<string>("patna");
   const [savedProperties, setSavedProperties] = useState<Record<string, boolean>>({});
 
-  // Inject Google Fonts for the script text & sleek modern typography on web
+  // Leaflet & Google Map instance refs
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+
+  // Inject Google Fonts and Leaflet CSS
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined") {
-      const linkId = "google-fonts-malikse";
-      if (!document.getElementById(linkId)) {
+      // Google Fonts
+      const fontId = "google-fonts-malikse";
+      if (!document.getElementById(fontId)) {
         const link = document.createElement("link");
-        link.id = linkId;
+        link.id = fontId;
         link.rel = "stylesheet";
         link.href =
           "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap";
         document.head.appendChild(link);
       }
+
+      // Leaflet CSS for smooth Google Map tile rendering
+      const leafletCssId = "leaflet-css-malikse";
+      if (!document.getElementById(leafletCssId)) {
+        const link = document.createElement("link");
+        link.id = leafletCssId;
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+      }
     }
   }, []);
+
+  // Initialize interactive Google Map via Leaflet
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+
+    let isMounted = true;
+
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default || leafletModule;
+      if (!isMounted || !mapContainerRef.current) return;
+
+      // Clean up previous instance if any
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+
+      // Initialize map centered at Patna coordinates
+      const map = L.map(mapContainerRef.current, {
+        center: [25.6127, 85.1200],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false,
+      });
+      mapInstanceRef.current = map;
+
+      // Google Maps Tile Layer:
+      // lyrs=m: Google Standard Roadmap
+      // lyrs=y: Google Hybrid Satellite with labels & roads
+      const googleTileUrl =
+        mapMode === "satellite"
+          ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+          : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+
+      const tiles = L.tileLayer(googleTileUrl, {
+        maxZoom: 20,
+        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      }).addTo(map);
+      tileLayerRef.current = tiles;
+
+      // Markers list corresponding to Patna region in reference image
+      const locations = [
+        { id: "patna", lat: 25.6093, lng: 85.1376, isCentral: true },
+        { id: "danapur", lat: 25.6324, lng: 85.0435 },
+        { id: "bihta", lat: 25.5684, lng: 84.8582 },
+        { id: "hajipur", lat: 25.6858, lng: 85.2146 },
+        { id: "sonepur", lat: 25.7001, lng: 85.1834 },
+        { id: "dighwara", lat: 25.7410, lng: 85.0062 },
+        { id: "phulwari", lat: 25.5768, lng: 85.0768 },
+        { id: "fatuha", lat: 25.5097, lng: 85.3112 },
+      ];
+
+      locations.forEach((loc) => {
+        const pinHtml = `
+          <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%, -100%);">
+            ${
+              loc.isCentral
+                ? `<div style="background-color: #064E3B; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center; white-space: nowrap; margin-bottom: 6px; position: relative;">
+                    Explore Properties<br/>in this Area
+                    <div style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #064E3B;"></div>
+                  </div>`
+                : ""
+            }
+            <div style="width: 22px; height: 28px; border-radius: 11px; background-color: #064E3B; border: 2px solid #FFFFFF; box-shadow: 0 4px 8px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;">
+              <div style="width: 6px; height: 6px; border-radius: 3px; background-color: #FFFFFF;"></div>
+            </div>
+          </div>
+        `;
+
+        const customIcon = L.divIcon({
+          className: "malikse-google-marker",
+          html: pinHtml,
+          iconSize: [0, 0],
+        });
+
+        const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(map);
+        marker.on("click", () => {
+          setSelectedPin(loc.id);
+          map.panTo([loc.lat, loc.lng]);
+        });
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Dynamically update Google Map tile mode (Roadmap <-> Hybrid Satellite)
+  useEffect(() => {
+    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default || leafletModule;
+      if (tileLayerRef.current) {
+        mapInstanceRef.current.removeLayer(tileLayerRef.current);
+      }
+
+      const googleTileUrl =
+        mapMode === "satellite"
+          ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+          : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+
+      tileLayerRef.current = L.tileLayer(googleTileUrl, {
+        maxZoom: 20,
+        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      }).addTo(mapInstanceRef.current);
+    });
+  }, [mapMode]);
+
+  const handleZoomIn = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.zoomIn();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.zoomOut();
+    }
+  };
+
+  const handleResetLocation = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([25.6127, 85.1200], 12);
+    }
+  };
 
   const toggleSave = (id: string) => {
     setSavedProperties((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -58,18 +205,6 @@ export default function SearchScreenWeb() {
     { id: "commercial", label: "Commercial", icon: "storefront" },
     { id: "agricultural", label: "Agricultural", icon: "eco" },
     { id: "patna_region", label: "Patna Region", icon: "location-on" },
-  ];
-
-  // Map pins corresponding to the reference image
-  const mapPins = [
-    { id: "dighwara", name: "Dighwara", x: "16%", y: "24%" },
-    { id: "sonepur", name: "Sonepur", x: "46%", y: "26%" },
-    { id: "hajipur", name: "Hajipur", x: "71%", y: "28%" },
-    { id: "danapur", name: "Danapur", x: "25%", y: "48%" },
-    { id: "bihta", name: "Bihta", x: "13%", y: "60%" },
-    { id: "patna", name: "Patna", x: "46%", y: "52%", isCentral: true },
-    { id: "phulwari", name: "Phulwari", x: "32%", y: "67%" },
-    { id: "fatuha", name: "Fatuha", x: "78%", y: "55%" },
   ];
 
   return (
@@ -245,72 +380,29 @@ export default function SearchScreenWeb() {
 
           {/* ================= MAIN SPLIT SECTION: SIDE-BY-SIDE WITH SAME CONTAINER SIZE ================= */}
           <View style={styles.sideBySideGrid}>
-            {/* ---------------- LEFT CONTAINER: PATNA VECTOR MAP CARD ---------------- */}
+            {/* ---------------- LEFT CONTAINER: REAL INTERACTIVE GOOGLE MAP CARD ---------------- */}
             <View style={styles.equalCard}>
-              <View style={styles.mapCanvas}>
-                {/* Ganga River Path */}
-                <View style={styles.gangaRiverShape}>
-                  <Text style={styles.riverLabel}>Ganga River</Text>
-                </View>
-
-                {/* Road Network Lines */}
-                <View style={styles.roadAtalPath} />
-                <View style={styles.roadDanapurPatna} />
-                <View style={styles.roadNorthBridge} />
-                <View style={styles.roadBihtaDanapur} />
-                <View style={styles.roadPatnaFatuha} />
-
-                {/* Labeled Areas on Map */}
-                <Text style={[styles.mapPlaceLabel, { left: "11%", top: "17%" }]}>Dighwara</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "44%", top: "20%" }]}>Sonepur</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "69%", top: "22%", fontWeight: "700" }]}>Hajipur</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "21%", top: "42%" }]}>Danapur</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "9%", top: "54%" }]}>Bihta</Text>
-                <Text style={[styles.mapPlaceLabel, styles.centralPatnaLabel, { left: "42%", top: "45%" }]}>Patna</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "29%", top: "62%" }]}>Phulwari</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "60%", top: "47%" }]}>Atal Path</Text>
-                <View style={[styles.airportBadge, { left: "35%", top: "54%" }]}>
-                  <MaterialIcons name="flight" size={11} color="#0284C7" />
-                  <Text style={styles.airportText}>Patna{"\n"}Airport</Text>
-                </View>
-                <Text style={[styles.mapPlaceLabel, { left: "57%", top: "60%" }]}>Sampatchak</Text>
-                <Text style={[styles.mapPlaceLabel, { left: "77%", top: "51%" }]}>Fatuha</Text>
-
-                {/* Pins Rendered Across Bihar */}
-                {mapPins.map((pin) => {
-                  const isSelected = selectedPin === pin.id;
-                  return (
-                    <TouchableOpacity
-                      key={pin.id}
-                      style={[styles.pinWrapper, { left: pin.x as any, top: pin.y as any }]}
-                      onPress={() => setSelectedPin(pin.id)}
-                      activeOpacity={0.8}
-                    >
-                      {/* Tooltip on Central Patna Pin */}
-                      {pin.isCentral && (
-                        <View style={styles.centralTooltipContainer}>
-                          <View style={styles.centralTooltipBubble}>
-                            <Text style={styles.centralTooltipText}>
-                              Explore Properties{"\n"}in this Area
-                            </Text>
-                          </View>
-                          <View style={styles.centralTooltipBeak} />
-                        </View>
-                      )}
-
-                      {/* Teardrop Forest Green Pin */}
-                      <View style={[styles.pinHead, isSelected && styles.pinHeadSelected]}>
-                        <View style={styles.pinCenterDot} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+              <View style={styles.googleMapWrapper}>
+                {/* HTML Div mount point for Google Maps instance */}
+                {Platform.OS === "web" ? (
+                  <div
+                    ref={mapContainerRef as any}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      backgroundColor: "#E5E3DF",
+                    }}
+                  />
+                ) : null}
 
                 {/* OVERLAY: Top-Left Location Selector */}
                 <View style={styles.mapTopLeftPill}>
                   <MaterialIcons name="place" size={15} color="#059669" />
                   <Text style={styles.mapTopLeftText}>Patna, Bihar</Text>
-                  <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+                  <TouchableOpacity onPress={handleResetLocation} activeOpacity={0.7}>
                     <Text style={styles.mapChangeLink}>Change</Text>
                   </TouchableOpacity>
                 </View>
@@ -318,16 +410,28 @@ export default function SearchScreenWeb() {
                 {/* OVERLAY: Top-Right Zoom & Crosshair Controls */}
                 <View style={styles.mapTopRightControls}>
                   <View style={styles.zoomPill}>
-                    <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.zoomBtn}
+                      onPress={handleZoomIn}
+                      activeOpacity={0.7}
+                    >
                       <MaterialIcons name="add" size={18} color="#475569" />
                     </TouchableOpacity>
                     <View style={styles.zoomDivider} />
-                    <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.zoomBtn}
+                      onPress={handleZoomOut}
+                      activeOpacity={0.7}
+                    >
                       <MaterialIcons name="remove" size={18} color="#475569" />
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity style={styles.crosshairBtn} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    style={styles.crosshairBtn}
+                    onPress={handleResetLocation}
+                    activeOpacity={0.7}
+                  >
                     <MaterialIcons name="my-location" size={18} color="#475569" />
                   </TouchableOpacity>
                 </View>
@@ -594,7 +698,7 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "relative",
     paddingTop: 32,
-    paddingBottom: 42, // Gives room for half the search bar to overlap the bottom edge
+    paddingBottom: 42,
     backgroundColor: "#E2ECE9",
   },
   heroBackgroundImage: {
@@ -712,7 +816,7 @@ const styles = StyleSheet.create({
   /* ================= SEARCH BAR STRADDLING SECTION LINE ================= */
   searchBarWrapper: {
     position: "relative",
-    marginBottom: -70, // Exactly places the search bar right on the section line!
+    marginBottom: -70,
     zIndex: 20,
   },
   searchBarCard: {
@@ -784,7 +888,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
     paddingHorizontal: 24,
-    paddingTop: 46, // Clear the overlapping search bar nicely
+    paddingTop: 46,
   },
 
   /* Category Filter Toolbar */
@@ -849,11 +953,11 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     gap: 20,
-    alignItems: "stretch", // Ensures both map and listings cards stretch to the exact same height
+    alignItems: "stretch",
   },
   equalCard: {
-    flex: 1, // Same container width!
-    height: 560, // Same container height!
+    flex: 1,
+    height: 560,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -865,177 +969,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  /* ---------------- LEFT: PATNA VECTOR MAP ---------------- */
-  mapCanvas: {
+  /* ---------------- LEFT: REAL INTERACTIVE GOOGLE MAP ---------------- */
+  googleMapWrapper: {
     width: "100%",
     height: "100%",
     position: "relative",
-    backgroundColor: "#EFF5EE",
-  },
-  gangaRiverShape: {
-    position: "absolute",
-    top: "22%",
-    left: "-10%",
-    right: "-10%",
-    height: 56,
-    backgroundColor: "#BAE6FD",
-    transform: [{ rotate: "-6deg" }],
-    justifyContent: "center",
-    alignItems: "center",
-    borderTopWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: "#93C5FD",
-  },
-  riverLabel: {
-    color: "#0369A1",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    opacity: 0.85,
-  },
-  roadAtalPath: {
-    position: "absolute",
-    top: "38%",
-    left: "20%",
-    width: "55%",
-    height: 4,
-    backgroundColor: "#FCD34D",
-    transform: [{ rotate: "8deg" }],
-    borderRadius: 2,
-  },
-  roadDanapurPatna: {
-    position: "absolute",
-    top: "48%",
-    left: "24%",
-    width: "35%",
-    height: 3,
-    backgroundColor: "#CBD5E1",
-    transform: [{ rotate: "-4deg" }],
-  },
-  roadNorthBridge: {
-    position: "absolute",
-    top: "16%",
-    left: "48%",
-    width: 4,
-    height: "45%",
-    backgroundColor: "#FDBA74",
-  },
-  roadBihtaDanapur: {
-    position: "absolute",
-    top: "53%",
-    left: "12%",
-    width: "25%",
-    height: 3,
-    backgroundColor: "#CBD5E1",
-    transform: [{ rotate: "-15deg" }],
-  },
-  roadPatnaFatuha: {
-    position: "absolute",
-    top: "52%",
-    left: "46%",
-    width: "36%",
-    height: 3,
-    backgroundColor: "#CBD5E1",
-    transform: [{ rotate: "12deg" }],
-  },
-  mapPlaceLabel: {
-    position: "absolute",
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#1E293B",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  centralPatnaLabel: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: "#0F172A",
-    backgroundColor: "transparent",
-  },
-  airportBadge: {
-    position: "absolute",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#E0F2FE",
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
-  },
-  airportText: {
-    fontSize: 8.5,
-    fontWeight: "700",
-    color: "#0369A1",
-    lineHeight: 10,
-  },
-  pinWrapper: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  pinHead: {
-    width: 22,
-    height: 28,
-    borderRadius: 11,
-    backgroundColor: "#064E3B",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pinHeadSelected: {
-    backgroundColor: "#059669",
-    transform: [{ scale: 1.15 }],
-  },
-  pinCenterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#FFFFFF",
-  },
-  centralTooltipContainer: {
-    position: "absolute",
-    bottom: 30,
-    alignItems: "center",
-    minWidth: 140,
-    zIndex: 20,
-  },
-  centralTooltipBubble: {
-    backgroundColor: "#064E3B",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-  },
-  centralTooltipText: {
-    color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "700",
-    textAlign: "center",
-    lineHeight: 13,
-  },
-  centralTooltipBeak: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 6,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#064E3B",
+    backgroundColor: "#E5E3DF",
   },
   mapTopLeftPill: {
     position: "absolute",
@@ -1052,8 +991,9 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
+    zIndex: 1000,
   },
   mapTopLeftText: {
     fontSize: 12,
@@ -1072,6 +1012,7 @@ const styles = StyleSheet.create({
     right: 14,
     alignItems: "center",
     gap: 8,
+    zIndex: 1000,
   },
   zoomPill: {
     backgroundColor: "#FFFFFF",
@@ -1081,8 +1022,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
   zoomBtn: {
     width: 32,
@@ -1105,8 +1046,8 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
   mapBottomLeftToggle: {
     position: "absolute",
@@ -1120,8 +1061,9 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
+    zIndex: 1000,
   },
   modeToggleBtn: {
     paddingVertical: 5,
@@ -1154,8 +1096,9 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
+    zIndex: 1000,
   },
   mapBottomRightText: {
     fontSize: 10.5,

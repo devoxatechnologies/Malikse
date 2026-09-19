@@ -26,11 +26,11 @@ export default function AppHeader({
   subtitle,
   badge,
   badgeColor = AppTheme.colors.primary,
-  showBack = true,
+  showBack = false,
   onBackPress,
   fallbackRoute = "/search",
   rightElement,
-  showLanguageToggle = false,
+  showLanguageToggle = true,
   showHomeButton = false,
   showNavLinks = true,
   showPostPropertyBtn = true,
@@ -40,6 +40,7 @@ export default function AppHeader({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const { language, toggleLanguage } = useLanguageStore();
+  const { user, authState } = useAuthStore();
 
   const handleBack = () => {
     if (onBackPress) {
@@ -51,10 +52,13 @@ export default function AppHeader({
     }
   };
 
+  const displayName = user?.name || "Nikhil kumar";
+  const avatarLetter = displayName.charAt(0).toUpperCase();
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
-        {/* Left Section: Back Button or Brand Logo */}
+        {/* Left Section: Brand Logo or Back Button */}
         <View style={styles.leftSection}>
           {showBack ? (
             <TouchableOpacity
@@ -73,25 +77,17 @@ export default function AppHeader({
               activeOpacity={0.8}
             >
               <View style={styles.logoIcon}>
-                <FontAwesome5 name="shield-alt" size={16} color="#FFFFFF" />
+                <FontAwesome5 name="shield-alt" size={18} color="#FFFFFF" />
               </View>
-              <View>
-                <View style={styles.brandNameRow}>
-                  <Text style={styles.brandName}>
-                    Malik<Text style={styles.brandAccent}>Se</Text>
-                  </Text>
-                  <View style={styles.directBadge}>
-                    <MaterialIcons name="verified" size={11} color="#059669" />
-                    <Text style={styles.directBadgeText}>100% DIRECT</Text>
-                  </View>
-                </View>
-                <Text style={styles.brandTagline}>Zero Brokers • Verified Land</Text>
+              <View style={styles.brandTextCol}>
+                <Text style={styles.brandName}>MalikSe</Text>
+                <Text style={styles.brandTagline}>Your Land. A Safer Future.</Text>
               </View>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Center Section: Desktop Nav Links OR Page Title */}
+        {/* Center Section: Desktop Nav Links OR Title */}
         {title ? (
           <View style={styles.centerSection}>
             <View style={styles.titleRow}>
@@ -112,72 +108,123 @@ export default function AppHeader({
           </View>
         ) : isDesktop && showNavLinks ? (
           <View style={styles.navLinksRow}>
+            {/* Explore Plots (Active with bold bottom underline) */}
             <TouchableOpacity
               style={[styles.navLink, pathname === "/search" && styles.navLinkActive]}
               onPress={() => router.replace("/search")}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <MaterialIcons
-                name="explore"
-                size={16}
-                color={pathname === "/search" ? "#059669" : "#64748B"}
-              />
               <Text style={[styles.navLinkText, pathname === "/search" && styles.navLinkTextActive]}>
                 Explore Plots
               </Text>
+              {pathname === "/search" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
 
+            {/* My Listings */}
             <TouchableOpacity
               style={[styles.navLink, pathname === "/my-properties" && styles.navLinkActive]}
               onPress={() => router.push("/my-properties")}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <MaterialIcons
-                name="terrain"
-                size={16}
-                color={pathname === "/my-properties" ? "#059669" : "#64748B"}
-              />
               <Text style={[styles.navLinkText, pathname === "/my-properties" && styles.navLinkTextActive]}>
-                My Land Listings
+                My Listings
               </Text>
+              {pathname === "/my-properties" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
 
+            {/* Saved */}
             <TouchableOpacity
               style={[styles.navLink, pathname === "/saved" && styles.navLinkActive]}
               onPress={() => router.push("/saved")}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
               <MaterialIcons
                 name="favorite-border"
                 size={16}
-                color={pathname === "/saved" ? "#059669" : "#64748B"}
+                color={pathname === "/saved" ? "#0B4D3C" : "#475569"}
+                style={{ marginRight: 4 }}
               />
               <Text style={[styles.navLinkText, pathname === "/saved" && styles.navLinkTextActive]}>
                 Saved
               </Text>
+              {pathname === "/saved" && <View style={styles.activeIndicator} />}
+            </TouchableOpacity>
+
+            {/* Insights */}
+            <TouchableOpacity
+              style={[styles.navLink, pathname === "/insights" && styles.navLinkActive]}
+              onPress={() => router.push("/search")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.navLinkText, pathname === "/insights" && styles.navLinkTextActive]}>
+                Insights
+              </Text>
+              {pathname === "/insights" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
           </View>
         ) : null}
 
-        {/* Right Section: Post Land CTA, Custom Actions, Home, or Language Toggle */}
+        {/* Right Section: Post Land (Free), Language Pill, User Profile Pill */}
         <View style={styles.rightSection}>
-          {/* Post Property Free CTA Button on Web */}
-          {showPostPropertyBtn && isDesktop && (
-            <TouchableOpacity
-              style={styles.postPropertyBtn}
-              onPress={() => {
-                const { authState, user } = useAuthStore.getState();
-                if (authState !== "AUTHENTICATED" || !user) {
-                  router.push("/login");
-                } else {
-                  router.push("/listing/create");
-                }
-              }}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="add-circle" size={16} color="#FFFFFF" />
-              <Text style={styles.postPropertyBtnText}>+ Post Land (Free)</Text>
-            </TouchableOpacity>
+          {rightElement ? (
+            rightElement
+          ) : (
+            <>
+              {/* + Post Land (Free) Button */}
+              {showPostPropertyBtn && isDesktop && (
+                <TouchableOpacity
+                  style={styles.postPropertyBtn}
+                  onPress={() => {
+                    if (authState !== "AUTHENTICATED" || !user) {
+                      router.push("/login");
+                    } else {
+                      router.push("/listing/create");
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <MaterialIcons name="add" size={17} color="#FFFFFF" />
+                  <Text style={styles.postPropertyBtnText}>Post Land (Free)</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Language Pill (e.g. "文A हिंदी") */}
+              {showLanguageToggle && (
+                <TouchableOpacity
+                  style={styles.langBtn}
+                  onPress={toggleLanguage}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons name="translate" size={15} color="#065F46" />
+                  <Text style={styles.langText}>{language === "en" ? "हिंदी" : "EN"}</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* User Profile Pill ("N Nikhil kumar ⌵") */}
+              <TouchableOpacity
+                style={styles.userProfilePill}
+                onPress={() => {
+                  if (authState !== "AUTHENTICATED") {
+                    router.push("/login");
+                  } else {
+                    router.push("/profile");
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.userAvatarCircle}>
+                  <Text style={styles.userAvatarText}>{avatarLetter}</Text>
+                </View>
+                {isDesktop && (
+                  <>
+                    <Text style={styles.userProfileName} numberOfLines={1}>
+                      {displayName}
+                    </Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={18} color="#64748B" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           )}
 
           {showHomeButton && (
@@ -189,19 +236,6 @@ export default function AppHeader({
               <MaterialIcons name="home" size={20} color="#475569" />
             </TouchableOpacity>
           )}
-
-          {showLanguageToggle && (
-            <TouchableOpacity
-              style={styles.langBtn}
-              onPress={toggleLanguage}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons name="translate" size={15} color="#059669" />
-              <Text style={styles.langText}>{language === "en" ? "हिन्दी" : "EN"}</Text>
-            </TouchableOpacity>
-          )}
-
-          {rightElement}
         </View>
       </View>
     </View>
@@ -251,97 +285,74 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1E293B",
   },
+  /* Left Brand */
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
   logoIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 5,
+    elevation: 3,
   },
-  brandNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  brandTextCol: {
+    justifyContent: "center",
   },
   brandName: {
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.5,
   },
-  brandAccent: {
-    color: "#059669",
-  },
-  directBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#ECFDF5",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 9999,
-  },
-  directBadgeText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#065F46",
-    letterSpacing: 0.3,
-  },
   brandTagline: {
-    fontSize: 10,
+    fontSize: 10.5,
     color: "#64748B",
     fontWeight: "500",
-    marginTop: -1,
+    marginTop: 1,
   },
 
   /* Center Nav Links (Desktop) */
   navLinksRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#F8FAFC",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    gap: 28,
   },
   navLink: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 7,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    position: "relative",
   },
   navLinkActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: "transparent",
   },
   navLinkText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#64748B",
+    color: "#475569",
   },
   navLinkTextActive: {
-    color: "#059669",
+    color: "#0B4D3C",
     fontWeight: "700",
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: -2,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: "#0B4D3C",
+    borderRadius: 2,
   },
 
   /* Center Title */
@@ -384,26 +395,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 10,
+    gap: 12,
   },
   postPropertyBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#059669",
-    paddingVertical: 7,
-    paddingHorizontal: 14,
+    backgroundColor: "#0B4D3C",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    shadowColor: "#059669",
+    shadowColor: "#0B4D3C",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 5,
+    shadowRadius: 4,
     elevation: 2,
   },
   postPropertyBtnText: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "700",
   },
   iconBtn: {
     width: 36,
@@ -418,17 +429,47 @@ const styles = StyleSheet.create({
   langBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 11,
-    paddingVertical: 6,
+    backgroundColor: "#E6F4EA",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: "#A7F3D0",
     gap: 5,
   },
   langText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "700",
     color: "#065F46",
+  },
+  userProfilePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  userAvatarCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#0B4D3C",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 12.5,
+    fontWeight: "800",
+  },
+  userProfileName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E293B",
+    maxWidth: 130,
   },
 });

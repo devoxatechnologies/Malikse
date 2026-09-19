@@ -1,479 +1,762 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, Platform } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  ScrollView,
+  Platform,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
-import { propertyService } from "../../src/services/propertyService";
-import type { Property } from "../../src/types/property.types";
-import PropertyCard from "../../components/PropertyCard";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import AppHeader from "../../components/AppHeader";
-import { t } from "../../src/i18n/translations";
-import { useLanguageStore } from "../../src/store/languageStore";
-import { useListingFilterStore } from "../../src/store/listingFilterStore";
 import { useAuthStore } from "../../src/store/authStore";
-import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import { AppTheme } from "../../constants/theme";
 
-const CURATED_PROPERTIES: Property[] = [
-  {
-    id: "prop_1",
-    ownerId: "owner_1",
-    title: "Prime Commercial Plot on Main Bailey Road",
-    type: "land",
-    price: 8500000,
-    totalArea: 2400,
-    sellableArea: 2400,
-    location: { district: "Danapur, Patna", state: "Bihar", lat: 25.6127, lng: 85.0456 },
-    status: "verified",
-    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
-    media: { photos: ["https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80"] },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "prop_2",
-    ownerId: "owner_2",
-    title: "Residential Land for Modern Villa",
-    type: "land",
-    price: 3200000,
-    totalArea: 1500,
-    sellableArea: 1500,
-    location: { district: "Bihta, Patna", state: "Bihar", lat: 25.5684, lng: 84.8582 },
-    status: "verified",
-    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
-    media: { photos: ["https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"] },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "prop_3",
-    ownerId: "owner_3",
-    title: "Fertile Highway Agricultural Farm Land",
-    type: "land",
-    price: 1850000,
-    totalArea: 43560,
-    sellableArea: 43560,
-    location: { district: "Naubatpur, Patna", state: "Bihar", lat: 25.5342, lng: 84.9741 },
-    status: "verified",
-    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: false, fullyVerified: false },
-    media: { photos: ["https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&q=80"] },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "prop_4",
-    ownerId: "owner_4",
-    title: "Luxury 3BHK Apartment in Gated Community",
-    type: "flat",
-    price: 6500000,
-    totalArea: 1850,
-    sellableArea: 1420,
-    location: { district: "Kankarbagh, Patna", state: "Bihar", lat: 25.5941, lng: 85.1550 },
-    status: "verified",
-    badges: { identityVerified: true, documentsChecked: true, siteVisited: true, lawyerReviewed: true, fullyVerified: true },
-    media: { photos: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"] },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+// Local image assets matching the design
+const heroBgImg = require("../../assets/marketplace_hero_bg.jpg");
+const aerialPlotImg = require("../../assets/plot_patna_aerial.jpg");
+const fieldPlotImg = require("../../assets/plot_danapur_field.jpg");
 
 export default function SearchScreenWeb() {
   const router = useRouter();
-  const { language } = useLanguageStore();
-  const filters = useListingFilterStore();
-  const { user, authState } = useAuthStore();
-  
-  const [properties, setProperties] = useState<Property[]>(CURATED_PROPERTIES);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [MapComponents, setMapComponents] = useState<any>(null);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
+  const { authState } = useAuthStore();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [mapMode, setMapMode] = useState<"map" | "satellite">("map");
+  const [selectedPin, setSelectedPin] = useState<string>("patna");
+  const [savedProperties, setSavedProperties] = useState<Record<string, boolean>>({});
+
+  // Inject Google Fonts for the script text & sleek modern typography on web
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("react-leaflet")
-        .then((ReactLeaflet) => {
-          setMapComponents(ReactLeaflet);
-        })
-        .catch((e) => console.error("Failed to load map components", e));
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const linkId = "google-fonts-malikse";
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement("link");
+        link.id = linkId;
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap";
+        document.head.appendChild(link);
+      }
     }
   }, []);
 
-  useEffect(() => {
-    fetchProperties();
-  }, [filters.verifiedOnly, filters.propertyType, filters.location]);
-
-  const fetchProperties = async () => {
-    setLoading(true);
-    try {
-      const data = await propertyService.searchProperties({
-        verifiedOnly: filters.verifiedOnly,
-        type: filters.propertyType || undefined,
-        location: filters.location || undefined
-      });
-      if (data && data.length > 0) {
-        setProperties(data);
-      } else {
-        setProperties(CURATED_PROPERTIES);
-      }
-    } catch (e) {
-      setProperties(CURATED_PROPERTIES);
-    } finally {
-      setLoading(false);
-    }
+  const toggleSave = (id: string) => {
+    setSavedProperties((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredList = properties.filter((p) => {
-    const loc = typeof p.location === "string" ? p.location : `${p.location?.district} ${p.location?.state}`;
-    const matchesSearch = !searchQuery || 
-      (p.title && p.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      loc.toLowerCase().includes(searchQuery.toLowerCase());
+  const categories = [
+    { id: "all", label: "All Properties", icon: "grid-view" },
+    { id: "plots", label: "Plots & Land", icon: "terrain" },
+    { id: "flats", label: "Flats & Houses", icon: "apartment" },
+    { id: "commercial", label: "Commercial", icon: "storefront" },
+    { id: "agricultural", label: "Agricultural", icon: "eco" },
+    { id: "patna_region", label: "Patna Region", icon: "location-on" },
+  ];
 
-    if (!matchesSearch) return false;
-
-    if (activeFilter === "verified") return p.status === "verified";
-    if (activeFilter === "land") return p.type === "land";
-    if (activeFilter === "flat") return p.type === "flat";
-    if (activeFilter === "patna") return loc.toLowerCase().includes("patna");
-    return true;
-  });
+  // Map pins corresponding to the reference image
+  const mapPins = [
+    { id: "dighwara", name: "Dighwara", x: "18%", y: "24%" },
+    { id: "sonepur", name: "Sonepur", x: "47%", y: "27%" },
+    { id: "hajipur", name: "Hajipur", x: "70%", y: "29%" },
+    { id: "danapur", name: "Danapur", x: "25%", y: "47%" },
+    { id: "bihta", name: "Bihta", x: "13%", y: "59%" },
+    { id: "patna", name: "Patna", x: "46%", y: "50%", isCentral: true },
+    { id: "phulwari", name: "Phulwari", x: "32%", y: "65%" },
+    { id: "fatuha", name: "Fatuha", x: "78%", y: "54%" },
+  ];
 
   return (
-    <View style={styles.container}>
-      {/* Top Navbar Header */}
+    <View style={styles.pageContainer}>
+      {/* Top Header Navbar */}
       <AppHeader
         showBack={false}
         showLanguageToggle={true}
-        rightElement={
-          authState === "AUTHENTICATED" && user ? (
-            <TouchableOpacity
-              style={styles.profileBtn}
-              onPress={() => router.push("/profile")}
-              activeOpacity={0.8}
-            >
-              <View style={styles.userAvatar}>
-                <Text style={styles.avatarLetter}>{user.name?.charAt(0) || "U"}</Text>
-              </View>
-              <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.loginBtn}
-              onPress={() => router.push("/login")}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="login" size={16} color={AppTheme.colors.white} />
-              <Text style={styles.loginBtnText}>Sign In</Text>
-            </TouchableOpacity>
-          )
-        }
+        showNavLinks={true}
+        showPostPropertyBtn={true}
       />
 
-      {/* Enhanced Hero Search & Filter Bar */}
-      <View style={styles.filterSection}>
-        <View style={styles.searchBarWrapper}>
-          {/* Header Banner Strip */}
-          <View style={styles.heroStrip}>
-            <View>
-              <Text style={styles.heroTitle}>Direct Land & Plots from Genuine Owners</Text>
-              <View style={styles.heroTrustRow}>
-                <View style={styles.trustItem}>
-                  <MaterialIcons name="verified" size={13} color="#059669" />
-                  <Text style={styles.trustItemText}>100% Jamabandi & Registry Checked</Text>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ================= HERO SECTION WITH LANDSCAPE BACKGROUND ================= */}
+        <View style={styles.heroSection}>
+          <Image
+            source={heroBgImg}
+            style={styles.heroBackgroundImage}
+            resizeMode="cover"
+          />
+          {/* Subtle gradient vignette to blend into page */}
+          <View style={styles.heroOverlay} />
+
+          <View style={styles.heroInnerContainer}>
+            {/* Top Row: Script tagline & Verified Parcels floating badge */}
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroTitlesBlock}>
+                <Text style={styles.heroMainTitle}>Find Genuine Land & Plots</Text>
+                <Text style={styles.heroSubTitle}>Direct from Verified Owners</Text>
+
+                {/* 4 Trust Badges Row */}
+                <View style={styles.trustBadgesRow}>
+                  <View style={styles.trustBadgeItem}>
+                    <MaterialIcons name="verified-user" size={15} color="#059669" />
+                    <Text style={styles.trustBadgeText}>100% Jamabandi & Registry Checked</Text>
+                  </View>
+
+                  <View style={styles.trustBadgeItem}>
+                    <MaterialIcons name="gps-fixed" size={15} color="#059669" />
+                    <Text style={styles.trustBadgeText}>GPS Verified Locations</Text>
+                  </View>
+
+                  <View style={styles.trustBadgeItem}>
+                    <MaterialIcons name="people" size={16} color="#059669" />
+                    <Text style={styles.trustBadgeText}>Zero Brokerage</Text>
+                  </View>
+
+                  <View style={styles.trustBadgeItem}>
+                    <MaterialIcons name="description" size={15} color="#059669" />
+                    <Text style={styles.trustBadgeText}>Direct Owner Contact</Text>
+                  </View>
                 </View>
-                <Text style={styles.trustDot}>&bull;</Text>
-                <View style={styles.trustItem}>
-                  <MaterialIcons name="gps-fixed" size={13} color="#059669" />
-                  <Text style={styles.trustItemText}>Physical GPS Boundary Visits</Text>
+              </View>
+
+              {/* Right Hero Corner: Cursive script + Floating Stat Card */}
+              <View style={styles.heroRightCorner}>
+                <Text style={styles.cursiveHeroScript}>
+                  Real Land{"\n"}Real Opportunities
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.floatingStatCard}
+                  onPress={() => router.push("/search")}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.statIconCircle}>
+                    <MaterialIcons name="check" size={17} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.statTextCol}>
+                    <Text style={styles.statNumber}>1,400+</Text>
+                    <Text style={styles.statLabel}>Verified Parcels</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* ================= COMPOSITE ELEVATED SEARCH BAR ================= */}
+            <View style={styles.searchBarCard}>
+              {/* Location Selector Pill */}
+              <TouchableOpacity style={styles.locationSelector} activeOpacity={0.8}>
+                <MaterialIcons name="place" size={18} color="#059669" />
+                <Text style={styles.locationSelectorText}>Patna, Bihar</Text>
+                <MaterialIcons name="keyboard-arrow-down" size={18} color="#64748B" />
+              </TouchableOpacity>
+
+              <View style={styles.searchBarDivider} />
+
+              {/* Search Query Input */}
+              <View style={styles.searchInputContainer}>
+                <MaterialIcons name="search" size={20} color="#94A3B8" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by location, landmark, plot ID..."
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery ? (
+                  <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
+                    <MaterialIcons name="close" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* Search Button */}
+              <TouchableOpacity
+                style={styles.searchActionBtn}
+                onPress={() => {}}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name="search" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.searchActionBtnText}>Search</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* ================= CATEGORY FILTER TOOLBAR ================= */}
+            <View style={styles.filterToolbar}>
+              {/* Left category pills */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryPillsScroll}
+              >
+                {categories.map((cat) => {
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.categoryPill, isActive && styles.categoryPillActive]}
+                      onPress={() => setSelectedCategory(cat.id)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialIcons
+                        name={cat.icon as any}
+                        size={15}
+                        color={isActive ? "#065F46" : "#475569"}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text
+                        style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Right Filter Actions: Sort By & Filters */}
+              <View style={styles.rightFilterActions}>
+                <TouchableOpacity style={styles.filterActionPill} activeOpacity={0.8}>
+                  <MaterialIcons name="swap-vert" size={17} color="#475569" style={{ marginRight: 4 }} />
+                  <Text style={styles.filterActionText}>Sort by</Text>
+                  <MaterialIcons name="keyboard-arrow-down" size={17} color="#64748B" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.filterActionPill} activeOpacity={0.8}>
+                  <MaterialIcons name="tune" size={16} color="#475569" style={{ marginRight: 5 }} />
+                  <Text style={styles.filterActionText}>Filters</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ================= MAIN SPLIT SECTION: MAP & LISTINGS ================= */}
+        <View style={styles.mainGrid}>
+          {/* ---------------- LEFT: PATNA VECTOR MAP CARD ---------------- */}
+          <View style={styles.mapCard}>
+            {/* Map Canvas with Ganga River, Roads, Towns, and Interactive Pins */}
+            <View style={styles.mapCanvas}>
+              {/* Ganga River Path */}
+              <View style={styles.gangaRiverShape}>
+                <Text style={styles.riverLabel}>Ganga River</Text>
+              </View>
+
+              {/* Road Lines Network */}
+              <View style={styles.roadAtalPath} />
+              <View style={styles.roadDanapurPatna} />
+              <View style={styles.roadNorthBridge} />
+              <View style={styles.roadBihtaDanapur} />
+              <View style={styles.roadPatnaFatuha} />
+
+              {/* Labeled Areas on Map */}
+              <Text style={[styles.mapPlaceLabel, { left: "12%", top: "18%" }]}>Dighwara</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "45%", top: "20%" }]}>Sonepur</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "68%", top: "22%", fontWeight: "700" }]}>Hajipur</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "22%", top: "42%" }]}>Danapur</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "10%", top: "54%" }]}>Bihta</Text>
+              <Text style={[styles.mapPlaceLabel, styles.centralPatnaLabel, { left: "43%", top: "44%" }]}>Patna</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "30%", top: "60%" }]}>Phulwari</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "60%", top: "46%" }]}>Atal Path</Text>
+              <View style={[styles.airportBadge, { left: "36%", top: "53%" }]}>
+                <MaterialIcons name="flight" size={11} color="#0284C7" />
+                <Text style={styles.airportText}>Patna{"\n"}Airport</Text>
+              </View>
+              <Text style={[styles.mapPlaceLabel, { left: "57%", top: "59%" }]}>Sampatchak</Text>
+              <Text style={[styles.mapPlaceLabel, { left: "76%", top: "50%" }]}>Fatuha</Text>
+
+              {/* Pins Rendered Across Bihar */}
+              {mapPins.map((pin) => {
+                const isSelected = selectedPin === pin.id;
+                return (
+                  <TouchableOpacity
+                    key={pin.id}
+                    style={[styles.pinWrapper, { left: pin.x as any, top: pin.y as any }]}
+                    onPress={() => setSelectedPin(pin.id)}
+                    activeOpacity={0.8}
+                  >
+                    {/* Tooltip on Central Patna Pin matching reference image */}
+                    {pin.isCentral && (
+                      <View style={styles.centralTooltipContainer}>
+                        <View style={styles.centralTooltipBubble}>
+                          <Text style={styles.centralTooltipText}>
+                            Explore Properties{"\n"}in this Area
+                          </Text>
+                        </View>
+                        <View style={styles.centralTooltipBeak} />
+                      </View>
+                    )}
+
+                    {/* Teardrop Forest Green Pin */}
+                    <View style={[styles.pinHead, isSelected && styles.pinHeadSelected]}>
+                      <View style={styles.pinCenterDot} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* OVERLAY: Top-Left Location Selector */}
+              <View style={styles.mapTopLeftPill}>
+                <MaterialIcons name="place" size={15} color="#059669" />
+                <Text style={styles.mapTopLeftText}>Patna, Bihar</Text>
+                <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+                  <Text style={styles.mapChangeLink}>Change</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* OVERLAY: Top-Right Zoom & Crosshair Controls */}
+              <View style={styles.mapTopRightControls}>
+                <View style={styles.zoomPill}>
+                  <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
+                    <MaterialIcons name="add" size={18} color="#475569" />
+                  </TouchableOpacity>
+                  <View style={styles.zoomDivider} />
+                  <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
+                    <MaterialIcons name="remove" size={18} color="#475569" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.trustDot}>&bull;</Text>
-                <View style={styles.trustItem}>
-                  <MaterialIcons name="handshake" size={13} color="#059669" />
-                  <Text style={styles.trustItemText}>Zero Brokerage</Text>
+
+                <TouchableOpacity style={styles.crosshairBtn} activeOpacity={0.7}>
+                  <MaterialIcons name="my-location" size={18} color="#475569" />
+                </TouchableOpacity>
+              </View>
+
+              {/* OVERLAY: Bottom-Left Map / Satellite Toggle */}
+              <View style={styles.mapBottomLeftToggle}>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, mapMode === "map" && styles.modeToggleActive]}
+                  onPress={() => setMapMode("map")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.modeToggleText, mapMode === "map" && styles.modeToggleTextActive]}>
+                    Map
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, mapMode === "satellite" && styles.modeToggleActive]}
+                  onPress={() => setMapMode("satellite")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.modeToggleText, mapMode === "satellite" && styles.modeToggleTextActive]}>
+                    Satellite
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* OVERLAY: Bottom-Right Showing Properties Card */}
+              <View style={styles.mapBottomRightPill}>
+                <MaterialIcons name="bar-chart" size={18} color="#059669" style={{ marginRight: 6 }} />
+                <Text style={styles.mapBottomRightText}>
+                  Showing <Text style={{ fontWeight: "800", color: "#0F172A" }}>1,240+</Text> properties{"\n"}in Patna Region
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ---------------- RIGHT: AVAILABLE LISTINGS PANEL ---------------- */}
+          <View style={styles.listingsCard}>
+            {/* Panel Header */}
+            <View style={styles.listingsHeader}>
+              <View style={styles.listingsHeaderTopRow}>
+                <Text style={styles.listingsTitle}>Available Listings (1,240+)</Text>
+                <TouchableOpacity
+                  style={styles.viewAllBtn}
+                  onPress={() => router.push("/search")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.viewAllText}>View All</Text>
+                  <MaterialIcons name="arrow-forward" size={15} color="#059669" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.listingsSubtitle}>
+                Direct from verified owners &bull; No middlemen &bull; 100% secure
+              </Text>
+            </View>
+
+            {/* List of Cards */}
+            <View style={styles.listingsContainer}>
+              {/* ============ LISTING CARD 1 (Featured) ============ */}
+              <View style={styles.propertyRowCard}>
+                {/* Left Media Column */}
+                <View style={styles.cardImageCol}>
+                  <Image
+                    source={aerialPlotImg}
+                    style={styles.propertyThumbImage}
+                    resizeMode="cover"
+                  />
+
+                  {/* Top-Left Featured Crown Badge */}
+                  <View style={styles.featuredBadge}>
+                    <FontAwesome5 name="crown" size={10} color="#B45309" style={{ marginRight: 4 }} />
+                    <Text style={styles.featuredBadgeText}>Featured</Text>
+                  </View>
+
+                  {/* Top-Right Favorite Heart Button */}
+                  <TouchableOpacity
+                    style={styles.favCircleBtn}
+                    onPress={() => toggleSave("prop_patna_1")}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons
+                      name={savedProperties["prop_patna_1"] ? "favorite" : "favorite-border"}
+                      size={16}
+                      color={savedProperties["prop_patna_1"] ? "#EF4444" : "#FFFFFF"}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Bottom-Left Image Count (1/8) */}
+                  <View style={styles.imageCountBadge}>
+                    <MaterialIcons name="photo-camera" size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.imageCountText}>1 / 8</Text>
+                  </View>
+
+                  {/* Bottom-Right Carousel Arrows */}
+                  <View style={styles.carouselNavRow}>
+                    <TouchableOpacity style={styles.carouselBtn} activeOpacity={0.7}>
+                      <MaterialIcons name="chevron-left" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.carouselBtn} activeOpacity={0.7}>
+                      <MaterialIcons name="chevron-right" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Right Details Column */}
+                <View style={styles.cardDetailsCol}>
+                  <View>
+                    <Text style={styles.cardTitle}>LAND in Patna, Bihar</Text>
+                    <View style={styles.cardLocationRow}>
+                      <MaterialIcons name="place" size={13} color="#64748B" style={{ marginRight: 3 }} />
+                      <Text style={styles.cardLocationText}>Patna, Bihar</Text>
+                    </View>
+
+                    {/* Trust & Spec Chips */}
+                    <View style={styles.chipsRow}>
+                      <View style={styles.chipNeutral}>
+                        <MaterialIcons name="grid-on" size={12} color="#475569" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipNeutralText}>2400 sq.ft</Text>
+                      </View>
+
+                      <View style={styles.chipKyc}>
+                        <MaterialIcons name="verified" size={12} color="#059669" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipKycText}>KYC Verified</Text>
+                      </View>
+
+                      <View style={styles.chipRegistry}>
+                        <MaterialIcons name="receipt-long" size={12} color="#2563EB" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipRegistryText}>Registry</Text>
+                      </View>
+
+                      <View style={styles.chipGps}>
+                        <MaterialIcons name="location-searching" size={12} color="#7C3AED" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipGpsText}>GPS Visit</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Bottom Price & View Details Button */}
+                  <View style={styles.cardPriceRow}>
+                    <Text style={styles.priceAmount}>₹60.00 Lakh</Text>
+                    <TouchableOpacity
+                      style={styles.viewDetailsBtn}
+                      onPress={() => router.push("/property/prop_1")}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.viewDetailsBtnText}>View Details</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* ============ LISTING CARD 2 (Residential Plot near Danapur) ============ */}
+              <View style={styles.propertyRowCard}>
+                {/* Left Media Column */}
+                <View style={styles.cardImageCol}>
+                  <Image
+                    source={fieldPlotImg}
+                    style={styles.propertyThumbImage}
+                    resizeMode="cover"
+                  />
+
+                  {/* Top-Right Favorite Heart Button */}
+                  <TouchableOpacity
+                    style={styles.favCircleBtn}
+                    onPress={() => toggleSave("prop_danapur_2")}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons
+                      name={savedProperties["prop_danapur_2"] ? "favorite" : "favorite-border"}
+                      size={16}
+                      color={savedProperties["prop_danapur_2"] ? "#EF4444" : "#FFFFFF"}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Bottom-Left Image Count (1/5) */}
+                  <View style={styles.imageCountBadge}>
+                    <MaterialIcons name="photo-camera" size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.imageCountText}>1 / 5</Text>
+                  </View>
+
+                  {/* Bottom-Right Carousel Arrows */}
+                  <View style={styles.carouselNavRow}>
+                    <TouchableOpacity style={styles.carouselBtn} activeOpacity={0.7}>
+                      <MaterialIcons name="chevron-left" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.carouselBtn} activeOpacity={0.7}>
+                      <MaterialIcons name="chevron-right" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Right Details Column */}
+                <View style={styles.cardDetailsCol}>
+                  <View>
+                    <Text style={styles.cardTitle}>Residential Plot near Danapur</Text>
+                    <View style={styles.cardLocationRow}>
+                      <MaterialIcons name="place" size={13} color="#64748B" style={{ marginRight: 3 }} />
+                      <Text style={styles.cardLocationText}>Danapur, Patna</Text>
+                    </View>
+
+                    {/* Trust & Spec Chips */}
+                    <View style={styles.chipsRow}>
+                      <View style={styles.chipNeutral}>
+                        <MaterialIcons name="grid-on" size={12} color="#475569" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipNeutralText}>1200 sq.ft</Text>
+                      </View>
+
+                      <View style={styles.chipKyc}>
+                        <MaterialIcons name="verified" size={12} color="#059669" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipKycText}>KYC Verified</Text>
+                      </View>
+
+                      <View style={styles.chipRegistry}>
+                        <MaterialIcons name="receipt-long" size={12} color="#2563EB" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipRegistryText}>Registry</Text>
+                      </View>
+
+                      <View style={styles.chipGps}>
+                        <MaterialIcons name="location-searching" size={12} color="#7C3AED" style={{ marginRight: 3 }} />
+                        <Text style={styles.chipGpsText}>GPS Visit</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Bottom Price & View Details Button */}
+                  <View style={styles.cardPriceRow}>
+                    <Text style={styles.priceAmount}>₹42.00 Lakh</Text>
+                    <TouchableOpacity
+                      style={styles.viewDetailsBtn}
+                      onPress={() => router.push("/property/prop_2")}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.viewDetailsBtnText}>View Details</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
-            <View style={styles.statBadge}>
-              <Text style={styles.statBadgeNum}>1,400+</Text>
-              <Text style={styles.statBadgeTxt}>Verified Parcels</Text>
-            </View>
           </View>
-
-          {/* Composite Search Bar */}
-          <View style={styles.searchComposite}>
-            <View style={styles.locationPill}>
-              <MaterialIcons name="place" size={16} color="#059669" />
-              <Text style={styles.locationPillText}>Patna, BR</Text>
-            </View>
-            <View style={styles.searchDivider} />
-            <View style={styles.searchBox}>
-              <MaterialIcons name="search" size={18} color="#94A3B8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={t(language, "search_placeholder") || "Search by colony, Danapur, Bihta, Bailey Road, plot size..."}
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery ? (
-                <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
-                  <MaterialIcons name="close" size={16} color="#94A3B8" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-            <TouchableOpacity style={styles.searchActionBtn} activeOpacity={0.8}>
-              <MaterialIcons name="search" size={16} color="#FFFFFF" />
-              <Text style={styles.searchActionBtnText}>Search</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Quick Filter Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-            {[
-              { key: "all", label: "All Properties", icon: "domain" },
-              { key: "verified", label: "100% Verified Only", icon: "verified" },
-              { key: "land", label: "Plots & Land", icon: "terrain" },
-              { key: "flat", label: "Flats & Houses", icon: "apartment" },
-              { key: "patna", label: "Patna Region", icon: "place" },
-            ].map((chip) => {
-              const isActive = activeFilter === chip.key;
-              return (
-                <TouchableOpacity
-                  key={chip.key}
-                  style={[styles.chip, isActive && styles.chipActive]}
-                  onPress={() => setActiveFilter(chip.key)}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons
-                    name={chip.icon as any}
-                    size={14}
-                    color={isActive ? "#059669" : "#64748B"}
-                  />
-                  <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                    {chip.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
         </View>
-      </View>
-
-      {/* Main Split Content: Map & Properties */}
-      <View style={styles.content}>
-        {/* Map View Left Panel */}
-        <View style={styles.mapContainer}>
-          {!MapComponents ? (
-            <View style={styles.mapLoader}>
-              <ActivityIndicator size="large" color={AppTheme.colors.primary} />
-              <Text style={styles.loadingText}>Loading Interactive Verified Map...</Text>
-            </View>
-          ) : (
-            <MapComponents.MapContainer
-              center={[25.5941, 85.1376]} // Patna coordinates
-              zoom={11}
-              style={{ width: "100%", height: "100%" }}
-            >
-              <MapComponents.TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {filteredList.map((prop) => {
-                const lat = prop.location?.lat || 25.5941;
-                const lng = prop.location?.lng || 85.1376;
-                const priceStr = Number(prop.price) >= 10000000 
-                  ? `₹${(Number(prop.price) / 10000000).toFixed(2)} Cr` 
-                  : `₹${(Number(prop.price) / 100000).toFixed(2)} Lakh`;
-                return (
-                  <MapComponents.Marker key={prop.id} position={[lat, lng]}>
-                    <MapComponents.Popup>
-                      <View style={{ minWidth: 160, padding: 4 }}>
-                        <Text style={{ fontWeight: "700", color: "#0F172A", fontSize: 13 }}>
-                          {prop.title || prop.type.toUpperCase()}
-                        </Text>
-                        <Text style={{ color: "#059669", fontWeight: "800", fontSize: 14, marginVertical: 4 }}>
-                          {priceStr}
-                        </Text>
-                        <Text style={{ color: "#64748B", fontSize: 11 }}>
-                          {typeof prop.location === "string" ? prop.location : prop.location?.district}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => router.push(`/property/${prop.id}`)}
-                          style={{
-                            marginTop: 8,
-                            backgroundColor: "#059669",
-                            paddingVertical: 5,
-                            paddingHorizontal: 10,
-                            borderRadius: 4,
-                            alignItems: "center"
-                          }}
-                        >
-                          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 11 }}>
-                            View Property &rarr;
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </MapComponents.Popup>
-                  </MapComponents.Marker>
-                );
-              })}
-            </MapComponents.MapContainer>
-          )}
-        </View>
-
-        {/* List View Right Panel */}
-        <View style={styles.listContainer}>
-          <View style={styles.listHeader}>
-            <Text style={styles.listHeading}>
-              Available Listings ({filteredList.length})
-            </Text>
-            <Text style={styles.listSubheading}>
-              Zero Middlemen &bull; 100% Direct Verified Owners
-            </Text>
-          </View>
-
-          {loading ? (
-            <View style={styles.loaderBox}>
-              <ActivityIndicator size="large" color={AppTheme.colors.primary} />
-              <Text style={styles.loadingText}>{t(language, "loading")}</Text>
-            </View>
-          ) : filteredList.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <MaterialIcons name="search-off" size={48} color={AppTheme.colors.textMuted} />
-              <Text style={styles.emptyTitle}>{t(language, "search_no_results")}</Text>
-              <Text style={styles.emptySub}>Try clearing your filters or searching for another district.</Text>
-              <TouchableOpacity style={styles.resetBtn} onPress={() => { setSearchQuery(""); setActiveFilter("all"); }}>
-                <Text style={styles.resetBtnTxt}>Reset Filters</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.cardsScroll}>
-              {filteredList.map((prop) => (
-                <PropertyCard key={prop.id} property={prop} />
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageContainer: {
     flex: 1,
-    backgroundColor: AppTheme.colors.background,
+    backgroundColor: "#F4F7F6",
   },
-  filterSection: {
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    paddingTop: 14,
-    paddingBottom: 10,
-    paddingHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
+  scrollArea: {
+    flex: 1,
   },
-  searchBarWrapper: {
-    maxWidth: 1300,
+  scrollContent: {
+    paddingBottom: 24,
+  },
+
+  /* ================= HERO SECTION ================= */
+  heroSection: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    paddingTop: 28,
+    paddingBottom: 16,
+    backgroundColor: "#E2ECE9",
+  },
+  heroBackgroundImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+    opacity: 0.92,
+  },
+  heroOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(244, 247, 246, 0.45)",
+  },
+  heroInnerContainer: {
+    maxWidth: 1320,
     width: "100%",
     alignSelf: "center",
+    paddingHorizontal: 24,
+    zIndex: 2,
   },
-  heroStrip: {
+  heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+    alignItems: "flex-start",
+    marginBottom: 16,
   },
-  heroTitle: {
-    fontSize: 19,
+  heroTitlesBlock: {
+    flex: 1,
+  },
+  heroMainTitle: {
+    fontSize: 34,
     fontWeight: "900",
     color: "#0F172A",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
+    lineHeight: 40,
   },
-  heroTrustRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 3,
-  },
-  trustItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  trustItemText: {
-    fontSize: 11,
-    color: "#059669",
+  heroSubTitle: {
+    fontSize: 20,
     fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 4,
+    marginBottom: 14,
   },
-  trustDot: {
-    color: "#94A3B8",
-    fontSize: 11,
-  },
-  statBadge: {
-    alignItems: "flex-end",
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  statBadgeNum: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#059669",
-  },
-  statBadgeTxt: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#166534",
-  },
-  searchComposite: {
+  trustBadgesRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    marginBottom: 10,
+    flexWrap: "wrap",
+    gap: 16,
   },
-  locationPill: {
+  trustBadgeItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
   },
-  locationPillText: {
+  trustBadgeText: {
     fontSize: 12,
+    fontWeight: "600",
+    color: "#1E293B",
+  },
+
+  /* Right Corner: Cursive script + Stat Card */
+  heroRightCorner: {
+    alignItems: "flex-end",
+    gap: 10,
+    marginLeft: 20,
+  },
+  cursiveHeroScript: {
+    fontFamily: Platform.OS === "web" ? "Caveat, 'Segoe Script', cursive" : "System",
+    fontSize: 22,
     fontWeight: "700",
-    color: "#065F46",
+    color: "#166534",
+    fontStyle: "italic",
+    textAlign: "right",
+    lineHeight: 24,
+    transform: [{ rotate: "-4deg" }],
   },
-  searchDivider: {
+  floatingStatCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  statIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#059669",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statTextCol: {
+    alignItems: "flex-start",
+  },
+  statNumber: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#0F172A",
+    lineHeight: 18,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+
+  /* ================= COMPOSITE SEARCH BAR ================= */
+  searchBarCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 6,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+    marginTop: 6,
+  },
+  locationSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  locationSelectorText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  searchBarDivider: {
     width: 1,
-    height: 24,
-    backgroundColor: "#CBD5E1",
-    marginHorizontal: 8,
+    height: 26,
+    backgroundColor: "#E2E8F0",
   },
-  searchBox: {
+  searchInputContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 14,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 13,
+    fontSize: 13.5,
     color: "#0F172A",
     fontWeight: "500",
     outlineStyle: "none" as any,
@@ -481,172 +764,668 @@ const styles = StyleSheet.create({
   searchActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#059669",
+    backgroundColor: "#056B4D",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    shadowColor: "#056B4D",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  searchActionBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13.5,
+    fontWeight: "800",
+  },
+
+  /* ================= CATEGORY FILTER TOOLBAR ================= */
+  filterToolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+    gap: 12,
+  },
+  categoryPillsScroll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 7,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  categoryPillActive: {
+    backgroundColor: "#D1FAE5",
+    borderColor: "#A7F3D0",
+  },
+  categoryPillText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  categoryPillTextActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+  rightFilterActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  filterActionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  filterActionText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#475569",
+  },
+
+  /* ================= MAIN SPLIT GRID ================= */
+  mainGrid: {
+    maxWidth: 1320,
+    width: "100%",
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    marginTop: 16,
+    flexDirection: "row",
+    gap: 20,
+    alignItems: "flex-start",
+  },
+
+  /* ---------------- LEFT: PATNA VECTOR MAP CARD ---------------- */
+  mapCard: {
+    flex: 1,
+    height: 570,
+    backgroundColor: "#EBF3EE",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  mapCanvas: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+    backgroundColor: "#EFF5EE",
+  },
+
+  /* River & Road styling matching the vector map in screenshot */
+  gangaRiverShape: {
+    position: "absolute",
+    top: "22%",
+    left: "-10%",
+    right: "-10%",
+    height: 56,
+    backgroundColor: "#BAE6FD",
+    transform: [{ rotate: "-6deg" }],
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: "#93C5FD",
+  },
+  riverLabel: {
+    color: "#0369A1",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    opacity: 0.85,
+  },
+  roadAtalPath: {
+    position: "absolute",
+    top: "38%",
+    left: "20%",
+    width: "55%",
+    height: 4,
+    backgroundColor: "#FCD34D",
+    transform: [{ rotate: "8deg" }],
+    borderRadius: 2,
+  },
+  roadDanapurPatna: {
+    position: "absolute",
+    top: "48%",
+    left: "24%",
+    width: "35%",
+    height: 3,
+    backgroundColor: "#CBD5E1",
+    transform: [{ rotate: "-4deg" }],
+  },
+  roadNorthBridge: {
+    position: "absolute",
+    top: "16%",
+    left: "48%",
+    width: 4,
+    height: "45%",
+    backgroundColor: "#FDBA74",
+  },
+  roadBihtaDanapur: {
+    position: "absolute",
+    top: "53%",
+    left: "12%",
+    width: "25%",
+    height: 3,
+    backgroundColor: "#CBD5E1",
+    transform: [{ rotate: "-15deg" }],
+  },
+  roadPatnaFatuha: {
+    position: "absolute",
+    top: "52%",
+    left: "46%",
+    width: "36%",
+    height: 3,
+    backgroundColor: "#CBD5E1",
+    transform: [{ rotate: "12deg" }],
+  },
+
+  /* Map Place Labels */
+  mapPlaceLabel: {
+    position: "absolute",
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#1E293B",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  centralPatnaLabel: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#0F172A",
+    backgroundColor: "transparent",
+  },
+  airportBadge: {
+    position: "absolute",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#E0F2FE",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  airportText: {
+    fontSize: 8.5,
+    fontWeight: "700",
+    color: "#0369A1",
+    lineHeight: 10,
+  },
+
+  /* Map Pin Elements */
+  pinWrapper: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  pinHead: {
+    width: 22,
+    height: 28,
+    borderRadius: 11,
+    backgroundColor: "#064E3B",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  pinHeadSelected: {
+    backgroundColor: "#059669",
+    transform: [{ scale: 1.15 }],
+  },
+  pinCenterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#FFFFFF",
+  },
+
+  /* Tooltip for Central Patna Pin */
+  centralTooltipContainer: {
+    position: "absolute",
+    bottom: 30,
+    alignItems: "center",
+    minWidth: 140,
+    zIndex: 20,
+  },
+  centralTooltipBubble: {
+    backgroundColor: "#064E3B",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    shadowColor: "#059669",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  centralTooltipText: {
+    color: "#FFFFFF",
+    fontSize: 10.5,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 13,
+  },
+  centralTooltipBeak: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#064E3B",
+  },
+
+  /* Map Overlays */
+  mapTopLeftPill: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  mapTopLeftText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  mapChangeLink: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#059669",
+    marginLeft: 4,
+  },
+  mapTopRightControls: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    alignItems: "center",
+    gap: 8,
+  },
+  zoomPill: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  zoomBtn: {
+    width: 32,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  zoomDivider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+  },
+  crosshairBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  mapBottomLeftToggle: {
+    position: "absolute",
+    bottom: 14,
+    left: 14,
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  modeToggleBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  modeToggleActive: {
+    backgroundColor: "#0B4D3C",
+  },
+  modeToggleText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  modeToggleTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  mapBottomRightPill: {
+    position: "absolute",
+    bottom: 14,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  mapBottomRightText: {
+    fontSize: 10.5,
+    color: "#475569",
+    lineHeight: 13,
+  },
+
+  /* ---------------- RIGHT: AVAILABLE LISTINGS PANEL ---------------- */
+  listingsCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  listingsHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    paddingBottom: 14,
+  },
+  listingsHeaderTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  listingsTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  listingsSubtitle: {
+    fontSize: 11.5,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  listingsContainer: {
+    marginTop: 14,
+    gap: 16,
+  },
+
+  /* Property Horizontal Row Card */
+  propertyRowCard: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+  },
+  cardImageCol: {
+    width: 210,
+    height: 145,
+    position: "relative",
+    backgroundColor: "#E2E8F0",
+  },
+  propertyThumbImage: {
+    width: "100%",
+    height: "100%",
+  },
+  featuredBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  featuredBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#92400E",
+  },
+  favCircleBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageCountBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  imageCountText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  carouselNavRow: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    flexDirection: "row",
+    gap: 4,
+  },
+  carouselBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /* Card Right Details */
+  cardDetailsCol: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "space-between",
+  },
+  cardTitle: {
+    fontSize: 15.5,
+    fontWeight: "800",
+    color: "#0F172A",
+    lineHeight: 20,
+  },
+  cardLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  cardLocationText: {
+    fontSize: 11.5,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  chipsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: 8,
+  },
+  chipNeutral: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  chipNeutralText: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  chipKyc: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  chipKycText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  chipRegistry: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  chipRegistryText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  chipGps: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAF5FF",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+  },
+  chipGpsText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#7C3AED",
+  },
+
+  /* Price & CTA */
+  cardPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  priceAmount: {
+    fontSize: 19,
+    fontWeight: "900",
+    color: "#065F46",
+    letterSpacing: -0.3,
+  },
+  viewDetailsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0B4D3C",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    gap: 4,
+    shadowColor: "#0B4D3C",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
   },
-  searchActionBtnText: {
+  viewDetailsBtnText: {
     color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: "800",
-  },
-  chipsScroll: {
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 2,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: AppTheme.radius.full,
-    backgroundColor: AppTheme.colors.background,
-    borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-  },
-  chipActive: {
-    backgroundColor: AppTheme.colors.primaryLight,
-    borderColor: AppTheme.colors.primary,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: AppTheme.colors.textSecondary,
-  },
-  chipTextActive: {
-    color: AppTheme.colors.primaryDark,
     fontWeight: "700",
-  },
-  content: {
-    flex: 1,
-    flexDirection: "row",
-  },
-  mapContainer: {
-    flex: 1.1,
-    backgroundColor: "#E2E8F0",
-    position: "relative",
-  },
-  mapLoader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    color: AppTheme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  listContainer: {
-    flex: 0.9,
-    backgroundColor: AppTheme.colors.background,
-    borderLeftWidth: 1,
-    borderLeftColor: AppTheme.colors.border,
-  },
-  listHeader: {
-    padding: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: AppTheme.colors.divider,
-    backgroundColor: AppTheme.colors.white,
-  },
-  listHeading: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: AppTheme.colors.text,
-  },
-  listSubheading: {
-    fontSize: 12,
-    color: AppTheme.colors.primaryDark,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  cardsScroll: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  loaderBox: {
-    padding: 40,
-    alignItems: "center",
-  },
-  emptyBox: {
-    padding: 40,
-    alignItems: "center",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: AppTheme.colors.text,
-    marginTop: 12,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: AppTheme.colors.textMuted,
-    textAlign: "center",
-    marginTop: 6,
-    maxWidth: 280,
-  },
-  resetBtn: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: AppTheme.colors.primaryLight,
-    borderRadius: AppTheme.radius.md,
-  },
-  resetBtnTxt: {
-    color: AppTheme.colors.primaryDark,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  loginBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: AppTheme.colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: AppTheme.radius.full,
-  },
-  loginBtnText: {
-    color: AppTheme.colors.white,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  profileBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: AppTheme.colors.divider,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: AppTheme.radius.full,
-  },
-  userAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: AppTheme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarLetter: {
-    color: AppTheme.colors.white,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  userName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: AppTheme.colors.text,
-    maxWidth: 100,
   },
 });

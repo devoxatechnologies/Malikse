@@ -114,6 +114,8 @@ const CORRIDOR_DATA: CorridorInsight[] = [
 export default function InsightsScreen() {
   const router = useRouter();
   const { language } = useLanguageStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 860;
 
   const [activeMainTab, setActiveMainTab] = useState<"rates" | "calculator" | "legal">("rates");
   const [corridorFilter, setCorridorFilter] = useState<"all" | "patna" | "bihta" | "ringroad" | "rajgir">("all");
@@ -168,32 +170,40 @@ export default function InsightsScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Compact Centered Container (maxWidth: 740, matching other core pages) */}
+        {/* Properly proportioned container (maxWidth: 1080px for desktop, 94% width) */}
         <View style={styles.container}>
           {/* ================= 1. KEY MARKET PULSE METRICS ================= */}
           <View style={styles.metricsRow}>
             <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>₹1,850</Text>
-              <Text style={styles.metricUnit}>/ sq.ft</Text>
-              <Text style={styles.metricLabel}>{t(language, "insights_stat_avg_rate") || "Avg Patna Rate"}</Text>
+              <View style={styles.metricHeaderRow}>
+                <Text style={styles.metricValue}>₹1,850</Text>
+                <Text style={styles.metricUnit}>/ sq.ft</Text>
+              </View>
+              <Text style={styles.metricLabel}>{t(language, "insights_stat_avg_rate") || "Avg Patna Land Rate"}</Text>
             </View>
 
             <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#059669" }]}>+16.4%</Text>
-              <Text style={styles.metricUnit}>YoY</Text>
-              <Text style={styles.metricLabel}>{t(language, "insights_stat_growth") || "Annual Growth"}</Text>
+              <View style={styles.metricHeaderRow}>
+                <Text style={[styles.metricValue, { color: "#059669" }]}>+16.4%</Text>
+                <Text style={styles.metricUnit}>YoY</Text>
+              </View>
+              <Text style={styles.metricLabel}>{t(language, "insights_stat_growth") || "Annual Land Appreciation"}</Text>
             </View>
 
             <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#D97706" }]}>100%</Text>
-              <Text style={styles.metricUnit}>MVR</Text>
-              <Text style={styles.metricLabel}>{t(language, "insights_stat_mvr_coverage") || "Govt Circle Rate"}</Text>
+              <View style={styles.metricHeaderRow}>
+                <Text style={[styles.metricValue, { color: "#D97706" }]}>100%</Text>
+                <Text style={styles.metricUnit}>MVR</Text>
+              </View>
+              <Text style={styles.metricLabel}>{t(language, "insights_stat_mvr_coverage") || "Govt Circle Rates Tracked"}</Text>
             </View>
 
             <View style={styles.metricCard}>
-              <Text style={[styles.metricValue, { color: "#2563EB" }]}>₹1.65 L</Text>
-              <Text style={styles.metricUnit}>avg</Text>
-              <Text style={styles.metricLabel}>{t(language, "insights_stat_brokerage_saved") || "Brokerage Saved"}</Text>
+              <View style={styles.metricHeaderRow}>
+                <Text style={[styles.metricValue, { color: "#2563EB" }]}>₹1.65 L</Text>
+                <Text style={styles.metricUnit}>avg</Text>
+              </View>
+              <Text style={styles.metricLabel}>{t(language, "insights_stat_brokerage_saved") || "Brokerage Saved on MalikSe"}</Text>
             </View>
           </View>
 
@@ -207,7 +217,7 @@ export default function InsightsScreen() {
               >
                 <MaterialIcons
                   name="trending-up"
-                  size={15}
+                  size={18}
                   color={activeMainTab === "rates" ? "#065F46" : "#64748B"}
                 />
                 <Text style={[styles.segmentBtnText, activeMainTab === "rates" && styles.segmentBtnTextActive]}>
@@ -222,11 +232,11 @@ export default function InsightsScreen() {
               >
                 <MaterialIcons
                   name="calculate"
-                  size={15}
+                  size={18}
                   color={activeMainTab === "calculator" ? "#065F46" : "#64748B"}
                 />
                 <Text style={[styles.segmentBtnText, activeMainTab === "calculator" && styles.segmentBtnTextActive]}>
-                  {t(language, "insights_tab_calc") || "Duty Calc"}
+                  {t(language, "insights_tab_calc") || "Stamp Duty Calculator"}
                 </Text>
               </TouchableOpacity>
 
@@ -237,11 +247,11 @@ export default function InsightsScreen() {
               >
                 <MaterialIcons
                   name="verified-user"
-                  size={15}
+                  size={18}
                   color={activeMainTab === "legal" ? "#065F46" : "#64748B"}
                 />
                 <Text style={[styles.segmentBtnText, activeMainTab === "legal" && styles.segmentBtnTextActive]}>
-                  {t(language, "insights_tab_legal") || "Legal Guide"}
+                  {t(language, "insights_tab_legal") || "Legal Due Diligence"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -288,7 +298,7 @@ export default function InsightsScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.corridorChipText, corridorFilter === "ringroad" && styles.corridorChipTextActive]}>
-                    {t(language, "insights_corridor_ringroad") || "Ring Road"}
+                    {t(language, "insights_corridor_ringroad") || "Outer Ring Road"}
                   </Text>
                 </TouchableOpacity>
 
@@ -298,15 +308,18 @@ export default function InsightsScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.corridorChipText, corridorFilter === "rajgir" && styles.corridorChipTextActive]}>
-                    {t(language, "insights_corridor_rajgir") || "Rajgir"}
+                    {t(language, "insights_corridor_rajgir") || "Rajgir / Nalanda"}
                   </Text>
                 </TouchableOpacity>
               </ScrollView>
 
-              {/* Corridor Insights Cards */}
-              <View style={styles.corridorList}>
+              {/* Corridor Insights Cards (Responsive 2-column on desktop) */}
+              <View style={[styles.corridorGrid, isDesktop && styles.corridorGridDesktop]}>
                 {filteredCorridors.map((item) => (
-                  <View key={item.id} style={styles.corridorCard}>
+                  <View
+                    key={item.id}
+                    style={[styles.corridorCard, isDesktop && styles.corridorCardDesktop]}
+                  >
                     {/* Header Row */}
                     <View style={styles.corridorHeader}>
                       <View style={{ flex: 1 }}>
@@ -314,7 +327,7 @@ export default function InsightsScreen() {
                           {item.name[language === "hi" ? "hi" : "en"]}
                         </Text>
                         <Text style={styles.corridorKatthaSub}>
-                          {item.avgRateKattha} / Kattha ({formatRupees(item.avgRateSqFt)}/sq.ft)
+                          {item.avgRateKattha} / Kattha • ₹{item.avgRateSqFt.toLocaleString("en-IN")}/sq.ft
                         </Text>
                       </View>
 
@@ -322,7 +335,7 @@ export default function InsightsScreen() {
                       <View style={[styles.growthPill, item.isTopPerformer && styles.growthPillTop]}>
                         <MaterialIcons
                           name="north-east"
-                          size={13}
+                          size={15}
                           color={item.isTopPerformer ? "#065F46" : "#059669"}
                         />
                         <Text style={[styles.growthPillText, item.isTopPerformer && styles.growthPillTextTop]}>
@@ -353,8 +366,8 @@ export default function InsightsScreen() {
 
                     {/* Growth Catalyst */}
                     <View style={styles.catalystRow}>
-                      <MaterialIcons name="bolt" size={14} color="#059669" />
-                      <Text style={styles.catalystText} numberOfLines={2}>
+                      <MaterialIcons name="bolt" size={16} color="#059669" />
+                      <Text style={styles.catalystText}>
                         {item.catalyst[language === "hi" ? "hi" : "en"]}
                       </Text>
                     </View>
@@ -367,9 +380,9 @@ export default function InsightsScreen() {
                         activeOpacity={0.85}
                       >
                         <Text style={styles.browseCorridorBtnText}>
-                          {language === "hi" ? "इस क्षेत्र में प्लॉट देखें" : "Browse Verified Plots Here"}
+                          {language === "hi" ? "इस क्षेत्र में सत्यापित प्लॉट देखें" : "Browse Verified Plots Here"}
                         </Text>
-                        <MaterialIcons name="arrow-forward" size={14} color="#065F46" />
+                        <MaterialIcons name="arrow-forward" size={16} color="#065F46" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -391,170 +404,176 @@ export default function InsightsScreen() {
                     "Instant calculation based on Bihar Registration Department MVR guidelines"}
                 </Text>
 
-                {/* Corridor Selector */}
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>
-                    {t(language, "insights_select_corridor") || "Select Corridor / Area"}
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.calcCorridorScroll}>
-                    {CORRIDOR_DATA.map((c) => (
-                      <TouchableOpacity
-                        key={c.id}
-                        style={[styles.calcCorridorChip, calcCorridorId === c.id && styles.calcCorridorChipActive]}
-                        onPress={() => setCalcCorridorId(c.id)}
-                        activeOpacity={0.8}
-                      >
-                        <Text
-                          style={[
-                            styles.calcCorridorChipText,
-                            calcCorridorId === c.id && styles.calcCorridorChipTextActive,
-                          ]}
+                {/* Desktop 2-column or Mobile 1-column layout */}
+                <View style={[styles.calcContentWrap, isDesktop && styles.calcContentWrapDesktop]}>
+                  {/* Left Column: Form Inputs */}
+                  <View style={[styles.calcFormSide, isDesktop && styles.calcFormSideDesktop]}>
+                    {/* Corridor Selector */}
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>
+                        {t(language, "insights_select_corridor") || "Select Corridor / Area"}
+                      </Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.calcCorridorScroll}>
+                        {CORRIDOR_DATA.map((c) => (
+                          <TouchableOpacity
+                            key={c.id}
+                            style={[styles.calcCorridorChip, calcCorridorId === c.id && styles.calcCorridorChipActive]}
+                            onPress={() => setCalcCorridorId(c.id)}
+                            activeOpacity={0.8}
+                          >
+                            <Text
+                              style={[
+                                styles.calcCorridorChipText,
+                                calcCorridorId === c.id && styles.calcCorridorChipTextActive,
+                              ]}
+                            >
+                              {c.name[language === "hi" ? "hi" : "en"]}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+
+                    {/* Area Input with Unit Switch */}
+                    <View style={styles.formGroup}>
+                      <View style={styles.areaLabelRow}>
+                        <Text style={styles.formLabel}>
+                          {t(language, "insights_area_label") || "Land Area"}
+                        </Text>
+                        {/* Unit Switcher */}
+                        <View style={styles.unitSwitcher}>
+                          <TouchableOpacity
+                            style={[styles.unitBtn, calcUnit === "kattha" && styles.unitBtnActive]}
+                            onPress={() => setCalcUnit("kattha")}
+                          >
+                            <Text style={[styles.unitBtnText, calcUnit === "kattha" && styles.unitBtnTextActive]}>
+                              {t(language, "insights_unit_kattha") || "Kattha"}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.unitBtn, calcUnit === "sqft" && styles.unitBtnActive]}
+                            onPress={() => setCalcUnit("sqft")}
+                          >
+                            <Text style={[styles.unitBtnText, calcUnit === "sqft" && styles.unitBtnTextActive]}>
+                              {t(language, "insights_unit_sqft") || "Sq.Ft"}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={styles.calcInputWrap}>
+                        <TextInput
+                          style={styles.calcInput}
+                          keyboardType="numeric"
+                          value={calcAreaValue}
+                          onChangeText={setCalcAreaValue}
+                          placeholder="e.g. 2"
+                          placeholderTextColor="#94A3B8"
+                        />
+                        <Text style={styles.calcInputUnit}>
+                          {calcUnit === "kattha" ? "Kattha (1 Kattha = 1,361.25 sq.ft)" : "sq.ft"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Buyer Gender (Bihar grants Stamp Duty concession for women) */}
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>
+                        {language === "hi" ? "क्रेता लिंग (महिला स्टांप शुल्क छूट)" : "Buyer (Stamp Duty Concession)"}
+                      </Text>
+                      <View style={styles.genderRow}>
+                        <TouchableOpacity
+                          style={[styles.genderBtn, buyerGender === "male" && styles.genderBtnActive]}
+                          onPress={() => setBuyerGender("male")}
+                          activeOpacity={0.8}
                         >
-                          {c.name[language === "hi" ? "hi" : "en"]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                          <MaterialIcons
+                            name="person"
+                            size={18}
+                            color={buyerGender === "male" ? "#065F46" : "#64748B"}
+                          />
+                          <Text style={[styles.genderBtnText, buyerGender === "male" && styles.genderBtnTextActive]}>
+                            {language === "hi" ? "पुरुष (6% स्टांप शुल्क)" : "Male (6% Stamp Duty)"}
+                          </Text>
+                        </TouchableOpacity>
 
-                {/* Area Input with Unit Switch */}
-                <View style={styles.formGroup}>
-                  <View style={styles.areaLabelRow}>
-                    <Text style={styles.formLabel}>
-                      {t(language, "insights_area_label") || "Land Area"}
-                    </Text>
-                    {/* Unit Switcher */}
-                    <View style={styles.unitSwitcher}>
-                      <TouchableOpacity
-                        style={[styles.unitBtn, calcUnit === "kattha" && styles.unitBtnActive]}
-                        onPress={() => setCalcUnit("kattha")}
-                      >
-                        <Text style={[styles.unitBtnText, calcUnit === "kattha" && styles.unitBtnTextActive]}>
-                          {t(language, "insights_unit_kattha") || "Kattha"}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.unitBtn, calcUnit === "sqft" && styles.unitBtnActive]}
-                        onPress={() => setCalcUnit("sqft")}
-                      >
-                        <Text style={[styles.unitBtnText, calcUnit === "sqft" && styles.unitBtnTextActive]}>
-                          {t(language, "insights_unit_sqft") || "Sq.Ft"}
-                        </Text>
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.genderBtn, buyerGender === "female" && styles.genderBtnActive]}
+                          onPress={() => setBuyerGender("female")}
+                          activeOpacity={0.8}
+                        >
+                          <MaterialIcons
+                            name="person-outline"
+                            size={18}
+                            color={buyerGender === "female" ? "#065F46" : "#64748B"}
+                          />
+                          <Text style={[styles.genderBtnText, buyerGender === "female" && styles.genderBtnTextActive]}>
+                            {language === "hi" ? "महिला (5.7% छूट दर)" : "Female (5.7% Concession)"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
 
-                  <View style={styles.calcInputWrap}>
-                    <TextInput
-                      style={styles.calcInput}
-                      keyboardType="numeric"
-                      value={calcAreaValue}
-                      onChangeText={setCalcAreaValue}
-                      placeholder="e.g. 2"
-                      placeholderTextColor="#94A3B8"
-                    />
-                    <Text style={styles.calcInputUnit}>
-                      {calcUnit === "kattha" ? "Kattha (1 Kattha = 1361.25 sq.ft)" : "sq.ft"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Buyer Gender (Bihar grants Stamp Duty concession for women) */}
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>
-                    {language === "hi" ? "क्रेता लिंग (महिला स्टांप शुल्क छूट)" : "Buyer (Stamp Duty Concession)"}
-                  </Text>
-                  <View style={styles.genderRow}>
-                    <TouchableOpacity
-                      style={[styles.genderBtn, buyerGender === "male" && styles.genderBtnActive]}
-                      onPress={() => setBuyerGender("male")}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialIcons
-                        name="person"
-                        size={15}
-                        color={buyerGender === "male" ? "#065F46" : "#64748B"}
-                      />
-                      <Text style={[styles.genderBtnText, buyerGender === "male" && styles.genderBtnTextActive]}>
-                        {language === "hi" ? "पुरुष (6% स्टांप शुल्क)" : "Male (6% Stamp Duty)"}
+                  {/* Right Column: Calculation Results Card */}
+                  <View style={[styles.resultsBox, isDesktop && styles.resultsBoxDesktop]}>
+                    <View style={styles.resultItem}>
+                      <Text style={styles.resultLabel}>
+                        {t(language, "insights_est_market_val") || "Est. Market Value"}
                       </Text>
-                    </TouchableOpacity>
+                      <Text style={styles.resultValBig}>{formatRupees(estimatedMarketValue)}</Text>
+                    </View>
 
-                    <TouchableOpacity
-                      style={[styles.genderBtn, buyerGender === "female" && styles.genderBtnActive]}
-                      onPress={() => setBuyerGender("female")}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialIcons
-                        name="person-outline"
-                        size={15}
-                        color={buyerGender === "female" ? "#065F46" : "#64748B"}
-                      />
-                      <Text style={[styles.genderBtnText, buyerGender === "female" && styles.genderBtnTextActive]}>
-                        {language === "hi" ? "महिला (5.7% छूट दर)" : "Female (5.7% Concession)"}
+                    <View style={styles.resultDivider} />
+
+                    <View style={styles.resultItemSmall}>
+                      <Text style={styles.resultSmallLabel}>
+                        {t(language, "insights_est_govt_mvr") || "Govt MVR Value"}
                       </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                      <Text style={styles.resultSmallVal}>{formatRupees(estimatedMvrValue)}</Text>
+                    </View>
 
-                {/* Calculation Results Card */}
-                <View style={styles.resultsBox}>
-                  <View style={styles.resultItem}>
-                    <Text style={styles.resultLabel}>
-                      {t(language, "insights_est_market_val") || "Est. Market Value"}
-                    </Text>
-                    <Text style={styles.resultValBig}>{formatRupees(estimatedMarketValue)}</Text>
-                  </View>
-
-                  <View style={styles.resultDivider} />
-
-                  <View style={styles.resultItemSmall}>
-                    <Text style={styles.resultSmallLabel}>
-                      {t(language, "insights_est_govt_mvr") || "Govt MVR Value"}
-                    </Text>
-                    <Text style={styles.resultSmallVal}>{formatRupees(estimatedMvrValue)}</Text>
-                  </View>
-
-                  <View style={styles.resultItemSmall}>
-                    <Text style={styles.resultSmallLabel}>
-                      {language === "hi" ? "स्टांप शुल्क" : "Stamp Duty"} ({buyerGender === "female" ? "5.7%" : "6.0%"})
-                    </Text>
-                    <Text style={styles.resultSmallVal}>{formatRupees(stampDutyAmt)}</Text>
-                  </View>
-
-                  <View style={styles.resultItemSmall}>
-                    <Text style={styles.resultSmallLabel}>
-                      {language === "hi" ? "निबंधन शुल्क (Registration Fee)" : "Registration Fee"} (2.0%)
-                    </Text>
-                    <Text style={styles.resultSmallVal}>{formatRupees(registrationAmt)}</Text>
-                  </View>
-
-                  <View style={styles.resultDivider} />
-
-                  {/* Total Govt Registration Outlay */}
-                  <View style={styles.resultItemSmall}>
-                    <Text style={[styles.resultSmallLabel, { fontWeight: "700", color: "#0F172A" }]}>
-                      {t(language, "insights_stamp_duty") || "Est. Stamp Duty & Registration"}
-                    </Text>
-                    <Text style={[styles.resultSmallVal, { fontWeight: "800", color: "#0F172A" }]}>
-                      {formatRupees(totalGovtOutlay)}
-                    </Text>
-                  </View>
-
-                  {/* 0% Brokerage Savings Highlight */}
-                  <View style={styles.brokerageSavingsHighlight}>
-                    <MaterialIcons name="savings" size={18} color="#059669" />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.savingsTitle}>
-                        {t(language, "insights_brokerage_savings") || "Brokerage Saved on MalikSe"}
+                    <View style={styles.resultItemSmall}>
+                      <Text style={styles.resultSmallLabel}>
+                        {language === "hi" ? "स्टांप शुल्क" : "Stamp Duty"} ({buyerGender === "female" ? "5.7%" : "6.0%"})
                       </Text>
-                      <Text style={styles.savingsSub}>
-                        {language === "hi"
-                          ? `पारंपरिक दलालों की 2% दलाली के मुकाबले आपकी सीधी बचत: ${formatRupees(brokerageSaved)}`
-                          : `Direct 0% brokerage model saves you ${formatRupees(brokerageSaved)} vs local agents`}
+                      <Text style={styles.resultSmallVal}>{formatRupees(stampDutyAmt)}</Text>
+                    </View>
+
+                    <View style={styles.resultItemSmall}>
+                      <Text style={styles.resultSmallLabel}>
+                        {language === "hi" ? "निबंधन शुल्क (Registration Fee)" : "Registration Fee"} (2.0%)
+                      </Text>
+                      <Text style={styles.resultSmallVal}>{formatRupees(registrationAmt)}</Text>
+                    </View>
+
+                    <View style={styles.resultDivider} />
+
+                    {/* Total Govt Registration Outlay */}
+                    <View style={styles.resultItemSmall}>
+                      <Text style={[styles.resultSmallLabel, { fontWeight: "800", color: "#0F172A", fontSize: 14 }]}>
+                        {t(language, "insights_stamp_duty") || "Est. Total Govt Registration"}
+                      </Text>
+                      <Text style={[styles.resultSmallVal, { fontWeight: "900", color: "#0F172A", fontSize: 16 }]}>
+                        {formatRupees(totalGovtOutlay)}
                       </Text>
                     </View>
-                    <Text style={styles.savingsAmt}>{formatRupees(brokerageSaved)}</Text>
+
+                    {/* 0% Brokerage Savings Highlight */}
+                    <View style={styles.brokerageSavingsHighlight}>
+                      <MaterialIcons name="savings" size={24} color="#059669" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.savingsTitle}>
+                          {t(language, "insights_brokerage_savings") || "Brokerage Saved on MalikSe"}
+                        </Text>
+                        <Text style={styles.savingsSub}>
+                          {language === "hi"
+                            ? `पारंपरिक 2% दलाली के मुकाबले आपकी सीधी बचत: ${formatRupees(brokerageSaved)}`
+                            : `Direct 0% brokerage model saves you ${formatRupees(brokerageSaved)} vs local agents`}
+                        </Text>
+                      </View>
+                      <Text style={styles.savingsAmt}>{formatRupees(brokerageSaved)}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -574,9 +593,9 @@ export default function InsightsScreen() {
                 </Text>
               </View>
 
-              <View style={styles.pillarsGrid}>
+              <View style={[styles.pillarsGrid, isDesktop && styles.pillarsGridDesktop]}>
                 {/* Pillar 1: Jamabandi & Mutation */}
-                <View style={styles.pillarCard}>
+                <View style={[styles.pillarCard, isDesktop && styles.pillarCardDesktop]}>
                   <View style={styles.pillarHeader}>
                     <View style={styles.pillarNumberCircle}>
                       <Text style={styles.pillarNumber}>1</Text>
@@ -591,7 +610,7 @@ export default function InsightsScreen() {
                       : "The plot's Jamabandi in Register-II must be officially digitized on biharbhumi.bihar.gov.in in the seller's name with an up-to-date Land Possession Certificate (LPC) and current year rent receipt."}
                   </Text>
                   <View style={styles.checkBadge}>
-                    <MaterialIcons name="check-circle" size={13} color="#059669" />
+                    <MaterialIcons name="check-circle" size={15} color="#059669" />
                     <Text style={styles.checkBadgeText}>
                       {language === "hi" ? "MalikSe पर 100% जांची जाती है" : "100% Checked on MalikSe"}
                     </Text>
@@ -599,7 +618,7 @@ export default function InsightsScreen() {
                 </View>
 
                 {/* Pillar 2: Khatiyan & CS/RS Survey */}
-                <View style={styles.pillarCard}>
+                <View style={[styles.pillarCard, isDesktop && styles.pillarCardDesktop]}>
                   <View style={styles.pillarHeader}>
                     <View style={styles.pillarNumberCircle}>
                       <Text style={styles.pillarNumber}>2</Text>
@@ -614,7 +633,7 @@ export default function InsightsScreen() {
                       : "Cross-reference Cadastral Survey (CS), Revisional Survey (RS), and current Special Survey maps against the seller's registered genealogy to eliminate co-parcenary multi-heir disputes."}
                   </Text>
                   <View style={styles.checkBadge}>
-                    <MaterialIcons name="check-circle" size={13} color="#059669" />
+                    <MaterialIcons name="check-circle" size={15} color="#059669" />
                     <Text style={styles.checkBadgeText}>
                       {language === "hi" ? "स्वामित्व श्रृंखला सत्यापन" : "Chain of Title Verified"}
                     </Text>
@@ -622,7 +641,7 @@ export default function InsightsScreen() {
                 </View>
 
                 {/* Pillar 3: Chauhaddi & Physical GPS */}
-                <View style={styles.pillarCard}>
+                <View style={[styles.pillarCard, isDesktop && styles.pillarCardDesktop]}>
                   <View style={styles.pillarHeader}>
                     <View style={styles.pillarNumberCircle}>
                       <Text style={styles.pillarNumber}>3</Text>
@@ -637,7 +656,7 @@ export default function InsightsScreen() {
                       : "Verify that physical boundaries (North, South, East, West) match deed records on the ground with accurate road frontage and neighbouring landholder boundary confirmations."}
                   </Text>
                   <View style={styles.checkBadge}>
-                    <MaterialIcons name="check-circle" size={13} color="#059669" />
+                    <MaterialIcons name="check-circle" size={15} color="#059669" />
                     <Text style={styles.checkBadgeText}>
                       {language === "hi" ? "GPS कोऑर्डिनेट्स से मैप्ड" : "GPS Coordinates Mapped"}
                     </Text>
@@ -645,7 +664,7 @@ export default function InsightsScreen() {
                 </View>
 
                 {/* Pillar 4: Non-Encumbrance Certificate */}
-                <View style={styles.pillarCard}>
+                <View style={[styles.pillarCard, isDesktop && styles.pillarCardDesktop]}>
                   <View style={styles.pillarHeader}>
                     <View style={styles.pillarNumberCircle}>
                       <Text style={styles.pillarNumber}>4</Text>
@@ -660,7 +679,7 @@ export default function InsightsScreen() {
                       : "Obtain a 13-to-30-year Non-Encumbrance Certificate from the local sub-registrar office to guarantee the land is free of bank mortgages or court injunctions."}
                   </Text>
                   <View style={styles.checkBadge}>
-                    <MaterialIcons name="check-circle" size={13} color="#059669" />
+                    <MaterialIcons name="check-circle" size={15} color="#059669" />
                     <Text style={styles.checkBadgeText}>
                       {language === "hi" ? "कानूनी सलाहकार द्वारा समीक्षित" : "Legal Search Report Assistance"}
                     </Text>
@@ -674,9 +693,9 @@ export default function InsightsScreen() {
           <View style={styles.bottomBanner}>
             <View style={styles.bottomBannerContent}>
               <View style={styles.bannerIconWrap}>
-                <MaterialIcons name="map" size={24} color="#059669" />
+                <MaterialIcons name="map" size={28} color="#059669" />
               </View>
-              <View style={{ flex: 1, minWidth: 260 }}>
+              <View style={{ flex: 1, minWidth: 280 }}>
                 <Text style={styles.bannerTitle}>
                   {t(language, "insights_banner_title") || "Looking for Genuine Plots with Verified Boundaries?"}
                 </Text>
@@ -696,7 +715,7 @@ export default function InsightsScreen() {
                 <Text style={styles.bannerExploreBtnText}>
                   {t(language, "insights_btn_explore") || "Explore Verified Land"}
                 </Text>
-                <MaterialIcons name="arrow-forward" size={15} color="#FFFFFF" />
+                <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -704,7 +723,7 @@ export default function InsightsScreen() {
                 onPress={() => router.push("/listing/create")}
                 activeOpacity={0.8}
               >
-                <MaterialIcons name="add" size={15} color="#065F46" />
+                <MaterialIcons name="add" size={17} color="#065F46" />
                 <Text style={styles.bannerPostBtnText}>
                   {t(language, "insights_btn_post") || "Post Land (0% Brokerage)"}
                 </Text>
@@ -726,173 +745,185 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scrollContainer: {
-    paddingBottom: 60,
+    paddingBottom: 68,
   },
-  /* Compact Centered Container (maxWidth: 740, matching search & saved pages) */
+  /* Generous, well-proportioned container for desktop & tablet (maxWidth: 1080px, width: "94%") */
   container: {
-    width: "100%",
-    maxWidth: 740,
+    width: "94%",
+    maxWidth: 1080,
     alignSelf: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
   },
 
   /* 1. Key Metrics */
   metricsRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 20,
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  metricValue: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0F172A",
-    lineHeight: 19,
-  },
-  metricUnit: {
-    fontSize: 10,
-    color: "#64748B",
-    fontWeight: "600",
-    lineHeight: 12,
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#475569",
-    marginTop: 3,
-    textAlign: "center",
-  },
-
-  /* 2. Main Section Segment Pills */
-  segmentWrap: {
-    marginBottom: 16,
-  },
-  segmentTrack: {
-    flexDirection: "row",
-    backgroundColor: "#E2E8F0",
-    padding: 3,
-    borderRadius: 9999,
-    gap: 3,
-  },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 9999,
-  },
-  segmentBtnActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  segmentBtnText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  segmentBtnTextActive: {
-    color: "#065F46",
-    fontWeight: "700",
-  },
-
-  tabContentBlock: {
-    marginBottom: 20,
-  },
-
-  /* Corridor Filter Chips */
-  corridorFiltersRow: {
-    flexDirection: "row",
-    marginBottom: 14,
-  },
-  corridorChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 9999,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginRight: 8,
-  },
-  corridorChipActive: {
-    backgroundColor: "#E6F4EA",
-    borderColor: "#A7F3D0",
-  },
-  corridorChipText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  corridorChipTextActive: {
-    color: "#065F46",
-    fontWeight: "700",
-  },
-
-  /* Corridor Cards */
-  corridorList: {
-    gap: 12,
-  },
-  corridorCard: {
+    minWidth: 160,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
   },
+  metricHeaderRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+  },
+  metricUnit: {
+    fontSize: 12.5,
+    color: "#64748B",
+    fontWeight: "700",
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+    marginTop: 4,
+    lineHeight: 16,
+  },
+
+  /* 2. Main Section Segment Pills */
+  segmentWrap: {
+    marginBottom: 20,
+  },
+  segmentTrack: {
+    flexDirection: "row",
+    backgroundColor: "#E2E8F0",
+    padding: 4,
+    borderRadius: 9999,
+    gap: 4,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+  },
+  segmentBtnActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.09,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentBtnText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  segmentBtnTextActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+
+  tabContentBlock: {
+    marginBottom: 24,
+  },
+
+  /* Corridor Filter Chips */
+  corridorFiltersRow: {
+    flexDirection: "row",
+    marginBottom: 16,
+  },
+  corridorChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 9999,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginRight: 10,
+  },
+  corridorChipActive: {
+    backgroundColor: "#E6F4EA",
+    borderColor: "#A7F3D0",
+  },
+  corridorChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  corridorChipTextActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+
+  /* Corridor Cards Grid */
+  corridorGrid: {
+    gap: 16,
+  },
+  corridorGridDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  corridorCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  corridorCardDesktop: {
+    width: "48.8%",
+  },
   corridorHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 14,
     gap: 10,
   },
   corridorTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     color: "#0F172A",
+    letterSpacing: -0.3,
   },
   corridorKatthaSub: {
-    fontSize: 12.5,
+    fontSize: 14,
     color: "#059669",
     fontWeight: "700",
-    marginTop: 2,
+    marginTop: 4,
   },
   growthPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 4,
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 9999,
   },
   growthPillTop: {
@@ -900,7 +931,7 @@ const styles = StyleSheet.create({
     borderColor: "#6EE7B7",
   },
   growthPillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: "#059669",
   },
@@ -915,107 +946,122 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 14,
   },
   benchmarkItem: {
     flex: 1,
   },
   benchmarkLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#64748B",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   benchmarkVal: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#0F172A",
-    marginTop: 1,
+    marginTop: 2,
   },
   benchmarkDivider: {
     width: 1,
-    height: 22,
+    height: 26,
     backgroundColor: "#E2E8F0",
-    marginHorizontal: 8,
+    marginHorizontal: 10,
   },
 
   catalystRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 14,
   },
   catalystText: {
-    fontSize: 11.5,
+    fontSize: 13,
     color: "#475569",
-    lineHeight: 16,
+    lineHeight: 18,
     flex: 1,
+    fontWeight: "500",
   },
   corridorActionRow: {
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
-    paddingTop: 10,
+    paddingTop: 12,
     alignItems: "flex-end",
   },
   browseCorridorBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     backgroundColor: "#E6F4EA",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
     borderRadius: 9999,
   },
   browseCorridorBtnText: {
     color: "#065F46",
-    fontSize: 11.5,
-    fontWeight: "700",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
 
   /* Calculator Styles */
   calcCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 18,
+    padding: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 5,
+    shadowRadius: 6,
     elevation: 2,
   },
   calcHeading: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "900",
     color: "#0F172A",
     marginBottom: 4,
   },
   calcSubHeading: {
-    fontSize: 12,
+    fontSize: 13.5,
     color: "#64748B",
-    marginBottom: 16,
-    lineHeight: 17,
+    marginBottom: 20,
+    lineHeight: 19,
+  },
+  calcContentWrap: {
+    gap: 20,
+  },
+  calcContentWrapDesktop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  calcFormSide: {
+    width: "100%",
+  },
+  calcFormSideDesktop: {
+    width: "48%",
   },
   formGroup: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   formLabel: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#334155",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   calcCorridorScroll: {
     flexDirection: "row",
   },
   calcCorridorChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 8,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
@@ -1027,19 +1073,19 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   calcCorridorChipText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: "#475569",
     fontWeight: "600",
   },
   calcCorridorChipTextActive: {
     color: "#065F46",
-    fontWeight: "700",
+    fontWeight: "800",
   },
   areaLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   unitSwitcher: {
     flexDirection: "row",
@@ -1049,47 +1095,51 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   unitBtn: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 4,
   },
   unitBtnActive: {
     backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   unitBtnText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: "#64748B",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   unitBtnTextActive: {
     color: "#065F46",
-    fontWeight: "700",
+    fontWeight: "800",
   },
   calcInputWrap: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
+    borderColor: "#CBD5E1",
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   calcInput: {
     flex: 1,
-    height: 42,
-    fontSize: 15,
-    fontWeight: "700",
+    height: 48,
+    fontSize: 16,
+    fontWeight: "800",
     color: "#0F172A",
     outlineStyle: "none" as any,
   },
   calcInputUnit: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: "#64748B",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   genderRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
   genderBtn: {
     flex: 1,
@@ -1097,9 +1147,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -1109,37 +1159,40 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   genderBtnText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     color: "#64748B",
     fontWeight: "600",
   },
   genderBtnTextActive: {
     color: "#065F46",
-    fontWeight: "700",
+    fontWeight: "800",
   },
 
   /* Results Box */
   resultsBox: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 14,
-    marginTop: 8,
+    padding: 18,
+    width: "100%",
+  },
+  resultsBoxDesktop: {
+    width: "48%",
   },
   resultItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   resultLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#0F172A",
   },
   resultValBig: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "900",
     color: "#059669",
     letterSpacing: -0.5,
@@ -1147,85 +1200,95 @@ const styles = StyleSheet.create({
   resultDivider: {
     height: 1,
     backgroundColor: "#E2E8F0",
-    marginVertical: 8,
+    marginVertical: 10,
   },
   resultItemSmall: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 3,
+    paddingVertical: 5,
   },
   resultSmallLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#475569",
+    fontWeight: "500",
   },
   resultSmallVal: {
-    fontSize: 12.5,
-    fontWeight: "600",
+    fontSize: 13.5,
+    fontWeight: "700",
     color: "#0F172A",
   },
   brokerageSavingsHighlight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     backgroundColor: "#E6F4EA",
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    marginTop: 10,
+    marginTop: 14,
   },
   savingsTitle: {
-    fontSize: 11.5,
+    fontSize: 13,
     fontWeight: "800",
     color: "#065F46",
   },
   savingsSub: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     color: "#047857",
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 16,
   },
   savingsAmt: {
-    fontSize: 13.5,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "900",
     color: "#065F46",
   },
 
   /* Legal Guide */
   legalHeader: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   legalTitle: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "900",
     color: "#0F172A",
-    marginBottom: 3,
+    marginBottom: 4,
   },
   legalSub: {
-    fontSize: 12,
+    fontSize: 13.5,
     color: "#64748B",
-    lineHeight: 17,
+    lineHeight: 19,
   },
   pillarsGrid: {
-    gap: 12,
+    gap: 14,
+  },
+  pillarsGridDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   pillarCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 14,
+    padding: 18,
+  },
+  pillarCardDesktop: {
+    width: "48.8%",
   },
   pillarHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   pillarNumberCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "#E6F4EA",
     borderWidth: 1,
     borderColor: "#A7F3D0",
@@ -1233,63 +1296,63 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pillarNumber: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#065F46",
   },
   pillarCardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 15.5,
+    fontWeight: "800",
     color: "#0F172A",
   },
   pillarCardDesc: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#475569",
-    lineHeight: 18,
-    marginBottom: 8,
+    lineHeight: 20,
+    marginBottom: 10,
   },
   checkBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     backgroundColor: "#ECFDF5",
     alignSelf: "flex-start",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
   checkBadgeText: {
-    fontSize: 10.5,
-    fontWeight: "600",
+    fontSize: 11.5,
+    fontWeight: "700",
     color: "#065F46",
   },
 
   /* Bottom Banner */
   bottomBanner: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    padding: 18,
-    marginTop: 8,
+    padding: 22,
+    marginTop: 10,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
   },
   bottomBannerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 14,
+    gap: 14,
+    marginBottom: 16,
   },
   bannerIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#E6F4EA",
     justifyContent: "center",
     alignItems: "center",
@@ -1297,20 +1360,20 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   bannerTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     color: "#0F172A",
   },
   bannerSub: {
-    fontSize: 11.5,
+    fontSize: 13,
     color: "#64748B",
-    marginTop: 2,
-    lineHeight: 16,
+    marginTop: 3,
+    lineHeight: 18,
   },
   bannerBtnGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     flexWrap: "wrap",
   },
   bannerExploreBtn: {
@@ -1318,8 +1381,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     backgroundColor: "#059669",
-    paddingVertical: 9,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 9999,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 1 },
@@ -1329,23 +1392,23 @@ const styles = StyleSheet.create({
   },
   bannerExploreBtnText: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
   },
   bannerPostBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     backgroundColor: "#E6F4EA",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#A7F3D0",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: 9999,
   },
   bannerPostBtnText: {
     color: "#065F46",
-    fontSize: 11.5,
-    fontWeight: "700",
+    fontSize: 12.5,
+    fontWeight: "800",
   },
 });

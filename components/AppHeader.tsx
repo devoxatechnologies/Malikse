@@ -127,14 +127,30 @@ export default function AppHeader({
 
             {/* My Listings */}
             <TouchableOpacity
-              style={[styles.navLink, pathname === "/my-properties" && styles.navLinkActive]}
+              style={[
+                styles.navLink,
+                pathname === "/my-properties"
+                  ? {
+                      backgroundColor: "#ECFDF5",
+                      borderRadius: 9999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderWidth: 1,
+                      borderColor: "#A7F3D0",
+                    }
+                  : null,
+              ]}
               onPress={() => router.push("/my-properties")}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navLinkText, pathname === "/my-properties" && styles.navLinkTextActive]}>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  pathname === "/my-properties" && { color: "#065F46", fontWeight: "700" },
+                ]}
+              >
                 {t(language, "nav_my_listings") || "My Listings"}
               </Text>
-              {pathname === "/my-properties" && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
 
             {/* Saved */}

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  useWindowDimensions,
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -16,11 +15,14 @@ import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
 
+const heroBgImg = require("../../assets/my_listings_hero_bg.png");
+const defaultAerialPhoto = require("../../assets/plot_patna_aerial.jpg");
+
 const DUMMY_MY_PROPERTIES = [
   {
     id: "prop_1",
-    title: "Prime Commercial Plot on Main Bailey Road",
-    location: { district: "Patna", state: "Bihar", area: "Bailey Road, Danapur" },
+    title: "Prime Land Plot in Patna, Bihar",
+    location: { district: "Patna", state: "Bihar", area: "Patna" },
     sellableArea: 2400,
     price: 4500000,
     ratePerSqFt: 1875,
@@ -28,30 +30,12 @@ const DUMMY_MY_PROPERTIES = [
     khesra: "582",
     dimensions: "40 x 60 ft",
     roadWidth: "40 ft Road",
-    media: { photos: ["https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80"] },
+    media: { photos: [require("../../assets/plot_patna_aerial.jpg")] },
     status: "pending",
     date: "12 Sep 2026",
-    offersCount: 2,
+    offersCount: 3,
     highestOffer: "₹44.50 L",
     badges: { identity: true, documents: true, site: false, lawyer: false },
-  },
-  {
-    id: "prop_2",
-    title: "Residential Land for Modern Villa in Bihta Corridor",
-    location: { district: "Patna", state: "Bihar", area: "Near IIT Bihta Campus" },
-    sellableArea: 1500,
-    price: 3200000,
-    ratePerSqFt: 2133,
-    khata: "88",
-    khesra: "341",
-    dimensions: "30 x 50 ft",
-    roadWidth: "30 ft Road",
-    media: { photos: ["https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"] },
-    status: "verified",
-    date: "05 Sep 2026",
-    offersCount: 1,
-    highestOffer: "₹31.00 L",
-    badges: { identity: true, documents: true, site: true, lawyer: true },
   },
 ];
 
@@ -102,7 +86,7 @@ export default function MyPropertiesScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Universal Brand AppHeader matching all other pages */}
+      {/* Universal Brand AppHeader matching all pages */}
       <AppHeader
         showBack={false}
         showNavLinks={true}
@@ -110,8 +94,18 @@ export default function MyPropertiesScreen() {
         showPostPropertyBtn={true}
       />
 
+      {/* Scenic Countryside Background from user upload */}
+      <View style={styles.scenicBackgroundWrap} pointerEvents="none">
+        <Image
+          source={heroBgImg}
+          style={styles.scenicBackgroundImage}
+          resizeMode="cover"
+        />
+        <View style={styles.scenicBackgroundOverlay} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Centered Compact Column - matching search.tsx & saved.tsx (maxWidth: 720) */}
+        {/* Centered Compact Column (maxWidth: 720, pixel-to-pixel matching mockup) */}
         <View style={styles.container}>
           {/* ================= PAGE HEADER SECTION ================= */}
           <View style={styles.pageHeader}>
@@ -133,7 +127,7 @@ export default function MyPropertiesScreen() {
               >
                 <MaterialIcons name="add" size={16} color="#FFFFFF" />
                 <Text style={styles.headerPostBtnText}>
-                  {t(language, "post_land_free") || "Post Land"}
+                  {t(language, "post_land_free") || "Post Land (Free)"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -150,7 +144,7 @@ export default function MyPropertiesScreen() {
             {/* Metric 2: Pending */}
             <View style={styles.metricCard}>
               <Text style={[styles.metricValue, { color: "#D97706" }]}>{pendingCount}</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_pending") || "In Verification"}</Text>
+              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_pending") || "Under Verification"}</Text>
             </View>
 
             {/* Metric 3: Verified */}
@@ -162,7 +156,7 @@ export default function MyPropertiesScreen() {
             {/* Metric 4: Active Offers */}
             <View style={styles.metricCard}>
               <Text style={[styles.metricValue, { color: "#2563EB" }]}>3</Text>
-              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_offers") || "Offers"}</Text>
+              <Text style={styles.metricLabel}>{t(language, "my_prop_stat_offers") || "Active Offers"}</Text>
             </View>
           </View>
 
@@ -185,7 +179,7 @@ export default function MyPropertiesScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.filterPillText, activeTab === "pending" && styles.filterPillTextActive]}>
-                  {t(language, "my_prop_tab_pending") || "In Verification"} ({pendingCount})
+                  {t(language, "my_prop_tab_pending") || "Under Verification"} ({pendingCount})
                 </Text>
               </TouchableOpacity>
 
@@ -236,11 +230,9 @@ export default function MyPropertiesScreen() {
             <View style={styles.cardsList}>
               {filteredProperties.map((item) => {
                 const isVerified = item.status === "verified";
-                const imageUri =
-                  item.media?.photos?.[0] ||
-                  item.image ||
-                  "https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80";
-                const priceStr = formatPrice(Number(item.price) || 0);
+                const imageSource =
+                  item.media?.photos?.[0] || defaultAerialPhoto;
+                const priceStr = formatPrice(Number(item.price) || 4500000);
                 const areaVal = item.sellableArea || item.totalArea || item.area || 2400;
                 const katthaVal = (Number(areaVal) / 1361.25).toFixed(2);
                 const ratePerSqFt =
@@ -248,11 +240,15 @@ export default function MyPropertiesScreen() {
 
                 return (
                   <View key={item.id || item._id} style={styles.card}>
-                    {/* Natural Photographic Thumbnail (Standard 16:9 ratio, no clutter) */}
+                    {/* Natural Photographic Thumbnail (Matching Mockup) */}
                     <View style={styles.mediaWrap}>
-                      <Image source={{ uri: imageUri }} style={styles.cardImg} resizeMode="cover" />
+                      <Image
+                        source={typeof imageSource === "string" ? { uri: imageSource } : imageSource}
+                        style={styles.cardImg}
+                        resizeMode="cover"
+                      />
 
-                      {/* Single Clean Status Pill (Human-crafted, not cluttered) */}
+                      {/* Status Badge: In Verification (Amber) or Verified & Live (Green) */}
                       <View style={[styles.statusBadge, isVerified ? styles.statusBadgeVerified : styles.statusBadgePending]}>
                         <MaterialIcons
                           name={isVerified ? "verified" : "hourglass-top"}
@@ -266,11 +262,10 @@ export default function MyPropertiesScreen() {
                         </Text>
                       </View>
 
-                      {/* Clean Property Type Tag */}
+                      {/* Clean Property Type Tag: LAND */}
                       <View style={styles.typeBadge}>
                         <Text style={styles.typeBadgeText}>
-                          {item.dimensions ? `${item.dimensions} • ` : ""}
-                          {item.type ? item.type.toUpperCase() : "LAND PLOT"}
+                          {item.type ? item.type.toUpperCase() : "LAND"}
                         </Text>
                       </View>
                     </View>
@@ -284,7 +279,7 @@ export default function MyPropertiesScreen() {
                           <Text style={styles.priceSub}>₹{ratePerSqFt.toLocaleString("en-IN")} / sq.ft</Text>
                         </View>
                         <View style={styles.dateChip}>
-                          <MaterialIcons name="schedule" size={12} color="#64748B" />
+                          <MaterialIcons name="schedule" size={13} color="#64748B" />
                           <Text style={styles.dateChipText}>{item.date || "12 Sep 2026"}</Text>
                         </View>
                       </View>
@@ -299,7 +294,6 @@ export default function MyPropertiesScreen() {
                         <View style={styles.metaItem}>
                           <MaterialIcons name="place" size={14} color="#059669" />
                           <Text style={styles.metaText} numberOfLines={1}>
-                            {item.location?.area ? `${item.location.area}, ` : ""}
                             {item.location?.district || "Patna"}
                           </Text>
                         </View>
@@ -310,20 +304,9 @@ export default function MyPropertiesScreen() {
                             {areaVal} sq.ft ({katthaVal} Kattha)
                           </Text>
                         </View>
-                        {item.khata && (
-                          <>
-                            <View style={styles.metaDot} />
-                            <View style={styles.metaItem}>
-                              <MaterialIcons name="description" size={14} color="#059669" />
-                              <Text style={styles.metaText}>
-                                Khata: {item.khata} / {item.khesra || "582"}
-                              </Text>
-                            </View>
-                          </>
-                        )}
                       </View>
 
-                      {/* 4-Pillar Verification Trust Strip (Compact & Clean) */}
+                      {/* 4-Pillar Verification Trust Strip */}
                       <View style={styles.trustStrip}>
                         <View style={[styles.trustPill, styles.trustPillComplete]}>
                           <MaterialIcons name="check-circle" size={12} color="#059669" />
@@ -346,7 +329,7 @@ export default function MyPropertiesScreen() {
                             color={isVerified ? "#059669" : "#94A3B8"}
                           />
                           <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
-                            {t(language, "my_prop_site") || "Site Visit"}
+                            {t(language, "my_prop_site") || "GPS Site Visit"}
                           </Text>
                         </View>
 
@@ -357,15 +340,12 @@ export default function MyPropertiesScreen() {
                             color={isVerified ? "#059669" : "#94A3B8"}
                           />
                           <Text style={isVerified ? styles.trustPillCompleteText : styles.trustPillPendingText}>
-                            {t(language, "my_prop_lawyer") || "Lawyer"}
+                            {t(language, "my_prop_lawyer") || "Legal / Lawyer"}
                           </Text>
                         </View>
                       </View>
 
-                      {/* Divider */}
-                      <View style={styles.divider} />
-
-                      {/* Card Action Buttons Row (Human scale, neat spacing) */}
+                      {/* Action Buttons Row */}
                       <View style={styles.cardActions}>
                         {/* Primary View Details Button */}
                         <TouchableOpacity
@@ -374,21 +354,21 @@ export default function MyPropertiesScreen() {
                           activeOpacity={0.85}
                         >
                           <Text style={styles.primaryActionBtnText}>
-                            {t(language, "my_prop_btn_details") || "View Details & Offers"}
+                            {t(language, "my_prop_btn_details") || "View Full Details & Offers"}
                           </Text>
                           <MaterialIcons name="arrow-forward" size={15} color="#FFFFFF" />
                         </TouchableOpacity>
 
-                        {/* Secondary Actions: Vault & Boundary */}
+                        {/* Secondary Actions: Document Vault & Boundary Map */}
                         <View style={styles.secondaryActions}>
                           <TouchableOpacity
                             style={styles.mintActionBtn}
                             onPress={() => router.push(`/property/${item.id || item._id || "prop_1"}`)}
                             activeOpacity={0.8}
                           >
-                            <MaterialIcons name="folder-shared" size={15} color="#065F46" />
+                            <MaterialIcons name="folder-shared" size={14} color="#065F46" />
                             <Text style={styles.mintActionBtnText}>
-                              {t(language, "my_prop_btn_vault") || "Vault"}
+                              {t(language, "my_prop_btn_vault") || "Document Vault"}
                             </Text>
                           </TouchableOpacity>
 
@@ -397,9 +377,9 @@ export default function MyPropertiesScreen() {
                             onPress={() => router.push("/listing/create")}
                             activeOpacity={0.8}
                           >
-                            <MaterialIcons name="map" size={15} color="#065F46" />
+                            <MaterialIcons name="map" size={14} color="#065F46" />
                             <Text style={styles.mintActionBtnText}>
-                              {t(language, "my_prop_btn_boundary") || "Map"}
+                              {t(language, "my_prop_btn_boundary") || "Boundary Map"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -410,27 +390,6 @@ export default function MyPropertiesScreen() {
               })}
             </View>
           )}
-
-          {/* ================= 4. POST ANOTHER LAND LINK ================= */}
-          <TouchableOpacity
-            style={styles.bottomPostCard}
-            onPress={() => router.push("/listing/create")}
-            activeOpacity={0.85}
-          >
-            <View style={styles.bottomPostIcon}>
-              <MaterialIcons name="add-business" size={22} color="#059669" />
-            </View>
-            <View style={styles.bottomPostTextCol}>
-              <Text style={styles.bottomPostTitle}>
-                {t(language, "my_prop_banner_title") || "Want to list another land parcel?"}
-              </Text>
-              <Text style={styles.bottomPostSub}>
-                {t(language, "my_prop_banner_sub") ||
-                  "Post your plot boundary directly to verified buyers with 0% brokerage."}
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={22} color="#059669" />
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -441,11 +400,31 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+    position: "relative",
+  },
+  scenicBackgroundWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 310,
+    overflow: "hidden",
+    zIndex: 0,
+  },
+  scenicBackgroundImage: {
+    width: "100%",
+    height: "100%",
+    opacity: 0.88,
+  },
+  scenicBackgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(248, 250, 252, 0.76)",
   },
   scrollContainer: {
-    paddingBottom: 48,
+    paddingBottom: 60,
+    zIndex: 1,
   },
-  /* Compact Centered Container (maxWidth: 720, matching search & saved pages) */
+  /* Compact Centered Container (maxWidth: 720, pixel-to-pixel matching mockup) */
   container: {
     width: "100%",
     maxWidth: 720,
@@ -487,7 +466,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.18,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -520,10 +499,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   metricValue: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "800",
     color: "#0F172A",
-    lineHeight: 22,
+    lineHeight: 23,
   },
   metricLabel: {
     fontSize: 10.5,
@@ -587,7 +566,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   mediaWrap: {
-    height: 190,
+    height: 195,
     width: "100%",
     position: "relative",
     backgroundColor: "#0F172A",
@@ -626,16 +605,16 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 10,
     left: 12,
-    backgroundColor: "rgba(15, 23, 42, 0.82)",
-    paddingVertical: 3,
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    paddingVertical: 3.5,
     paddingHorizontal: 8,
     borderRadius: 6,
   },
   typeBadgeText: {
     color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 
   /* Card Body */
@@ -650,7 +629,7 @@ const styles = StyleSheet.create({
   },
   priceCol: {},
   priceMain: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.4,
@@ -659,28 +638,28 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: "#64748B",
     fontWeight: "500",
-    marginTop: 1,
+    marginTop: 2,
   },
   dateChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#F1F5F9",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    backgroundColor: "transparent",
+    paddingVertical: 2,
+    paddingHorizontal: 4,
   },
   dateChipText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: "#64748B",
     fontWeight: "500",
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 8,
-    lineHeight: 21,
+    fontSize: 16.5,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 4,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   metaRow: {
     flexDirection: "row",
@@ -692,18 +671,19 @@ const styles = StyleSheet.create({
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 4,
   },
   metaText: {
     fontSize: 12,
     color: "#475569",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#CBD5E1",
+    backgroundColor: "#94A3B8",
+    marginHorizontal: 2,
   },
 
   /* Trust Strip */
@@ -711,15 +691,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   trustPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 4.5,
+    paddingHorizontal: 10,
+    borderRadius: 9999,
     borderWidth: 1,
   },
   trustPillComplete: {
@@ -727,8 +707,8 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   trustPillCompleteText: {
-    fontSize: 10.5,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     color: "#065F46",
   },
   trustPillPending: {
@@ -736,15 +716,9 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   trustPillPendingText: {
-    fontSize: 10.5,
-    fontWeight: "500",
-    color: "#94A3B8",
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#F1F5F9",
-    marginBottom: 14,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
   },
 
   /* Actions */
@@ -760,12 +734,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     backgroundColor: "#059669",
-    paddingVertical: 8,
+    paddingVertical: 8.5,
     paddingHorizontal: 16,
     borderRadius: 9999,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.18,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -782,11 +756,11 @@ const styles = StyleSheet.create({
   mintActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     backgroundColor: "#E6F4EA",
     borderWidth: 1,
     borderColor: "#A7F3D0",
-    paddingVertical: 7,
+    paddingVertical: 7.5,
     paddingHorizontal: 12,
     borderRadius: 9999,
   },
@@ -796,41 +770,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* Bottom Post Card */
-  bottomPostCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-    marginTop: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  bottomPostIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#E6F4EA",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomPostTextCol: {
-    flex: 1,
-  },
-  bottomPostTitle: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  bottomPostSub: {
-    fontSize: 11.5,
-    color: "#64748B",
-    marginTop: 2,
-  },
-
   /* Empty State */
+  loaderCenter: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
@@ -851,36 +796,31 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   emptyHeading: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: "#0F172A",
+    marginBottom: 4,
   },
   emptySubText: {
     fontSize: 12.5,
     color: "#64748B",
     textAlign: "center",
-    marginTop: 4,
-    maxWidth: 320,
+    maxWidth: 300,
     lineHeight: 18,
+    marginBottom: 16,
   },
   emptyBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: "#059669",
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: 9999,
-    marginTop: 16,
   },
   emptyBtnText: {
     color: "#FFFFFF",
     fontSize: 12.5,
     fontWeight: "700",
-  },
-  loaderCenter: {
-    paddingVertical: 48,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

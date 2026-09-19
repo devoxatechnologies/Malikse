@@ -744,20 +744,18 @@ const styles = StyleSheet.create({
   },
   mainLayout: {
     width: "100%",
-    maxWidth: 1380,
-    alignSelf: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 16,
   },
   mainLayoutDesktop: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 20,
+    gap: 24,
   },
 
   /* ================= LEFT SIDEBAR ================= */
   sidebar: {
-    width: 220,
+    width: 240,
     backgroundColor: "transparent",
   },
   sidebarMenu: {

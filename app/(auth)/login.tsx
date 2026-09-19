@@ -38,8 +38,13 @@ export default function LoginScreen() {
       if (pwInput?.value) resolvedPassword = pwInput.value;
     }
 
+    const showMsg = (title: string, msg: string) => {
+      if (Platform.OS === "web") alert(`${title}: ${msg}`);
+      else Alert.alert(title, msg);
+    };
+
     if (mobile.length < 10 || resolvedPassword.length < 6) {
-      Alert.alert("Invalid Input", "Please enter your 10-digit mobile number and password (min 6 characters).");
+      showMsg("Invalid Input", "Please enter your 10-digit mobile number and password (min 6 characters).");
       return;
     }
 
@@ -48,7 +53,7 @@ export default function LoginScreen() {
       const user = await authService.login(mobile, resolvedPassword);
       routeByRole(user.role);
     } catch (e: any) {
-      Alert.alert("Sign In Failed", e.response?.data?.message || "Invalid mobile number or password.");
+      showMsg("Sign In Failed", e.response?.data?.message || "Invalid mobile number or password.");
     } finally {
       setLoading(false);
     }

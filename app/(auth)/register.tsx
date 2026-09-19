@@ -40,24 +40,47 @@ export default function RegisterScreen() {
       if (pwInput?.value) resolvedPassword = pwInput.value;
     }
 
-    if (name.trim().length < 2 || mobile.length < 10 || resolvedPassword.length < 6) {
-      Alert.alert("Required Fields", "Please enter your full name, a valid 10-digit mobile, and a password (min 6 chars).");
+    const showMsg = (title: string, msg: string) => {
+      if (Platform.OS === "web") alert(`${title}: ${msg}`);
+      else Alert.alert(title, msg);
+    };
+
+    if (name.trim().length < 2) {
+      showMsg("Required Field", "Please enter your full legal name.");
+      return;
+    }
+    if (mobile.length < 10) {
+      showMsg("Required Field", "Please enter a valid 10-digit mobile number.");
+      return;
+    }
+    if (resolvedPassword.length < 6) {
+      showMsg("Required Field", "Password must be at least 6 characters.");
       return;
     }
 
     setLoading(true);
     try {
       await authService.register(role, name, mobile, resolvedPassword, email);
-      if (Platform.OS === "web") {
-        alert("Registration successful! Please sign in with your mobile number.");
+      
+      // Auto sign-in with newly created credentials
+      try {
+        const user = await authService.login(mobile, resolvedPassword);
+        if (Platform.OS === "web") {
+          alert(`Welcome to MalikSe, ${user.name}! Your account has been created.`);
+        }
+        if (user.role === "owner") router.replace("/my-properties");
+        else router.replace("/search");
+      } catch {
+        if (Platform.OS === "web") {
+          alert("Registration successful! Please sign in with your mobile number.");
+        } else {
+          Alert.alert("Success", "Registration successful! Please sign in.");
+        }
         router.replace("/login");
-      } else {
-        Alert.alert("Success", "Registered successfully. Please login.", [
-          { text: "OK", onPress: () => router.replace("/login") },
-        ]);
       }
     } catch (e: any) {
-      Alert.alert("Registration Error", e.response?.data?.message || "Failed to create account. Please try again.");
+      const errorMsg = e.response?.data?.message || "Failed to create account. Please try again.";
+      showMsg("Registration Error", errorMsg);
     } finally {
       setLoading(false);
     }

@@ -114,10 +114,6 @@ export default function SavedScreen() {
               <Text style={styles.heroSubtitle}>
                 {t(language, "saved_hero_sub") || "Properties you've saved for later"}
               </Text>
-              <Text style={styles.heroCount}>
-                {savedList.length}{" "}
-                {t(language, "saved_shortlisted_plots") || "shortlisted plots"}
-              </Text>
             </View>
 
             {/* Right Top Cursive Script */}
@@ -644,14 +640,12 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     width: "100%",
-    maxWidth: 1240,
-    alignSelf: "center",
     height: 195,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: "hidden",
     position: "relative",
     justifyContent: "center",
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
   },
   heroBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -743,8 +737,6 @@ const styles = StyleSheet.create({
   /* ================= MAIN LAYOUT ================= */
   mainLayout: {
     width: "100%",
-    maxWidth: 1240,
-    alignSelf: "center",
     paddingHorizontal: 24,
     marginTop: 20,
     gap: 20,
@@ -955,7 +947,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#0F172A",
   },
   photoSliderWrapDesktop: {
-    width: "48%",
+    width: "44%",
+    maxWidth: 480,
     height: 250,
   },
   propertyImg: {
@@ -1070,7 +1063,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   detailsWrapDesktop: {
-    width: "52%",
+    flex: 1,
     padding: 20,
   },
   titleRow: {

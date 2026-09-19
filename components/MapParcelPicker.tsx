@@ -826,8 +826,8 @@ const styles = StyleSheet.create({
 
   /* ================= RIGHT: SIDEBAR ================= */
   sidebarCol: {
-    width: Platform.OS === "web" ? 300 : "100%",
-    gap: 14,
+    width: Platform.OS === "web" ? 330 : "100%",
+    gap: 16,
   },
   sidebarCard: {
     backgroundColor: "#FFFFFF",
@@ -888,5 +888,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     lineHeight: 16,
+  },
+
+  /* Empty state floating pill */
+  emptyHintPill: {
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
+    left: "50%",
+    transform: [{ translateX: -190 }],
+    width: 380,
+    maxWidth: "88%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 9999,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    zIndex: 1000,
+  },
+  emptyHintText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#065F46",
   },
 });

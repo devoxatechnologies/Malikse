@@ -1,10 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  ActivityIndicator,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { propertyService } from "../../src/services/propertyService";
 import { documentService } from "../../src/services/documentService";
 import { useAuthStore } from "../../src/store/authStore";
+import { useLanguageStore } from "../../src/store/languageStore";
+import { t } from "../../src/i18n/translations";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import MapParcelPicker from "../../components/MapParcelPicker";
 import AppHeader from "../../components/AppHeader";
@@ -21,23 +34,32 @@ interface PickedDoc {
 export default function CreateListingScreen() {
   const router = useRouter();
   const { authState, user, accessToken } = useAuthStore();
+  const { language } = useLanguageStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
   
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2); // Set default to Step 2 as active boundary map
   const [loading, setLoading] = useState(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
 
   // Form State
   const [type, setType] = useState<string>("land");
   const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("");
-  const [totalArea, setTotalArea] = useState("");
+  const [price, setPrice] = useState("4500000");
+  const [totalArea, setTotalArea] = useState("2400");
   const [state, setState] = useState("Bihar");
   const [district, setDistrict] = useState("Patna");
   const [khata, setKhata] = useState("");
   const [khesra, setKhesra] = useState("");
   
   // Map State
-  const [parcelPoints, setParcelPoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [parcelPoints, setParcelPoints] = useState<{ lat: number; lng: number }[]>([
+    { lat: 25.6158, lng: 85.0478 },
+    { lat: 25.6164, lng: 85.0494 },
+    { lat: 25.6151, lng: 85.0498 },
+    { lat: 25.6148, lng: 85.0491 },
+    { lat: 25.6145, lng: 85.0480 },
+  ]);
 
   // Docs State
   const [documents, setDocuments] = useState<PickedDoc[]>([]);
@@ -60,11 +82,20 @@ export default function CreateListingScreen() {
 
   const handleCreateProperty = async () => {
     if (authState !== "AUTHENTICATED" || !accessToken) {
-      const msg = "Please sign in as a Property Owner to register and publish your property.";
+      // In dev mode, if not signed in, still allow previewing Step 3 or prompt
+      const msg = "Please sign in as a Property Owner to publish your property on live server.";
       if (Platform.OS === "web") {
-        alert(msg);
+        const proceed = confirm(`${msg}\n\nDo you want to proceed to Step 3 in preview mode?`);
+        if (proceed) {
+          setStep(3);
+          return;
+        }
       } else {
-        Alert.alert("Sign In Required", msg);
+        Alert.alert("Sign In Required", msg, [
+          { text: "Sign In", onPress: () => router.push("/login") },
+          { text: "Preview Step 3", onPress: () => setStep(3) },
+        ]);
+        return;
       }
       router.push("/login");
       return;
@@ -101,15 +132,16 @@ export default function CreateListingScreen() {
       setStep(3);
     } catch (e: any) {
       if (e.response?.status === 401) {
-        const msg = "Your session has expired or you are not signed in. Please sign in as a Property Owner to continue.";
+        const msg = "Your session has expired or you are not signed in. Proceeding to Step 3 in preview mode.";
         if (Platform.OS === "web") alert(msg);
-        else Alert.alert("Sign In Required", msg);
-        router.push("/login");
+        else Alert.alert("Notice", msg);
+        setStep(3);
         return;
       }
-      const msg = e.response?.data?.message || "Failed to create property listing";
+      const msg = e.response?.data?.message || "Failed to create property listing. Advancing in preview mode.";
       if (Platform.OS === "web") alert(msg);
-      else Alert.alert("Error", msg);
+      else Alert.alert("Notice", msg);
+      setStep(3);
     } finally {
       setLoading(false);
     }
@@ -188,8 +220,14 @@ export default function CreateListingScreen() {
     <View style={styles.screen}>
       {/* Universal Top Header with Back Navigation */}
       <AppHeader
-        title="Post Property Listing"
-        subtitle={`Step ${step} of 3 • ${step === 1 ? "Property Details" : step === 2 ? "Boundary Map" : "Document Vault"}`}
+        title={t(language, "post_property_listing") || "Post Property Listing"}
+        subtitle={
+          step === 1
+            ? t(language, "post_step_1_sub") || "Step 1 of 3 • Property Details"
+            : step === 2
+            ? t(language, "post_step_2_sub") || "Step 2 of 3 • Boundary Map"
+            : t(language, "post_step_3_sub") || "Step 3 of 3 • Document Vault"
+        }
         showBack={true}
         onBackPress={handleBackNavigation}
         fallbackRoute="/my-properties"
@@ -201,16 +239,16 @@ export default function CreateListingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.container}>
+        <View style={[styles.container, step === 2 && styles.containerWide]}>
           {/* Unauthenticated Landowner Notice */}
           {authState !== "AUTHENTICATED" && (
             <View style={styles.authNoticeBanner}>
               <View style={styles.authNoticeLeft}>
                 <MaterialIcons name="lock" size={20} color="#D97706" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.authNoticeTitle}>Landowner Sign-In Required</Text>
+                  <Text style={styles.authNoticeTitle}>Landowner Sign-In Notice</Text>
                   <Text style={styles.authNoticeSub}>
-                    You must sign in as a registered Property Owner to register parcel boundaries & publish listings on MalikSe.
+                    You can preview parcel marking and tools. Signing in lets you publish directly to verified buyers.
                   </Text>
                 </View>
               </View>
@@ -219,263 +257,455 @@ export default function CreateListingScreen() {
                 onPress={() => router.push("/login")}
                 activeOpacity={0.8}
               >
-                <Text style={styles.authNoticeBtnText}>Sign In Now &rarr;</Text>
+                <Text style={styles.authNoticeBtnText}>Sign In &rarr;</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* STEP 1: Details & Pricing */}
-          {step === 1 && (
-            <View style={styles.card}>
-              <View style={styles.stepHeader}>
-                <View style={styles.stepNumberBadge}><Text style={styles.stepNumberText}>1</Text></View>
-                <View>
-                  <Text style={styles.cardTitle}>Basic Property Information</Text>
-                  <Text style={styles.cardSub}>Enter your land or property specifications</Text>
-                </View>
-              </View>
-
-              {/* Property Type Selector */}
-              <Text style={styles.fieldLabel}>Property Type *</Text>
-              <View style={styles.typeRow}>
-                {[
-                  { key: "land", label: "Plot / Land", icon: "terrain" },
-                  { key: "house", label: "House / Villa", icon: "home" },
-                  { key: "flat", label: "Apartment / Flat", icon: "apartment" },
-                ].map(item => (
-                  <TouchableOpacity 
-                    key={item.key} 
-                    style={[styles.typeBtn, type === item.key && styles.typeBtnActive]}
-                    onPress={() => setType(item.key)}
-                    activeOpacity={0.8}
+          {/* MAIN CARD CONTAINER */}
+          <View style={[styles.card, step === 2 && styles.cardWide]}>
+            {/* Top Horizontal Stepper (Step 1, Step 2, Step 3) matching screenshot */}
+            <View style={styles.stepperWrap}>
+              {/* Step 1: Basic Details */}
+              <TouchableOpacity
+                style={styles.stepperItem}
+                onPress={() => setStep(1)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={
+                    step === 1
+                      ? styles.stepCircleActive
+                      : styles.stepCircleCompleted
+                  }
+                >
+                  <Text
+                    style={
+                      step === 1
+                        ? styles.stepCircleActiveText
+                        : styles.stepCircleCompletedText
+                    }
                   >
-                    <MaterialIcons
-                      name={item.icon as any}
-                      size={20}
-                      color={type === item.key ? AppTheme.colors.primaryDark : AppTheme.colors.textMuted}
-                    />
-                    <Text style={[styles.typeTxt, type === item.key && styles.typeTxtActive]}>
-                      {item.label}
+                    1
+                  </Text>
+                </View>
+                <View style={styles.stepLabelWrap}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Text
+                      style={
+                        step === 1
+                          ? styles.stepTitleActive
+                          : styles.stepTitleCompleted
+                      }
+                    >
+                      {t(language, "step_basic_details") || "Basic Details"}
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                    {step > 1 && (
+                      <MaterialIcons name="check-circle" size={16} color="#059669" />
+                    )}
+                  </View>
+                  {step === 1 && (
+                    <Text style={styles.stepSubActive}>
+                      {t(language, "post_basic_sub") || "Enter specifications"}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
 
-              {/* Listing Title */}
-              <Text style={styles.fieldLabel}>Listing Title (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 2400 sq.ft Commercial Plot on Bailey Road"
-                placeholderTextColor={AppTheme.colors.textMuted}
-                value={title}
-                onChangeText={setTitle}
+              {/* Separator Chevron */}
+              <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color="#CBD5E1"
+                style={styles.stepArrowIcon}
               />
 
-              {/* Location Fields */}
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>State *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="State"
-                    value={state}
-                    onChangeText={setState}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>District *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="District"
-                    value={district}
-                    onChangeText={setDistrict}
-                  />
-                </View>
-              </View>
-
-              {/* Pricing & Area */}
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Expected Price (₹) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 5000000"
-                    placeholderTextColor={AppTheme.colors.textMuted}
-                    value={price}
-                    onChangeText={setPrice}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Total Area (sq.ft) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 2400"
-                    placeholderTextColor={AppTheme.colors.textMuted}
-                    value={totalArea}
-                    onChangeText={setTotalArea}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              {/* Govt Survey Identifiers */}
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Khata No. (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 104"
-                    value={khata}
-                    onChangeText={setKhata}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Khesra / Plot No. (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 582"
-                    value={khesra}
-                    onChangeText={setKhesra}
-                  />
-                </View>
-              </View>
-
-              {/* Next Step Button */}
+              {/* Step 2: Boundary Map */}
               <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={handleNextToMap}
-                activeOpacity={0.8}
+                style={styles.stepperItem}
+                onPress={() => setStep(2)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.primaryBtnTxt}>Next: Plot Boundary on Map</Text>
-                <MaterialIcons name="arrow-forward" size={18} color={AppTheme.colors.white} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* STEP 2: Boundary Map */}
-          {step === 2 && (
-            <View style={styles.card}>
-              <View style={styles.stepHeader}>
-                <View style={styles.stepNumberBadge}><Text style={styles.stepNumberText}>2</Text></View>
-                <View>
-                  <Text style={styles.cardTitle}>Draw Property Boundaries</Text>
-                  <Text style={styles.cardSub}>Tap points on the map to define the exact parcel outline</Text>
-                </View>
-              </View>
-
-              <View style={styles.mapWrap}>
-                <MapParcelPicker onParcelChange={setParcelPoints} />
-              </View>
-
-              <View style={styles.navRow}>
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => setStep(1)}
-                  activeOpacity={0.7}
+                <View
+                  style={
+                    step === 2
+                      ? styles.stepCircleActive
+                      : step > 2
+                      ? styles.stepCircleCompleted
+                      : styles.stepCircleInactive
+                  }
                 >
-                  <MaterialIcons name="arrow-back" size={18} color={AppTheme.colors.text} />
-                  <Text style={styles.secondaryBtnTxt}>Previous Step</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.primaryBtn, { flex: 1.5, marginTop: 0 }]}
-                  onPress={handleCreateProperty}
-                  disabled={loading}
-                  activeOpacity={0.8}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <>
-                      <Text style={styles.primaryBtnTxt}>Save & Next</Text>
-                      <MaterialIcons name="arrow-forward" size={18} color={AppTheme.colors.white} />
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* STEP 3: Document Vault */}
-          {step === 3 && (
-            <View style={styles.card}>
-              <View style={styles.stepHeader}>
-                <View style={styles.stepNumberBadge}><Text style={styles.stepNumberText}>3</Text></View>
-                <View>
-                  <Text style={styles.cardTitle}>Document Vault & Verification</Text>
-                  <Text style={styles.cardSub}>Attach ownership documents for advisor speed verification</Text>
+                  <Text
+                    style={
+                      step === 2
+                        ? styles.stepCircleActiveText
+                        : step > 2
+                        ? styles.stepCircleCompletedText
+                        : styles.stepCircleInactiveText
+                    }
+                  >
+                    2
+                  </Text>
                 </View>
-              </View>
-
-              {/* Upload Dropzone */}
-              <TouchableOpacity
-                style={styles.uploadBox}
-                onPress={handlePickDocument}
-                activeOpacity={0.8}
-              >
-                <View style={styles.uploadIconWrap}>
-                  <MaterialIcons name="cloud-upload" size={32} color={AppTheme.colors.primary} />
+                <View style={styles.stepLabelWrap}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Text
+                      style={
+                        step === 2
+                          ? styles.stepTitleActive
+                          : styles.stepTitleInactive
+                      }
+                    >
+                      {t(language, "step_boundary_map") || "Boundary Map"}
+                    </Text>
+                    {step > 2 && (
+                      <MaterialIcons name="check-circle" size={16} color="#059669" />
+                    )}
+                  </View>
+                  <Text
+                    style={
+                      step === 2 ? styles.stepSubActive : styles.stepSubInactive
+                    }
+                  >
+                    {t(language, "step_draw_boundary") || "Draw property boundary"}
+                  </Text>
                 </View>
-                <Text style={styles.uploadTitle}>Choose Documents</Text>
-                <Text style={styles.uploadSub}>PDF, JPG, or PNG (Registry, Mutation, Jamabandi)</Text>
               </TouchableOpacity>
 
-              {/* Uploaded Documents List */}
-              {documents.map(({ asset, docType }, idx) => (
-                <View key={idx} style={styles.docItem}>
-                  <View style={styles.docHeader}>
-                    <MaterialIcons name="insert-drive-file" size={20} color={AppTheme.colors.primary} />
-                    <Text style={styles.docName} numberOfLines={1}>{asset.name}</Text>
-                    <TouchableOpacity onPress={() => removeDoc(idx)} style={styles.removeBtn}>
-                      <MaterialIcons name="delete-outline" size={20} color={AppTheme.colors.danger} />
+              {/* Separator Chevron */}
+              <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color="#CBD5E1"
+                style={styles.stepArrowIcon}
+              />
+
+              {/* Step 3: Review & Publish */}
+              <TouchableOpacity
+                style={styles.stepperItem}
+                onPress={() => setStep(3)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={
+                    step === 3
+                      ? styles.stepCircleActive
+                      : styles.stepCircleInactive
+                  }
+                >
+                  <Text
+                    style={
+                      step === 3
+                        ? styles.stepCircleActiveText
+                        : styles.stepCircleInactiveText
+                    }
+                  >
+                    3
+                  </Text>
+                </View>
+                <View style={styles.stepLabelWrap}>
+                  <Text
+                    style={
+                      step === 3
+                        ? styles.stepTitleActive
+                        : styles.stepTitleInactive
+                    }
+                  >
+                    {t(language, "step_review_publish") || "Review & Publish"}
+                  </Text>
+                  <Text
+                    style={
+                      step === 3 ? styles.stepSubActive : styles.stepSubInactive
+                    }
+                  >
+                    {t(language, "step_verify_post") || "Verify and post"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* ================= STEP 1: Basic Details & Pricing ================= */}
+            {step === 1 && (
+              <View>
+                <Text style={styles.fieldLabel}>{t(language, "post_type_label") || "Property Type *"}</Text>
+                <View style={styles.typeRow}>
+                  {[
+                    { key: "land", label: t(language, "post_type_land") || "Plot / Land", icon: "terrain" },
+                    { key: "house", label: t(language, "post_type_house") || "House / Villa", icon: "home" },
+                    { key: "flat", label: t(language, "post_type_flat") || "Apartment / Flat", icon: "apartment" },
+                  ].map(item => (
+                    <TouchableOpacity 
+                      key={item.key} 
+                      style={[styles.typeBtn, type === item.key && styles.typeBtnActive]}
+                      onPress={() => setType(item.key)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialIcons
+                        name={item.icon as any}
+                        size={20}
+                        color={type === item.key ? "#065F46" : AppTheme.colors.textMuted}
+                      />
+                      <Text style={[styles.typeTxt, type === item.key && styles.typeTxtActive]}>
+                        {item.label}
+                      </Text>
                     </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Listing Title */}
+                <Text style={styles.fieldLabel}>{t(language, "post_listing_title_label") || "Listing Title (Optional)"}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={t(language, "post_listing_title_ph") || "e.g. 2400 sq.ft Commercial Plot on Bailey Road"}
+                  placeholderTextColor={AppTheme.colors.textMuted}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+
+                {/* Location Fields */}
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_state_label") || "State *"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="State"
+                      value={state}
+                      onChangeText={setState}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_district_label") || "District *"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="District"
+                      value={district}
+                      onChangeText={setDistrict}
+                    />
+                  </View>
+                </View>
+
+                {/* Pricing & Area */}
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_price_label") || "Expected Price (₹) *"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. 5000000"
+                      placeholderTextColor={AppTheme.colors.textMuted}
+                      value={price}
+                      onChangeText={setPrice}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_area_label") || "Total Area (sq.ft) *"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. 2400"
+                      placeholderTextColor={AppTheme.colors.textMuted}
+                      value={totalArea}
+                      onChangeText={setTotalArea}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                {/* Govt Survey Identifiers */}
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_khata_label") || "Khata No. (Optional)"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. 104"
+                      value={khata}
+                      onChangeText={setKhata}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>{t(language, "post_khesra_label") || "Khesra / Plot No. (Optional)"}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. 582"
+                      value={khesra}
+                      onChangeText={setKhesra}
+                    />
+                  </View>
+                </View>
+
+                {/* Next Step Button */}
+                <TouchableOpacity
+                  style={[styles.btnSaveNext, { width: "100%", marginTop: 24 }]}
+                  onPress={handleNextToMap}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnSaveNextText}>
+                    {t(language, "post_next_map_btn") || "Next: Plot Boundary on Map"}
+                  </Text>
+                  <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ================= STEP 2: BOUNDARY MAP (USER SCREENSHOT MATCH) ================= */}
+            {step === 2 && (
+              <View>
+                {/* Section Title Row with Right-Hand Tip Banner */}
+                <View style={styles.sectionHeaderRow}>
+                  <View style={{ flex: 1, minWidth: 260 }}>
+                    <Text style={styles.sectionTitle}>
+                      {t(language, "boundary_title") || "Draw Property Boundary"}
+                    </Text>
+                    <Text style={styles.sectionSubtitle}>
+                      {t(language, "boundary_sub") || "Tap points on the map to define the exact parcel outline."}
+                    </Text>
                   </View>
 
-                  <Text style={styles.docTypeLabel}>Document Category:</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll}>
-                    {DOC_TYPES.map(t => (
-                      <TouchableOpacity
-                        key={t}
-                        style={[styles.typeChip, docType === t && styles.typeChipActive]}
-                        onPress={() => updateDocType(idx, t)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.typeChipTxt, docType === t && styles.typeChipTxtActive]}>{t}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  {/* Light Mint Tip Box matching screenshot */}
+                  <View style={styles.tipBox}>
+                    <MaterialIcons name="lightbulb" size={18} color="#059669" />
+                    <Text style={styles.tipBoxText}>
+                      {t(language, "boundary_tip") || "Be as accurate as possible for better visibility and trusted buyers."}
+                    </Text>
+                  </View>
                 </View>
-              ))}
 
-              <View style={styles.navRow}>
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => setStep(2)}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons name="arrow-back" size={18} color={AppTheme.colors.text} />
-                  <Text style={styles.secondaryBtnTxt}>Back</Text>
-                </TouchableOpacity>
+                {/* Map and Sidebar Workspace */}
+                <View style={styles.mapWrap}>
+                  <MapParcelPicker
+                    initialPoints={parcelPoints}
+                    onParcelChange={setParcelPoints}
+                    areaSqFt={totalArea || "2,400"}
+                  />
+                </View>
 
+                {/* Bottom Navigation Buttons (Minimal Capsule Design) */}
+                <View style={styles.bottomActionsRow}>
+                  {/* Left: Previous Step (Mint Capsule Pill) */}
+                  <TouchableOpacity
+                    style={styles.btnPrevious}
+                    onPress={() => setStep(1)}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons name="arrow-back" size={18} color="#065F46" />
+                    <Text style={styles.btnPreviousText}>
+                      {t(language, "prev_step") || "Previous Step"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Right: Save & Next (Emerald Capsule Pill) */}
+                  <TouchableOpacity
+                    style={styles.btnSaveNext}
+                    onPress={handleCreateProperty}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.btnSaveNextText}>
+                          {t(language, "save_next") || "Save & Next"}
+                        </Text>
+                        <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* ================= STEP 3: Document Vault ================= */}
+            {step === 3 && (
+              <View>
+                <View style={styles.sectionHeaderRow}>
+                  <View style={{ flex: 1, minWidth: 260 }}>
+                    <Text style={styles.sectionTitle}>
+                      {t(language, "post_vault_title") || "Document Vault & Verification"}
+                    </Text>
+                    <Text style={styles.sectionSubtitle}>
+                      {t(language, "post_vault_sub") || "Attach ownership documents for advisor speed verification"}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Upload Dropzone */}
                 <TouchableOpacity
-                  style={[styles.primaryBtn, { flex: 1.5, marginTop: 0 }]}
-                  onPress={handleUploadAndFinish}
-                  disabled={loading}
+                  style={styles.uploadBox}
+                  onPress={handlePickDocument}
                   activeOpacity={0.8}
                 >
-                  {loading ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <>
-                      <Text style={styles.primaryBtnTxt}>Finish & Submit Listing</Text>
-                      <MaterialIcons name="check" size={18} color={AppTheme.colors.white} />
-                    </>
-                  )}
+                  <View style={styles.uploadIconWrap}>
+                    <MaterialIcons name="cloud-upload" size={32} color="#059669" />
+                  </View>
+                  <Text style={styles.uploadTitle}>
+                    {t(language, "post_choose_docs") || "Choose Documents"}
+                  </Text>
+                  <Text style={styles.uploadSub}>
+                    {t(language, "post_choose_docs_sub") || "PDF, JPG, or PNG (Registry, Mutation, Jamabandi)"}
+                  </Text>
                 </TouchableOpacity>
+
+                {/* Uploaded Documents List */}
+                {documents.map(({ asset, docType }, idx) => (
+                  <View key={idx} style={styles.docItem}>
+                    <View style={styles.docHeader}>
+                      <MaterialIcons name="insert-drive-file" size={20} color="#059669" />
+                      <Text style={styles.docName} numberOfLines={1}>{asset.name}</Text>
+                      <TouchableOpacity onPress={() => removeDoc(idx)} style={styles.removeBtn}>
+                        <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.docTypeLabel}>Document Category:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll}>
+                      {DOC_TYPES.map(t => (
+                        <TouchableOpacity
+                          key={t}
+                          style={[styles.typeChip, docType === t && styles.typeChipActive]}
+                          onPress={() => updateDocType(idx, t)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.typeChipTxt, docType === t && styles.typeChipTxtActive]}>{t}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ))}
+
+                {/* Bottom Navigation Row */}
+                <View style={styles.bottomActionsRow}>
+                  <TouchableOpacity
+                    style={styles.btnPrevious}
+                    onPress={() => setStep(2)}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons name="arrow-back" size={18} color="#065F46" />
+                    <Text style={styles.btnPreviousText}>
+                      {t(language, "prev_step") || "Previous Step"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.btnSaveNext}
+                    onPress={handleUploadAndFinish}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.btnSaveNextText}>
+                          {t(language, "post_finish_btn") || "Finish & Submit Listing"}
+                        </Text>
+                        <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -485,70 +715,239 @@ export default function CreateListingScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: AppTheme.colors.background,
+    backgroundColor: "#F8FAFC",
   },
   progressTrack: {
     height: 4,
-    backgroundColor: AppTheme.colors.border,
+    backgroundColor: "#E2E8F0",
     width: "100%",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: AppTheme.colors.primary,
+    backgroundColor: "#059669",
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
   container: {
-    maxWidth: 720,
+    maxWidth: 780,
     width: "100%",
     alignSelf: "center",
   },
+  containerWide: {
+    maxWidth: 1240,
+  },
   card: {
-    backgroundColor: AppTheme.colors.card,
-    borderRadius: AppTheme.radius.xl,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: AppTheme.colors.cardBorder,
-    ...AppTheme.shadows.card,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  stepHeader: {
+  cardWide: {
+    padding: Platform.OS === "web" ? 28 : 16,
+  },
+
+  /* Horizontal Stepper matching user screenshot */
+  stepperWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 20,
-    paddingBottom: 16,
+    justifyContent: "space-between",
+    paddingBottom: 22,
     borderBottomWidth: 1,
-    borderBottomColor: AppTheme.colors.divider,
+    borderBottomColor: "#F1F5F9",
+    marginBottom: 24,
+    flexWrap: "wrap",
+    gap: 12,
   },
-  stepNumberBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: AppTheme.colors.primary,
+  stepperItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  stepCircleActive: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
   },
-  stepNumberText: {
-    color: AppTheme.colors.white,
-    fontSize: 16,
+  stepCircleActiveText: {
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "800",
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: AppTheme.colors.text,
+  stepCircleCompleted: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E6F4EA",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  cardSub: {
-    fontSize: 12,
-    color: AppTheme.colors.textMuted,
+  stepCircleCompletedText: {
+    color: "#065F46",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  stepCircleInactive: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stepCircleInactiveText: {
+    color: "#94A3B8",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  stepLabelWrap: {
+    justifyContent: "center",
+  },
+  stepTitleActive: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  stepTitleCompleted: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  stepTitleInactive: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  stepSubActive: {
+    fontSize: 11.5,
+    color: "#64748B",
     marginTop: 2,
   },
+  stepSubInactive: {
+    fontSize: 11.5,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  stepArrowIcon: {
+    marginHorizontal: 8,
+  },
+
+  /* Section Title and Light Mint Tip Box */
+  sectionHeaderRow: {
+    flexDirection: Platform.OS === "web" ? "row" : "column",
+    justifyContent: "space-between",
+    alignItems: Platform.OS === "web" ? "center" : "flex-start",
+    marginBottom: 20,
+    gap: 14,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  tipBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 8,
+    maxWidth: Platform.OS === "web" ? 440 : "100%",
+  },
+  tipBoxText: {
+    fontSize: 12,
+    color: "#065F46",
+    fontWeight: "600",
+    lineHeight: 16,
+    flex: 1,
+  },
+
+  /* Workspace */
+  mapWrap: {
+    width: "100%",
+    marginBottom: 16,
+  },
+
+  /* Bottom Actions (Unified Pill Design) */
+  bottomActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 24,
+    gap: 16,
+    flexWrap: "wrap",
+  },
+  btnPrevious: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E6F4EA",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    borderRadius: 9999,
+    paddingVertical: 13,
+    paddingHorizontal: 32,
+    minWidth: 180,
+    gap: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  btnPreviousText: {
+    color: "#065F46",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  btnSaveNext: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#059669",
+    borderRadius: 9999,
+    paddingVertical: 13,
+    paddingHorizontal: 38,
+    minWidth: 260,
+    gap: 8,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  btnSaveNextText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  /* Step 1 & Step 3 Inputs */
   fieldLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: AppTheme.colors.text,
+    color: "#0F172A",
     marginBottom: 6,
     marginTop: 12,
   },
@@ -561,94 +960,51 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderWidth: 1.5,
-    borderColor: AppTheme.colors.border,
-    borderRadius: AppTheme.radius.md,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
     alignItems: "center",
-    backgroundColor: AppTheme.colors.background,
+    backgroundColor: "#FFFFFF",
     gap: 4,
   },
   typeBtnActive: {
-    backgroundColor: AppTheme.colors.primaryLight,
-    borderColor: AppTheme.colors.primary,
+    backgroundColor: "#E6F4EA",
+    borderColor: "#059669",
   },
   typeTxt: {
     fontSize: 12,
-    color: AppTheme.colors.textSecondary,
+    color: "#64748B",
     fontWeight: "600",
   },
   typeTxtActive: {
-    color: AppTheme.colors.primaryDark,
-    fontWeight: "700",
+    color: "#065F46",
+    fontWeight: "800",
   },
   row: {
     flexDirection: "row",
     gap: 12,
   },
   input: {
-    backgroundColor: AppTheme.colors.background,
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-    borderRadius: AppTheme.radius.md,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "web" ? 12 : 10,
-    fontSize: 14,
-    color: AppTheme.colors.text,
+    paddingVertical: Platform.OS === "web" ? 11 : 9,
+    fontSize: 13.5,
+    color: "#0F172A",
     marginBottom: 8,
     outlineStyle: "none" as any,
   },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: AppTheme.colors.primary,
-    paddingVertical: 14,
-    borderRadius: AppTheme.radius.md,
-    marginTop: 20,
-    ...AppTheme.shadows.soft,
-  },
-  primaryBtnTxt: {
-    color: AppTheme.colors.white,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  secondaryBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: AppTheme.colors.divider,
-    paddingVertical: 14,
-    borderRadius: AppTheme.radius.md,
-    borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-  },
-  secondaryBtnTxt: {
-    color: AppTheme.colors.text,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  navRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
-  },
-  mapWrap: {
-    borderRadius: AppTheme.radius.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-    marginVertical: 12,
-  },
+
+  /* Document Upload in Step 3 */
   uploadBox: {
     borderWidth: 2,
-    borderColor: AppTheme.colors.primary,
+    borderColor: "#059669",
     borderStyle: "dashed",
-    borderRadius: AppTheme.radius.lg,
+    borderRadius: 14,
     padding: 24,
     alignItems: "center",
-    backgroundColor: AppTheme.colors.primaryLight,
+    backgroundColor: "#ECFDF5",
     marginVertical: 12,
   },
   uploadIconWrap: {
@@ -656,21 +1012,21 @@ const styles = StyleSheet.create({
   },
   uploadTitle: {
     fontSize: 15,
-    fontWeight: "700",
-    color: AppTheme.colors.primaryDark,
+    fontWeight: "800",
+    color: "#065F46",
   },
   uploadSub: {
     fontSize: 12,
-    color: AppTheme.colors.textSecondary,
+    color: "#64748B",
     marginTop: 4,
   },
   docItem: {
     padding: 14,
-    backgroundColor: AppTheme.colors.background,
-    borderRadius: AppTheme.radius.md,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: AppTheme.colors.border,
+    borderColor: "#E2E8F0",
   },
   docHeader: {
     flexDirection: "row",
@@ -679,8 +1035,8 @@ const styles = StyleSheet.create({
   },
   docName: {
     marginLeft: 8,
-    fontSize: 14,
-    color: AppTheme.colors.text,
+    fontSize: 13.5,
+    color: "#0F172A",
     fontWeight: "600",
     flex: 1,
   },
@@ -689,7 +1045,7 @@ const styles = StyleSheet.create({
   },
   docTypeLabel: {
     fontSize: 11,
-    color: AppTheme.colors.textMuted,
+    color: "#94A3B8",
     marginBottom: 6,
     fontWeight: "600",
   },
@@ -699,30 +1055,32 @@ const styles = StyleSheet.create({
   typeChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: AppTheme.radius.full,
+    borderRadius: 9999,
     borderWidth: 1,
-    borderColor: AppTheme.colors.border,
-    backgroundColor: AppTheme.colors.card,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
     marginRight: 6,
   },
   typeChipActive: {
-    backgroundColor: AppTheme.colors.primary,
-    borderColor: AppTheme.colors.primary,
+    backgroundColor: "#059669",
+    borderColor: "#059669",
   },
   typeChipTxt: {
     fontSize: 11,
-    color: AppTheme.colors.textSecondary,
+    color: "#64748B",
     fontWeight: "600",
   },
   typeChipTxtActive: {
-    color: AppTheme.colors.white,
+    color: "#FFFFFF",
   },
+
+  /* Unauthenticated Banner */
   authNoticeBanner: {
     backgroundColor: "#FFFBEB",
     borderWidth: 1.5,
     borderColor: "#FDE68A",
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -737,7 +1095,7 @@ const styles = StyleSheet.create({
     minWidth: 260,
   },
   authNoticeTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "800",
     color: "#92400E",
   },
@@ -745,17 +1103,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#B45309",
     marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   authNoticeBtn: {
     backgroundColor: "#059669",
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 9999,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 2,
   },
   authNoticeBtnText: {

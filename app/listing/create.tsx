@@ -52,14 +52,8 @@ export default function CreateListingScreen() {
   const [khata, setKhata] = useState("");
   const [khesra, setKhesra] = useState("");
   
-  // Map State
-  const [parcelPoints, setParcelPoints] = useState<{ lat: number; lng: number }[]>([
-    { lat: 25.6158, lng: 85.0478 },
-    { lat: 25.6164, lng: 85.0494 },
-    { lat: 25.6151, lng: 85.0498 },
-    { lat: 25.6148, lng: 85.0491 },
-    { lat: 25.6145, lng: 85.0480 },
-  ]);
+  // Map State - default empty until user taps and plots on the map
+  const [parcelPoints, setParcelPoints] = useState<{ lat: number; lng: number }[]>([]);
 
   // Docs State
   const [documents, setDocuments] = useState<PickedDoc[]>([]);

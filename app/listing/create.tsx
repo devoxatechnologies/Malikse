@@ -730,11 +730,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   containerWide: {
-    maxWidth: 1240,
+    maxWidth: 1480,
+    width: "98%",
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 24,
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -745,7 +746,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardWide: {
-    padding: Platform.OS === "web" ? 28 : 16,
+    padding: Platform.OS === "web" ? 32 : 16,
+    borderRadius: 20,
   },
 
   /* Horizontal Stepper matching user screenshot */

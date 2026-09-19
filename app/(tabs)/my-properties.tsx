@@ -317,6 +317,7 @@ export default function MyPropertiesScreen() {
                 source={heroBgImg}
                 style={styles.heroBannerBackground}
                 resizeMode="cover"
+                blurRadius={Platform.OS === "web" ? 0 : 2}
               />
               <View style={styles.heroBannerOverlay} />
 
@@ -893,6 +894,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: "100%",
     height: "100%",
+    ...Platform.select({
+      web: {
+        objectFit: "cover",
+        objectPosition: "center center",
+        filter: "blur(2px)",
+        transform: "scale(1.04)",
+      } as any,
+    }),
   },
   heroBannerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -900,10 +909,10 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         background:
-          "linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 40%, rgba(255, 255, 255, 0.05) 75%, transparent 100%)",
+          "linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 35%, transparent 65%)",
       } as any,
       default: {
-        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        backgroundColor: "rgba(255, 255, 255, 0.06)",
       },
     }),
   },

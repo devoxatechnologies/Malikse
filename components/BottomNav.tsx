@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuthStore } from "../src/store/authStore";
 
+import BiharHeritageWatermark from "./BiharHeritageWatermark";
+
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -20,11 +22,9 @@ export default function BottomNav() {
     return (
       <View style={styles.webWrapper}>
         <View style={styles.webFooterContainer}>
-          {/* Left Watermark: Golghar monument silhouette + caption */}
+          {/* Left Watermark: Bihar Heritage Monument Skyline (Golghar, Mahabodhi) + caption */}
           <View style={styles.leftWatermark}>
-            <View style={styles.monumentIconBox}>
-              <MaterialIcons name="account-balance" size={28} color="#94A3B8" />
-            </View>
+            <BiharHeritageWatermark width={140} height={42} opacity={0.45} />
             <Text style={styles.watermarkText}>Building Trust in{"\n"}Every Square Foot</Text>
           </View>
 
@@ -210,21 +210,14 @@ const styles = StyleSheet.create({
   leftWatermark: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    opacity: 0.65,
-    minWidth: 160,
-  },
-  monumentIconBox: {
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: 12,
+    minWidth: 240,
   },
   watermarkText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: "#64748B",
-    fontWeight: "500",
-    lineHeight: 14,
+    fontWeight: "600",
+    lineHeight: 15,
   },
   floatingDock: {
     flexDirection: "row",

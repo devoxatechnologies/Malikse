@@ -474,45 +474,47 @@ export default function SavedScreen() {
             </View>
           )}
 
-          {/* ================= 7. FOOTER SECTION ================= */}
-          <View style={styles.footerSection}>
-            <View style={styles.footerContent}>
-              {/* Brand Logo & Tagline */}
-              <View style={styles.footerBrand}>
-                <View style={styles.footerLogoIcon}>
-                  <FontAwesome5 name="shield-alt" size={14} color="#FFFFFF" />
+          {/* ================= 7. FOOTER SECTION (Website Layout Only) ================= */}
+          {isDesktop && (
+            <View style={styles.footerSection}>
+              <View style={styles.footerContent}>
+                {/* Brand Logo & Tagline */}
+                <View style={styles.footerBrand}>
+                  <View style={styles.footerLogoIcon}>
+                    <FontAwesome5 name="shield-alt" size={14} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.footerBrandName}>MalikSe</Text>
+                    <Text style={styles.footerBrandTagline}>Your Land. A Safer Future.</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.footerBrandName}>MalikSe</Text>
-                  <Text style={styles.footerBrandTagline}>Your Land. A Safer Future.</Text>
+
+                {/* Legal & Navigation Links */}
+                <View style={styles.footerLinksRow}>
+                  <TouchableOpacity activeOpacity={0.7}>
+                    <Text style={styles.footerLink}>About</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity activeOpacity={0.7}>
+                    <Text style={styles.footerLink}>Contact</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity activeOpacity={0.7}>
+                    <Text style={styles.footerLink}>Privacy</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity activeOpacity={0.7}>
+                    <Text style={styles.footerLink}>Terms</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
 
-              {/* Legal & Navigation Links */}
-              <View style={styles.footerLinksRow}>
-                <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.footerLink}>About</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.footerLink}>Contact</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.footerLink}>Privacy</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.footerLink}>Terms</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Signature Cursive Watermark */}
-              <View style={styles.footerSignatureWrap}>
-                <Text style={styles.footerSignatureText}>
-                  Verified Land{"\n"}Brighter Tomorrows
-                </Text>
-                <View style={styles.signatureSwoosh} />
+                {/* Signature Cursive Watermark */}
+                <View style={styles.footerSignatureWrap}>
+                  <Text style={styles.footerSignatureText}>
+                    Verified Land{"\n"}Brighter Tomorrows
+                  </Text>
+                  <View style={styles.signatureSwoosh} />
+                </View>
               </View>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
 

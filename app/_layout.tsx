@@ -4,7 +4,6 @@
  */
 
 import { Stack } from "expo-router";
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
 import "react-native-reanimated";
@@ -22,7 +21,7 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -34,6 +33,6 @@ export default function RootLayout() {
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
       <StatusBar style="dark" />
-    </ThemeProvider>
+    </>
   );
 }

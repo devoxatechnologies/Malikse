@@ -1315,7 +1315,7 @@ const styles = StyleSheet.create({
     pointerEvents: "none",
     ...Platform.select({
       web: {
-        background:
+        backgroundImage:
           "linear-gradient(90deg, rgba(230, 245, 238, 0.94) 0%, rgba(230, 245, 238, 0.88) 35%, rgba(230, 245, 238, 0.35) 65%, transparent 90%)",
       } as any,
       default: {

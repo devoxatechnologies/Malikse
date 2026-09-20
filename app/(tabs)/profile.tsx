@@ -1395,7 +1395,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     ...Platform.select({
       web: {
-        background:
+        backgroundImage:
           "linear-gradient(to right, rgba(248, 250, 252, 0.92) 0%, rgba(248, 250, 252, 0.65) 45%, rgba(248, 250, 252, 0.08) 80%, transparent 100%)",
       } as any,
       default: {

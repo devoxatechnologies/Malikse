@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     pointerEvents: "none",
     ...Platform.select({
       web: {
-        background:
+        backgroundImage:
           "linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 35%, transparent 65%)",
       } as any,
       default: {
@@ -1460,7 +1460,7 @@ const styles = StyleSheet.create({
     pointerEvents: "none",
     ...Platform.select({
       web: {
-        background:
+        backgroundImage:
           "linear-gradient(90deg, #E6F5EE 0%, #E6F5EE 28%, rgba(230, 245, 238, 0.85) 45%, rgba(230, 245, 238, 0.2) 68%, transparent 85%)",
       } as any,
       default: {

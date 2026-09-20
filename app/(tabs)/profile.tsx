@@ -115,18 +115,6 @@ export default function ProfileScreen() {
           {/* ================= LEFT SIDEBAR ================= */}
           {isDesktop && (
             <View style={styles.sidebar}>
-              {/* Back to Home action */}
-              <TouchableOpacity
-                style={styles.sidebarBackBtn}
-                onPress={() => router.replace("/search")}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="arrow-back" size={16} color="#1E293B" />
-                <Text style={styles.sidebarBackBtnText}>
-                  {language === "hi" ? "होम पर वापस" : "Back to Home"}
-                </Text>
-              </TouchableOpacity>
-
               {/* Sidebar Menu Items */}
               <View style={styles.sidebarMenu}>
                 {/* 1. Profile (Active) */}
@@ -365,35 +353,37 @@ export default function ProfileScreen() {
 
           {/* ================= RIGHT MAIN CONTENT AREA ================= */}
           <View style={styles.mainContent}>
-            {/* Top Page Header Title & Top-Right Landscape Watermark */}
-            <View style={styles.topPageHeaderRow}>
-              <View>
-                <Text style={styles.pageMainTitle}>
-                  {language === "hi" ? "खाता और प्रोफ़ाइल" : "Account & Profile"}
-                </Text>
-                <Text style={styles.pageSubtitle}>
-                  {language === "hi"
-                    ? "अपनी व्यक्तिगत जानकारी, सुरक्षा और प्राथमिकताओं का प्रबंधन करें"
-                    : "Manage your personal information, security and preferences"}
-                </Text>
-              </View>
+            {/* Top Page Header Section Occupied by Scenic Landscape Background */}
+            <View style={styles.topPageHeaderSection}>
+              <Image
+                source={heroBgImg}
+                style={styles.topHeaderSectionBg}
+                resizeMode="cover"
+              />
+              <View style={styles.topHeaderSectionOverlay} />
 
-              {/* Scenic Top-Right Cursive & Hills Graphic */}
-              {isDesktop && (
-                <View style={styles.topHeaderGraphicBox}>
-                  <Image
-                    source={heroBgImg}
-                    style={styles.topHeaderGraphicImg}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.topHeaderGraphicOverlay} />
+              <View style={styles.topHeaderContentRow}>
+                {/* Left: Account & Profile Title & Subtitle */}
+                <View style={styles.topHeaderTitleCol}>
+                  <Text style={styles.pageMainTitle}>
+                    {language === "hi" ? "खाता और प्रोफ़ाइल" : "Account & Profile"}
+                  </Text>
+                  <Text style={styles.pageSubtitle}>
+                    {language === "hi"
+                      ? "अपनी व्यक्तिगत जानकारी, सुरक्षा और प्राथमिकताओं का प्रबंधन करें"
+                      : "Manage your personal information, security and preferences"}
+                  </Text>
+                </View>
+
+                {/* Right: Scenic Cursive Tagline floating over the landscape */}
+                {isDesktop && (
                   <View style={styles.topHeaderCursiveWrap}>
                     <Text style={styles.topHeaderCursiveText}>
                       Verified Land{"\n"}Brighter Tomorrow
                     </Text>
                   </View>
-                </View>
-              )}
+                )}
+              </View>
             </View>
 
             {/* User Profile Identity Hero Card */}
@@ -1300,20 +1290,7 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 240,
     backgroundColor: "transparent",
-  },
-  sidebarBackBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  sidebarBackBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E293B",
+    paddingTop: 4,
   },
   sidebarMenu: {
     gap: 4,
@@ -1391,15 +1368,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* Top Page Header */
-  topPageHeaderRow: {
+  /* Top Page Header Section Occupied by Scenic Landscape Background */
+  topPageHeaderSection: {
+    width: "100%",
+    minHeight: 100,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  topHeaderSectionBg: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    ...Platform.select({
+      web: {
+        objectFit: "cover",
+        objectPosition: "right center",
+      } as any,
+    }),
+  },
+  topHeaderSectionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    ...Platform.select({
+      web: {
+        background:
+          "linear-gradient(to right, rgba(248, 250, 252, 0.92) 0%, rgba(248, 250, 252, 0.65) 45%, rgba(248, 250, 252, 0.08) 80%, transparent 100%)",
+      } as any,
+      default: {
+        backgroundColor: "rgba(248, 250, 252, 0.25)",
+      },
+    }),
+  },
+  topHeaderContentRow: {
+    position: "relative",
+    zIndex: 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    width: "100%",
+  },
+  topHeaderTitleCol: {
+    maxWidth: "58%",
   },
   pageMainTitle: {
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.4,
@@ -1410,35 +1426,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginTop: 3,
   },
-  topHeaderGraphicBox: {
-    width: 240,
-    height: 60,
-    borderRadius: 12,
-    overflow: "hidden",
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  topHeaderGraphicImg: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-  },
-  topHeaderGraphicOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
-  },
   topHeaderCursiveWrap: {
-    zIndex: 2,
+    paddingRight: 170,
+    transform: [{ rotate: "-4deg" }],
   },
   topHeaderCursiveText: {
     fontFamily: Platform.OS === "web" ? "Kalam, Caveat, cursive" : "System",
-    fontSize: 14,
+    fontSize: 16,
     color: "#065F46",
     fontStyle: "italic",
     textAlign: "center",
-    lineHeight: 17,
-    fontWeight: "700",
+    lineHeight: 20,
+    fontWeight: "800",
+    textShadowColor: "rgba(255, 255, 255, 0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
   /* User Profile Identity Hero Card */

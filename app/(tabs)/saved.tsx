@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
-import Svg, { Path, Rect } from "react-native-svg";
+import Svg, { Path, Rect, Defs, LinearGradient, Stop } from "react-native-svg";
 import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
@@ -112,7 +112,7 @@ export default function SavedScreen() {
   const countsByCategory = useMemo(() => {
     const counts: Record<string, number> = {
       all: savedList.filter((item) => item.isSaved).length,
-      land: 2, // Highlighted count as shown in screenshot
+      land: 2,
       plots: 0,
       flats: 0,
       commercial: 0,
@@ -169,14 +169,27 @@ export default function SavedScreen() {
         <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
           {/* ================= 2. TOP HERO BANNER ================= */}
           <View style={styles.heroCard}>
-            {/* Background Landscape Photo */}
+            {/* Background Landscape Photo (The 2nd user uploaded image) */}
             <Image
               source={heroScenicImg}
               style={styles.heroBackground}
               resizeMode="cover"
             />
-            {/* Soft Translucent Light Gradient Overlay on Left */}
-            <View style={styles.heroOverlay} />
+
+            {/* Seamless Soft Gradient Mist on Left (eliminates any harsh vertical cut-off lines) */}
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Svg width="100%" height="100%">
+                <Defs>
+                  <LinearGradient id="heroGradient" x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.84" />
+                    <Stop offset="36%" stopColor="#FFFFFF" stopOpacity="0.65" />
+                    <Stop offset="62%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                    <Stop offset="82%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                  </LinearGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#heroGradient)" />
+              </Svg>
+            </View>
 
             {/* Top-Left: Tilted Cursive Script */}
             <View style={styles.heroCursiveTopWrap}>
@@ -203,13 +216,13 @@ export default function SavedScreen() {
             {/* Lower Mid-Left: Floating Glassmorphic Info Card */}
             <View style={styles.heroFloatingCard}>
               <View style={styles.heroFloatingIconBox}>
-                <MaterialIcons name="bookmark" size={18} color="#059669" />
+                <MaterialIcons name="bookmark" size={17} color="#059669" />
               </View>
               <View style={styles.heroFloatingTextBox}>
                 <Text style={styles.heroFloatingTitle}>Keep track of properties</Text>
                 <Text style={styles.heroFloatingSubtitle}>that match your goals.</Text>
               </View>
-              <MaterialIcons name="arrow-forward" size={18} color="#1E293B" />
+              <MaterialIcons name="arrow-forward" size={16} color="#1E293B" />
             </View>
 
             {/* Bottom-Right: Cursive Tagline over Water */}
@@ -248,7 +261,7 @@ export default function SavedScreen() {
                     >
                       <MaterialIcons
                         name={cat.icon}
-                        size={22}
+                        size={20}
                         color={isActive ? "#059669" : "#475569"}
                       />
                     </View>
@@ -298,7 +311,7 @@ export default function SavedScreen() {
               <View style={styles.promoHeartCircle}>
                 <MaterialIcons name="favorite" size={22} color="#059669" />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, paddingRight: 6 }}>
                 <Text style={styles.promoTitle}>Shortlist. Compare.</Text>
                 <Text style={styles.promoSubtitle}>
                   Make the right move. Save properties, compare details and find your perfect land.
@@ -308,16 +321,16 @@ export default function SavedScreen() {
 
             {/* Decorative Right Illustration */}
             <View style={styles.promoGraphicWrap}>
-              <Svg width={110} height={66} viewBox="0 0 110 66" fill="none">
-                <Path d="M85 8 L95 2" stroke="#86EFAC" strokeWidth={2} strokeLinecap="round" />
-                <Path d="M98 16 L108 12" stroke="#86EFAC" strokeWidth={2} strokeLinecap="round" />
-                <Rect x="46" y="16" width="34" height="46" rx="6" transform="rotate(-15 46 16)" fill="#D1FAE5" opacity={0.65} />
-                <Rect x="56" y="12" width="36" height="48" rx="7" transform="rotate(-4 56 12)" fill="#E6F4EA" stroke="#A7F3D0" strokeWidth={1.2} />
-                <Rect x="66" y="8" width="38" height="52" rx="8" transform="rotate(10 66 8)" fill="#FFFFFF" stroke="#86EFAC" strokeWidth={1.5} />
+              <Svg width={80} height={54} viewBox="0 0 80 54" fill="none">
+                <Path d="M60 6 L68 2" stroke="#86EFAC" strokeWidth={1.8} strokeLinecap="round" />
+                <Path d="M70 12 L78 9" stroke="#86EFAC" strokeWidth={1.8} strokeLinecap="round" />
+                <Rect x="26" y="12" width="28" height="38" rx="6" transform="rotate(-15 26 12)" fill="#D1FAE5" opacity={0.65} />
+                <Rect x="35" y="8" width="30" height="40" rx="6" transform="rotate(-4 35 8)" fill="#E6F4EA" stroke="#A7F3D0" strokeWidth={1.2} />
+                <Rect x="44" y="4" width="32" height="44" rx="7" transform="rotate(8 44 4)" fill="#FFFFFF" stroke="#86EFAC" strokeWidth={1.5} />
                 <Path
-                  d="M84 25 C84 22 88 22 88 25 C88 28.5 84 32 84 32 C84 32 80 28.5 80 25 C80 22 84 22 84 25 Z"
+                  d="M58 18 C58 15.5 61.5 15.5 61.5 18 C61.5 21 58 24 58 24 C58 24 54.5 21 54.5 18 C54.5 15.5 58 15.5 58 18 Z"
                   fill="#059669"
-                  transform="rotate(10 84 26)"
+                  transform="rotate(8 58 19)"
                 />
               </Svg>
             </View>
@@ -408,7 +421,7 @@ export default function SavedScreen() {
                   <View style={styles.cardDetailsSection}>
                     {/* Top: Title & 3-dots Menu */}
                     <View style={styles.cardHeaderRow}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
+                      <Text style={styles.cardTitle} numberOfLines={2}>
                         {item.title}
                       </Text>
                       <TouchableOpacity
@@ -422,7 +435,7 @@ export default function SavedScreen() {
 
                     {/* Location Row */}
                     <View style={styles.cardMetaRow}>
-                      <MaterialIcons name="place" size={14} color="#64748B" />
+                      <MaterialIcons name="place" size={13} color="#64748B" />
                       <Text style={styles.cardMetaText} numberOfLines={1}>
                         {item.location}
                       </Text>
@@ -657,12 +670,12 @@ const styles = StyleSheet.create({
   /* ================= 2. HERO BANNER ================= */
   heroCard: {
     marginHorizontal: 16,
-    marginTop: 12,
-    height: 200,
+    marginTop: 10,
+    height: 220,
     borderRadius: 24,
     overflow: "hidden",
     position: "relative",
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingTop: 16,
     borderWidth: 1,
     borderColor: "rgba(226, 232, 240, 0.8)",
@@ -677,18 +690,13 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  heroOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(255, 255, 255, 0.38)",
-    width: "70%",
-  },
   heroCursiveTopWrap: {
-    marginBottom: 4,
+    marginBottom: 6,
   },
   heroCursiveTopText: {
     fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
-    fontSize: 16,
-    color: "#2D3748",
+    fontSize: 15,
+    color: "#1E293B",
     fontStyle: "italic",
     transform: [{ rotate: "-6deg" }],
     lineHeight: 18,
@@ -699,24 +707,24 @@ const styles = StyleSheet.create({
     maxWidth: 240,
   },
   heroMainTitle: {
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: "900",
     color: "#0F172A",
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
   },
   heroSubTitle: {
-    fontSize: 13.5,
+    fontSize: 13,
     color: "#334155",
     fontWeight: "500",
-    marginTop: 3,
+    marginTop: 2,
   },
   heroTopRightBadge: {
     position: "absolute",
     top: 14,
     right: 14,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
@@ -728,28 +736,28 @@ const styles = StyleSheet.create({
   },
   heroFloatingCard: {
     position: "absolute",
-    bottom: 14,
+    bottom: 12,
     left: 14,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    borderRadius: 13,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 8,
     borderWidth: 1,
-    borderColor: "#FFFFFF",
+    borderColor: "rgba(255, 255, 255, 0.9)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 2,
-    maxWidth: "76%",
+    maxWidth: 226,
   },
   heroFloatingIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: "#DCFCE7",
     justifyContent: "center",
     alignItems: "center",
@@ -758,12 +766,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   heroFloatingTitle: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: "800",
     color: "#0F172A",
   },
   heroFloatingSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
     marginTop: 1,
   },
@@ -775,21 +783,21 @@ const styles = StyleSheet.create({
   },
   heroBottomRightScript: {
     fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
-    fontSize: 16,
+    fontSize: 15.5,
     color: "#FFFFFF",
     fontStyle: "italic",
     textAlign: "right",
     transform: [{ rotate: "-8deg" }],
     lineHeight: 18,
     fontWeight: "700",
-    textShadowColor: "rgba(0, 0, 0, 0.4)",
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
 
   /* ================= 3. HORIZONTAL CATEGORY ROW ================= */
   categorySection: {
-    marginTop: 14,
+    marginTop: 12,
   },
   categoryScrollContainer: {
     paddingHorizontal: 16,
@@ -797,15 +805,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   categoryCard: {
-    width: 74,
-    height: 106,
+    width: 72,
+    height: 98,
     borderRadius: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -819,9 +827,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   categoryIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -829,20 +837,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#DCFCE7",
   },
   categoryLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "700",
     color: "#334155",
     textAlign: "center",
-    lineHeight: 13,
+    lineHeight: 12,
   },
   categoryLabelActive: {
     color: "#065F46",
     fontWeight: "800",
   },
   categoryBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -856,7 +864,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
   },
   categoryBadgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
   },
   categoryBadgeTextActive: {
@@ -876,8 +884,9 @@ const styles = StyleSheet.create({
     borderColor: "#BBF7D0",
     borderRadius: 18,
     marginHorizontal: 16,
-    marginTop: 14,
-    padding: 14,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -892,27 +901,27 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   promoHeartCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#DCFCE7",
     justifyContent: "center",
     alignItems: "center",
   },
   promoTitle: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: "900",
     color: "#0F172A",
   },
   promoSubtitle: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: "#475569",
-    lineHeight: 16,
-    marginTop: 3,
+    lineHeight: 15,
+    marginTop: 2,
   },
   promoGraphicWrap: {
     position: "absolute",
-    right: -2,
+    right: 4,
     bottom: 0,
     top: 0,
     justifyContent: "center",
@@ -925,8 +934,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 14,
+    marginTop: 12,
+    marginBottom: 12,
     gap: 10,
   },
   searchBar: {
@@ -934,10 +943,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 14,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    height: 46,
+    height: 44,
     paddingHorizontal: 12,
     gap: 8,
   },
@@ -952,10 +961,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    height: 46,
+    height: 44,
     paddingHorizontal: 12,
     gap: 5,
     shadowColor: "#000",
@@ -996,8 +1005,8 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   cardImageSection: {
-    width: 125,
-    height: 114,
+    width: 118,
+    height: 112,
     borderRadius: 12,
     overflow: "hidden",
     position: "relative",
@@ -1044,28 +1053,29 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 4,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "800",
     color: "#0F172A",
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   cardMenuBtn: {
     padding: 2,
+    marginTop: -2,
   },
   cardMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     marginTop: 2,
   },
   cardMetaText: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: "#64748B",
     fontWeight: "500",
     flex: 1,
@@ -1077,7 +1087,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardPriceText: {
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: "900",
     color: "#059669",
     letterSpacing: -0.3,
@@ -1094,7 +1104,7 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
     borderRadius: 9999,
     paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -1190,7 +1200,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#0F172A",
-    marginTop: 12,
   },
   emptySub: {
     fontSize: 12.5,

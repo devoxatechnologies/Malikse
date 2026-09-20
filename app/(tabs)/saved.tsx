@@ -181,55 +181,58 @@ export default function SavedScreen() {
               <Svg width="100%" height="100%">
                 <Defs>
                   <LinearGradient id="heroGradient" x1="0" y1="0" x2="1" y2="0">
-                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.84" />
-                    <Stop offset="36%" stopColor="#FFFFFF" stopOpacity="0.65" />
-                    <Stop offset="62%" stopColor="#FFFFFF" stopOpacity="0.2" />
-                    <Stop offset="82%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.88" />
+                    <Stop offset="32%" stopColor="#FFFFFF" stopOpacity="0.70" />
+                    <Stop offset="56%" stopColor="#FFFFFF" stopOpacity="0.22" />
+                    <Stop offset="76%" stopColor="#FFFFFF" stopOpacity="0.0" />
                   </LinearGradient>
                 </Defs>
                 <Rect width="100%" height="100%" fill="url(#heroGradient)" />
               </Svg>
             </View>
 
-            {/* Top-Left: Tilted Cursive Script */}
-            <View style={styles.heroCursiveTopWrap}>
-              <Text style={styles.heroCursiveTopText}>
-                Save Today{"\n"}Build Tomorrows
-              </Text>
-            </View>
-
-            {/* Main Title & Subtitle */}
-            <View style={styles.heroTitlesWrap}>
-              <Text style={styles.heroMainTitle}>
-                {t(language, "saved_hero_title") || "Saved Properties"}
-              </Text>
-              <Text style={styles.heroSubTitle}>
-                {t(language, "saved_hero_sub") || "Properties you've saved for later"}
-              </Text>
-            </View>
-
-            {/* Top-Right: Floating Circular Bookmark Icon Button */}
-            <View style={styles.heroTopRightBadge}>
-              <MaterialIcons name="bookmark" size={24} color="#064E3B" />
-            </View>
-
-            {/* Lower Mid-Left: Floating Glassmorphic Info Card */}
-            <View style={styles.heroFloatingCard}>
-              <View style={styles.heroFloatingIconBox}>
-                <MaterialIcons name="bookmark" size={17} color="#059669" />
+            {/* Content Layer (Overlays) */}
+            <View style={styles.heroContentLayer} pointerEvents="box-none">
+              {/* Top-Left: Tilted Cursive Script */}
+              <View style={styles.heroCursiveTopWrap}>
+                <Text style={styles.heroCursiveTopText}>
+                  Save Today{"\n"}Build Tomorrows
+                </Text>
               </View>
-              <View style={styles.heroFloatingTextBox}>
-                <Text style={styles.heroFloatingTitle}>Keep track of properties</Text>
-                <Text style={styles.heroFloatingSubtitle}>that match your goals.</Text>
-              </View>
-              <MaterialIcons name="arrow-forward" size={16} color="#1E293B" />
-            </View>
 
-            {/* Bottom-Right: Cursive Tagline over Water */}
-            <View style={styles.heroBottomRightScriptWrap}>
-              <Text style={styles.heroBottomRightScript}>
-                Better Places{"\n"}Brighter Futures
-              </Text>
+              {/* Main Title & Subtitle */}
+              <View style={styles.heroTitlesWrap}>
+                <Text style={styles.heroMainTitle}>
+                  {t(language, "saved_hero_title") || "Saved Properties"}
+                </Text>
+                <Text style={styles.heroSubTitle}>
+                  {t(language, "saved_hero_sub") || "Properties you've saved for later"}
+                </Text>
+              </View>
+
+              {/* Top-Right: Floating Circular Bookmark Icon Button */}
+              <View style={styles.heroTopRightBadge}>
+                <MaterialIcons name="bookmark" size={24} color="#064E3B" />
+              </View>
+
+              {/* Lower Mid-Left: Floating Glassmorphic Info Card */}
+              <View style={styles.heroFloatingCard}>
+                <View style={styles.heroFloatingIconBox}>
+                  <MaterialIcons name="bookmark" size={17} color="#059669" />
+                </View>
+                <View style={styles.heroFloatingTextBox}>
+                  <Text style={styles.heroFloatingTitle}>Keep track of properties</Text>
+                  <Text style={styles.heroFloatingSubtitle}>that match your goals.</Text>
+                </View>
+                <MaterialIcons name="arrow-forward" size={16} color="#1E293B" />
+              </View>
+
+              {/* Bottom-Right: Cursive Tagline over Water */}
+              <View style={styles.heroBottomRightScriptWrap}>
+                <Text style={styles.heroBottomRightScript}>
+                  Better Places{"\n"}Brighter Futures
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -675,8 +678,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: "hidden",
     position: "relative",
-    paddingHorizontal: 16,
-    paddingTop: 16,
     borderWidth: 1,
     borderColor: "rgba(226, 232, 240, 0.8)",
     shadowColor: "#000",
@@ -686,45 +687,62 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   heroBackground: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: "100%",
     height: "100%",
   },
+  heroContentLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
   heroCursiveTopWrap: {
-    marginBottom: 6,
+    alignSelf: "flex-start",
+    marginBottom: 10,
   },
   heroCursiveTopText: {
     fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
-    fontSize: 15,
+    fontSize: 14.5,
     color: "#1E293B",
     fontStyle: "italic",
-    transform: [{ rotate: "-6deg" }],
+    transform: [{ rotate: "-4deg" }],
     lineHeight: 18,
     fontWeight: "700",
-    opacity: 0.9,
+    opacity: 0.95,
   },
   heroTitlesWrap: {
     maxWidth: 240,
+    marginTop: 2,
   },
   heroMainTitle: {
     fontSize: 25,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.5,
+    lineHeight: 28,
   },
   heroSubTitle: {
     fontSize: 13,
     color: "#334155",
     fontWeight: "500",
-    marginTop: 2,
+    marginTop: 3,
   },
   heroTopRightBadge: {
     position: "absolute",
     top: 14,
     right: 14,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",

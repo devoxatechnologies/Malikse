@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   Image,
   ScrollView,
   TextInput,
-  useWindowDimensions,
-  Platform,
   Modal,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
@@ -17,7 +17,8 @@ import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
 
-const heroBgImg = require("../../assets/my_listings_hero_bg.png");
+// Top container background: 2nd uploaded scenic image
+const heroScenicImg = require("../../assets/messages_hero_scenic.jpg");
 
 interface MessageItem {
   id: string;
@@ -31,20 +32,29 @@ interface MessageItem {
   };
 }
 
+interface TagItem {
+  label: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  color: string;
+  bg: string;
+  border?: string;
+}
+
 interface Conversation {
   id: string;
   name: string;
   role: string;
-  roleType: "owner" | "advisor" | "buyer" | "agent";
+  roleType: "owner" | "advisor" | "buyer";
   avatarLetter: string;
   avatarColor: string;
   verified: boolean;
   property: string;
   lastMsg: string;
   time: string;
+  timestampNum: number;
   unread: boolean;
-  tag1: { label: string; icon: string; color: string; bg: string; border: string };
-  tag2: { label: string; icon: string; color: string; bg: string; border: string };
+  tag1: TagItem;
+  tag2: TagItem;
   messages: MessageItem[];
 }
 
@@ -55,18 +65,19 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     role: "Verified Owner",
     roleType: "owner",
     avatarLetter: "R",
-    avatarColor: "#059669",
+    avatarColor: "#0D9488",
     verified: true,
     property: "Plot on Main Bailey Road, Patna",
     lastMsg: "I have shared the latest circle office mutation receipt.",
     time: "10:30 AM",
+    timestampNum: 1726808400000,
     unread: true,
     tag1: {
       label: "Document Shared",
       icon: "description",
       color: "#065F46",
-      bg: "#F0FDF4",
-      border: "#BBF7D0",
+      bg: "#ECFDF5",
+      border: "#A7F3D0",
     },
     tag2: {
       label: "Verified Owner",
@@ -106,6 +117,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     property: "Site Inspection Task #402",
     lastMsg: "GPS geo-boundary survey report has been uploaded.",
     time: "Yesterday",
+    timestampNum: 1726722000000,
     unread: false,
     tag1: {
       label: "Report Shared",
@@ -117,15 +129,15 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     tag2: {
       label: "Advisor",
       icon: "verified-user",
-      color: "#0284C7",
-      bg: "#F0F9FF",
-      border: "#BAE6FD",
+      color: "#1D4ED8",
+      bg: "#EFF6FF",
+      border: "#BFDBFE",
     },
     messages: [
       {
         id: "m1",
         sender: "them",
-        text: "Hello Nikhil! The on-ground physical inspection for your Danapur plot #402 was completed this morning.",
+        text: "Hello Nikhil! The on-ground physical inspection for your Danapur plot #402 was completed yesterday morning.",
         time: "Yesterday, 3:20 PM",
       },
       {
@@ -152,13 +164,14 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     property: "Residential Land in Bihta",
     lastMsg: "Token offer of ₹30 Lakh submitted for owner review.",
     time: "16 Sep",
+    timestampNum: 1726462800000,
     unread: false,
     tag1: {
       label: "Offer Submitted",
       icon: "payments",
       color: "#065F46",
-      bg: "#F0FDF4",
-      border: "#BBF7D0",
+      bg: "#ECFDF5",
+      border: "#A7F3D0",
     },
     tag2: {
       label: "Buyer",
@@ -171,7 +184,7 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
       {
         id: "m1",
         sender: "them",
-        text: "Hello sir, I visited the Bihta plot location yesterday with my family and we really liked the boundary.",
+        text: "Hello sir, I visited the Bihta plot location with my family and we really liked the boundary demarcation.",
         time: "16 Sep, 11:10 AM",
       },
       {
@@ -187,48 +200,158 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
       },
     ],
   },
+  {
+    id: "c4",
+    name: "Priya Verma (Interested Buyer)",
+    role: "Interested Buyer",
+    roleType: "buyer",
+    avatarLetter: "P",
+    avatarColor: "#7C3AED",
+    verified: false,
+    property: "Plot in Danapur",
+    lastMsg: "Can you share the latest price and available size details?",
+    time: "14 Sep",
+    timestampNum: 1726290000000,
+    unread: false,
+    tag1: {
+      label: "Price Query",
+      icon: "help",
+      color: "#6D28D9",
+      bg: "#F5F3FF",
+      border: "#DDD6FE",
+    },
+    tag2: {
+      label: "Buyer",
+      icon: "person",
+      color: "#C2410C",
+      bg: "#FFF7ED",
+      border: "#FED7AA",
+    },
+    messages: [
+      {
+        id: "m1",
+        sender: "them",
+        text: "Namaste! I saw your Danapur property listing and was interested in knowing more details.",
+        time: "14 Sep, 10:00 AM",
+      },
+      {
+        id: "m2",
+        sender: "them",
+        text: "Can you share the latest price and available size details?",
+        time: "14 Sep, 10:05 AM",
+      },
+    ],
+  },
+  {
+    id: "c5",
+    name: "Manish Tiwari (Owner)",
+    role: "Owner",
+    roleType: "owner",
+    avatarLetter: "M",
+    avatarColor: "#0D9488",
+    verified: false,
+    property: "Commercial Plot – Bailey Road",
+    lastMsg: "Site photos and documents are attached.",
+    time: "12 Sep",
+    timestampNum: 1726117200000,
+    unread: false,
+    tag1: {
+      label: "Documents",
+      icon: "description",
+      color: "#065F46",
+      bg: "#ECFDF5",
+      border: "#A7F3D0",
+    },
+    tag2: {
+      label: "Owner",
+      icon: "home",
+      color: "#1D4ED8",
+      bg: "#EFF6FF",
+      border: "#BFDBFE",
+    },
+    messages: [
+      {
+        id: "m1",
+        sender: "them",
+        text: "Hello! Here are the commercial land details as requested.",
+        time: "12 Sep, 3:15 PM",
+      },
+      {
+        id: "m2",
+        sender: "them",
+        text: "Site photos and documents are attached.",
+        time: "12 Sep, 3:20 PM",
+        attachment: {
+          title: "Site_Photos_Commercial_Bailey.pdf",
+          type: "document",
+          size: "4.8 MB",
+        },
+      },
+    ],
+  },
 ];
 
-export default function MessagesScreen() {
+export default function MessagesScreenMobile() {
   const router = useRouter();
   const { language } = useLanguageStore();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 900;
 
   const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
-  const [activeFilter, setActiveFilter] = useState<"all" | "unread" | "buyers" | "agents" | "advisors" | "archived">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState<"latest" | "oldest">("latest");
-  const [selectedChat, setSelectedChat] = useState<Conversation | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "unread" | "archived">("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortOption, setSortOption] = useState<"latest" | "oldest">("latest");
+  const [showSortModal, setShowSortModal] = useState<boolean>(false);
 
-  // Filter conversations
-  const filteredConversations = conversations.filter((c) => {
-    // Category Filter
-    if (activeFilter === "unread" && !c.unread) return false;
-    if (activeFilter === "buyers" && c.roleType !== "buyer") return false;
-    if (activeFilter === "agents" && c.roleType !== "agent") return false;
-    if (activeFilter === "advisors" && c.roleType !== "advisor") return false;
-    if (activeFilter === "archived") return false;
+  // Active chat state for full conversation modal
+  const [selectedChat, setSelectedChat] = useState<Conversation | null>(null);
+  const [replyText, setReplyText] = useState<string>("");
+
+  // Unread count
+  const unreadCount = useMemo(() => {
+    return conversations.filter((c) => c.unread).length;
+  }, [conversations]);
+
+  // Filtered & sorted conversations
+  const filteredConversations = useMemo(() => {
+    let list = [...conversations];
+
+    // Tab Filter
+    if (activeTab === "unread") {
+      list = list.filter((c) => c.unread);
+    } else if (activeTab === "archived") {
+      list = []; // No archived items initially
+    }
 
     // Search Query
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = c.name.toLowerCase().includes(q);
-      const matchProp = c.property.toLowerCase().includes(q);
-      const matchMsg = c.lastMsg.toLowerCase().includes(q);
-      return matchName || matchProp || matchMsg;
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.property.toLowerCase().includes(q) ||
+          c.lastMsg.toLowerCase().includes(q)
+      );
     }
-    return true;
-  });
+
+    // Sorting
+    list.sort((a, b) => {
+      if (sortOption === "latest") {
+        return b.timestampNum - a.timestampNum;
+      } else {
+        return a.timestampNum - b.timestampNum;
+      }
+    });
+
+    return list;
+  }, [conversations, activeTab, searchQuery, sortOption]);
 
   const handleOpenChat = (c: Conversation) => {
     setSelectedChat(c);
-    // Mark as read
-    setConversations((prev) =>
-      prev.map((item) => (item.id === c.id ? { ...item, unread: false } : item))
-    );
+    // Mark conversation as read
+    if (c.unread) {
+      setConversations((prev) =>
+        prev.map((item) => (item.id === c.id ? { ...item, unread: false } : item))
+      );
+    }
   };
 
   const handleSendMessage = () => {
@@ -246,6 +369,7 @@ export default function MessagesScreen() {
       messages: [...selectedChat.messages, newMsg],
       lastMsg: replyText.trim(),
       time: "Just now",
+      timestampNum: Date.now(),
     };
 
     setSelectedChat(updated);
@@ -257,847 +381,528 @@ export default function MessagesScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Universal Brand AppHeader navbar */}
+      {/* 1. Global Brand Header */}
       <AppHeader
         showBack={false}
-        showNavLinks={true}
+        showNavLinks={false}
         showLanguageToggle={true}
-        showPostPropertyBtn={true}
+        showPostPropertyBtn={false}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={[styles.mainLayout, isDesktop && styles.mainLayoutDesktop]}>
-          {/* ================= 1. LEFT EXECUTIVE SIDEBAR ================= */}
-          {isDesktop && (
-            <View style={styles.sidebar}>
-              {/* Sidebar Header Badge */}
-              <View style={styles.sidebarHeaderBox}>
-                <View style={styles.sidebarHeaderIconSquare}>
-                  <MaterialIcons name="chat" size={20} color="#FFFFFF" />
-                </View>
-                <Text style={styles.sidebarHeaderTitle}>
-                  {language === "hi" ? "संदेश" : "Messages"}
-                </Text>
-              </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ================= 2. HERO BANNER (TOP CONTAINER) ================= */}
+        <View style={styles.heroContainer}>
+          {/* Scenic Background Image */}
+          <Image
+            source={heroScenicImg}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
 
-              {/* Navigation Menu Filter List */}
-              <View style={styles.sidebarMenu}>
-                {/* All Messages */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "all" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("all")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="chat"
-                      size={18}
-                      color={activeFilter === "all" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "all" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "सभी संदेश" : "All Messages"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "all" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "all" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      3
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+          {/* Soft semi-translucent gradient overlay on the left */}
+          <View style={styles.heroOverlay} />
 
-                {/* Unread */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "unread" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("unread")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="mark-chat-unread"
-                      size={18}
-                      color={activeFilter === "unread" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "unread" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "अपठित" : "Unread"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "unread" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "unread" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      1
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Buyers */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "buyers" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("buyers")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="person-outline"
-                      size={18}
-                      color={activeFilter === "buyers" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "buyers" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "खरीदार" : "Buyers"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "buyers" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "buyers" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      2
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Brokers / Agents */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "agents" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("agents")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="groups"
-                      size={18}
-                      color={activeFilter === "agents" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "agents" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "दलाल / एजेंट" : "Brokers / Agents"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "agents" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "agents" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      1
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Advisors */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "advisors" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("advisors")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="support-agent"
-                      size={18}
-                      color={activeFilter === "advisors" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "advisors" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "सलाहकार" : "Advisors"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "advisors" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "advisors" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      0
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Archived */}
-                <TouchableOpacity
-                  style={[
-                    styles.sidebarNavItem,
-                    activeFilter === "archived" && styles.sidebarNavItemActive,
-                  ]}
-                  onPress={() => setActiveFilter("archived")}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.sidebarNavLeft}>
-                    <MaterialIcons
-                      name="archive"
-                      size={18}
-                      color={activeFilter === "archived" ? "#065F46" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.sidebarNavText,
-                        activeFilter === "archived" && styles.sidebarNavTextActive,
-                      ]}
-                    >
-                      {language === "hi" ? "अभिलेखागार" : "Archived"}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.sidebarBadge,
-                      activeFilter === "archived" && styles.sidebarBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sidebarBadgeText,
-                        activeFilter === "archived" && styles.sidebarBadgeTextActive,
-                      ]}
-                    >
-                      0
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/* Need Help? Promo Card */}
-              <View style={styles.sidebarHelpCard}>
-                <View style={styles.sidebarHelpTopRow}>
-                  <View style={styles.sidebarHelpIconCircle}>
-                    <MaterialIcons name="headset-mic" size={18} color="#059669" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.sidebarHelpTitle}>
-                      {language === "hi" ? "मदद चाहिए?" : "Need Help?"}
-                    </Text>
-                    <Text style={styles.sidebarHelpSubtitle}>
-                      {language === "hi"
-                        ? "किसी भी समय स्पैम या संदिग्ध गतिविधि की रिपोर्ट करें।"
-                        : "Report spam or suspicious activity anytime."}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.sidebarHelpBtn}
-                  onPress={() => setShowSupportModal(true)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.sidebarHelpBtnText}>
-                    {language === "hi" ? "सहायता से संपर्क करें" : "Contact Support"}
-                  </Text>
-                  <MaterialIcons name="arrow-forward" size={13} color="#059669" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Sidebar Bottom Landscape Contour Graphic */}
-              <View style={styles.sidebarFooterGraphicWrap}>
-                {Platform.OS === "web" ? (
-                  <svg
-                    viewBox="0 0 240 90"
-                    width="100%"
-                    height="90"
-                    style={{ display: "block" }}
-                  >
-                    <defs>
-                      <linearGradient id="sideMtnGradMsg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.65" />
-                        <stop offset="100%" stopColor="#D1FAE5" stopOpacity="0.2" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M0,90 L0,50 Q45,25 90,45 Q135,20 180,48 Q210,40 240,55 L240,90 Z"
-                      fill="url(#sideMtnGradMsg)"
-                    />
-                  </svg>
-                ) : null}
-                <View style={styles.sidebarCursiveWrap}>
-                  <Text style={styles.sidebarCursiveText}>
-                    Verified People{"\n"}Better Opportunities
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* ================= 2. RIGHT MAIN CONTENT AREA ================= */}
-          <View style={styles.mainContent}>
-            {/* Scenic Hero Header Banner (Direct Messages) */}
-            <View style={styles.heroBannerCard}>
-              <Image
-                source={heroBgImg}
-                style={styles.heroBannerBackground}
-                resizeMode="cover"
-              />
-              <View style={styles.heroBannerOverlay} />
-
-              {/* Left Column: Direct Messages & Subtitle & 3 Badges */}
-              <View style={styles.heroLeftCol}>
-                <Text style={styles.heroMainTitle}>
-                  {language === "hi" ? "प्रत्यक्ष संदेश" : "Direct Messages"}
-                </Text>
-                <Text style={styles.heroSubtitle}>
-                  {language === "hi"
-                    ? "सहमति-आधारित सुरक्षित बातचीत"
-                    : "Consent-gated secure conversations"}
-                </Text>
-
-                {/* 3 Security Feature Pills */}
-                <View style={styles.heroPillsRow}>
-                  {/* Pill 1: Protected by OTP */}
-                  <View style={styles.heroPillCard}>
-                    <View style={styles.heroPillIconCircle}>
-                      <MaterialIcons name="lock" size={14} color="#065F46" />
-                    </View>
-                    <View>
-                      <Text style={styles.heroPillTitle}>
-                        {language === "hi" ? "ओटीपी से सुरक्षित" : "Protected by OTP"}
-                      </Text>
-                      <Text style={styles.heroPillSub}>
-                        {language === "hi" ? "संपर्क विवरण सुरक्षित हैं" : "Your contact details stay safe"}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Pill 2: No Spam */}
-                  <View style={styles.heroPillCard}>
-                    <View style={styles.heroPillIconCircle}>
-                      <MaterialIcons name="verified-user" size={14} color="#065F46" />
-                    </View>
-                    <View>
-                      <Text style={styles.heroPillTitle}>
-                        {language === "hi" ? "कोई स्पैम नहीं" : "No Spam"}
-                      </Text>
-                      <Text style={styles.heroPillSub}>
-                        {language === "hi" ? "केवल वास्तविक खरीदार और दलाल" : "Only genuine buyers & brokers"}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Pill 3: Trusted Platform */}
-                  <View style={styles.heroPillCard}>
-                    <View style={styles.heroPillIconCircle}>
-                      <MaterialIcons name="handshake" size={14} color="#065F46" />
-                    </View>
-                    <View>
-                      <Text style={styles.heroPillTitle}>
-                        {language === "hi" ? "विश्वसनीय मंच" : "Trusted Platform"}
-                      </Text>
-                      <Text style={styles.heroPillSub}>
-                        {language === "hi" ? "केवल सत्यापित उपयोगकर्ता" : "Verified users only"}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Center Cursive Script */}
-              {isDesktop && (
-                <View style={styles.heroCursiveBox}>
-                  <Text style={styles.heroCursiveText}>
-                    Safe Conversations{"\n"}
-                    <Text style={styles.heroCursiveUnderline}>Stronger Deals</Text>
-                  </Text>
-                </View>
-              )}
-
-              {/* Right Floating Quote Card */}
-              {isDesktop && (
-                <View style={styles.heroQuoteCard}>
-                  <Text style={styles.heroQuoteMark}>“</Text>
-                  <Text style={styles.heroQuoteText}>
-                    Genuine people.{"\n"}Real opportunities.”
-                  </Text>
-                </View>
-              )}
+          {/* Top Row: Left Direct Messages + Right Cursive Script */}
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroTitlesWrap}>
+              <Text style={styles.heroCategoryLabel}>
+                {t(language, "messages_direct") || "DIRECT MESSAGES"}
+              </Text>
+              <Text style={styles.heroHeadline}>
+                Secure Conversations{"\n"}for Better Deals
+              </Text>
+              <Text style={styles.heroSubtitle}>
+                Connect, share documents and stay updated{"\n"}with buyers, owners and advisors.
+              </Text>
             </View>
 
-            {/* Search & Sort Controls Row */}
-            <View style={styles.searchSortRow}>
-              {/* Search Bar Input */}
-              <View style={styles.searchBarWrap}>
-                <MaterialIcons name="search" size={20} color="#64748B" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={
-                    language === "hi"
-                      ? "नाम, संपत्ति या कीवर्ड द्वारा संदेश खोजें..."
-                      : "Search messages by name, property, or keywords..."
-                  }
-                  placeholderTextColor="#94A3B8"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery("")}>
-                    <MaterialIcons name="close" size={18} color="#94A3B8" />
-                  </TouchableOpacity>
-                )}
-              </View>
+            {/* Right Top Cursive Script */}
+            <View style={styles.heroCursiveWrap}>
+              <Text style={styles.heroCursiveText}>
+                Good Conversations{"\n"}Build Great{"\n"}Opportunities
+              </Text>
+            </View>
+          </View>
 
-              {/* Sort Pill Dropdown */}
-              <TouchableOpacity
-                style={styles.sortDropdownBtn}
-                onPress={() => setSortOrder(sortOrder === "latest" ? "oldest" : "latest")}
-                activeOpacity={0.85}
-              >
-                <MaterialIcons name="swap-vert" size={18} color="#0F172A" />
-                <Text style={styles.sortDropdownText}>
-                  {sortOrder === "latest"
-                    ? language === "hi" ? "नवीनतम पहले" : "Latest First"
-                    : language === "hi" ? "सबसे पुराना" : "Oldest First"}
-                </Text>
-                <MaterialIcons name="keyboard-arrow-down" size={18} color="#64748B" />
-              </TouchableOpacity>
+          {/* Bottom 3 Floating Feature Pills */}
+          <View style={styles.heroPillsRow}>
+            {/* Pill 1: Protected by OTP */}
+            <View style={styles.heroPill}>
+              <View style={styles.heroPillIconBox}>
+                <MaterialIcons name="lock" size={14} color="#059669" />
+              </View>
+              <View style={styles.heroPillTextWrap}>
+                <Text style={styles.heroPillTitle}>Protected</Text>
+                <Text style={styles.heroPillSub}>by OTP</Text>
+              </View>
             </View>
 
-            {/* Conversations List */}
-            <View style={styles.conversationsContainer}>
-              {filteredConversations.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <MaterialIcons name="chat-bubble-outline" size={44} color="#94A3B8" />
-                  <Text style={styles.emptyHeading}>
-                    {language === "hi" ? "कोई संदेश नहीं मिला" : "No messages found"}
-                  </Text>
-                  <Text style={styles.emptySubText}>
-                    {language === "hi"
-                      ? "आपके वर्तमान फ़िल्टर या खोज के लिए कोई बातचीत उपलब्ध नहीं है।"
-                      : "No conversations match your current filter or search criteria."}
-                  </Text>
-                </View>
-              ) : (
-                filteredConversations.map((item) => {
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.conversationCard,
-                        item.unread && styles.conversationCardUnread,
-                      ]}
-                      onPress={() => handleOpenChat(item)}
-                      activeOpacity={0.88}
-                    >
-                      {/* Left: Avatar with Verified Checkmark Badge */}
-                      <View style={styles.avatarContainer}>
-                        <View
-                          style={[
-                            styles.avatarCircle,
-                            { backgroundColor: item.avatarColor },
-                          ]}
-                        >
-                          <Text style={styles.avatarLetter}>{item.avatarLetter}</Text>
-                        </View>
-                        {item.verified && (
-                          <View style={styles.verifiedCheckBadge}>
-                            <MaterialIcons name="check" size={11} color="#FFFFFF" />
-                          </View>
-                        )}
-                      </View>
-
-                      {/* Middle: Content Info */}
-                      <View style={styles.convMainInfo}>
-                        {/* Name & Title */}
-                        <Text style={styles.convName}>{item.name}</Text>
-
-                        {/* Property Location */}
-                        <View style={styles.convPropRow}>
-                          <MaterialIcons name="place" size={14} color="#059669" />
-                          <Text style={styles.convPropText} numberOfLines={1}>
-                            {item.property}
-                          </Text>
-                        </View>
-
-                        {/* Last Message Preview */}
-                        <Text
-                          style={[
-                            styles.convLastMsg,
-                            item.unread && styles.convLastMsgUnread,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {item.lastMsg}
-                        </Text>
-
-                        {/* Tags Badges Row */}
-                        <View style={styles.convTagsRow}>
-                          {/* Tag 1 */}
-                          <View
-                            style={[
-                              styles.convTagPill,
-                              {
-                                backgroundColor: item.tag1.bg,
-                                borderColor: item.tag1.border,
-                              },
-                            ]}
-                          >
-                            <MaterialIcons
-                              name={item.tag1.icon as any}
-                              size={13}
-                              color={item.tag1.color}
-                            />
-                            <Text
-                              style={[
-                                styles.convTagText,
-                                { color: item.tag1.color },
-                              ]}
-                            >
-                              {item.tag1.label}
-                            </Text>
-                          </View>
-
-                          {/* Tag 2 */}
-                          <View
-                            style={[
-                              styles.convTagPill,
-                              {
-                                backgroundColor: item.tag2.bg,
-                                borderColor: item.tag2.border,
-                              },
-                            ]}
-                          >
-                            <MaterialIcons
-                              name={item.tag2.icon as any}
-                              size={13}
-                              color={item.tag2.color}
-                            />
-                            <Text
-                              style={[
-                                styles.convTagText,
-                                { color: item.tag2.color },
-                              ]}
-                            >
-                              {item.tag2.label}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Right: Timestamp, Unread Indicator & Chevron */}
-                      <View style={styles.convRightMeta}>
-                        <View style={styles.timeUnreadRow}>
-                          <Text style={styles.convTimeText}>{item.time}</Text>
-                          {item.unread && <View style={styles.unreadGreenDot} />}
-                        </View>
-                        <MaterialIcons
-                          name="chevron-right"
-                          size={24}
-                          color="#64748B"
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
+            {/* Pill 2: No Spam Genuine Users Only */}
+            <View style={styles.heroPill}>
+              <View style={styles.heroPillIconBox}>
+                <MaterialIcons name="verified-user" size={14} color="#059669" />
+              </View>
+              <View style={styles.heroPillTextWrap}>
+                <Text style={styles.heroPillTitle}>No Spam</Text>
+                <Text style={styles.heroPillSub} numberOfLines={1}>Genuine Users Only</Text>
+              </View>
             </View>
 
-            {/* Bottom Inspiring Quote Footer */}
-            <View style={styles.bottomQuoteWrap}>
-              <View style={styles.bottomQuoteLine} />
-              <View style={styles.bottomQuoteRow}>
-                <Text style={styles.bottomQuoteMarks}>“</Text>
-                <Text style={styles.bottomQuoteText}>
-                  {language === "hi"
-                    ? "सार्थक बातचीत से बेहतर कल का निर्माण होता है।"
-                    : "Meaningful conversations lead to better tomorrow."}
-                </Text>
-                <Text style={styles.bottomQuoteMarks}>”</Text>
+            {/* Pill 3: Trusted Platform Verified People */}
+            <View style={styles.heroPill}>
+              <View style={styles.heroPillIconBox}>
+                <FontAwesome5 name="handshake" size={12} color="#059669" />
               </View>
-              <View style={styles.bottomQuoteLine} />
+              <View style={styles.heroPillTextWrap}>
+                <Text style={styles.heroPillTitle}>Trusted Platform</Text>
+                <Text style={styles.heroPillSub} numberOfLines={1}>Verified People</Text>
+              </View>
             </View>
           </View>
         </View>
-      </ScrollView>
 
-      {/* ================= INTERACTIVE CHAT MODAL ================= */}
-      {selectedChat && (
-        <Modal
-          visible={Boolean(selectedChat)}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setSelectedChat(null)}
-        >
-          <View style={styles.chatModalOverlay}>
-            <View style={[styles.chatModalCard, isDesktop && styles.chatModalCardDesktop]}>
-              {/* Modal Header */}
-              <View style={styles.chatModalHeader}>
-                <View style={styles.chatModalHeaderLeft}>
-                  <View
-                    style={[
-                      styles.avatarCircle,
-                      {
-                        backgroundColor: selectedChat.avatarColor,
-                        width: 42,
-                        height: 42,
-                        borderRadius: 21,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.avatarLetter, { fontSize: 18 }]}>
-                      {selectedChat.avatarLetter}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text style={styles.chatModalName}>{selectedChat.name}</Text>
-                    <View style={styles.convPropRow}>
-                      <MaterialIcons name="place" size={13} color="#059669" />
-                      <Text style={styles.convPropText}>{selectedChat.property}</Text>
-                    </View>
-                  </View>
+        {/* ================= 3. SEARCH & SORT ROW ================= */}
+        <View style={styles.searchSortRow}>
+          {/* Search bar */}
+          <View style={styles.searchBar}>
+            <MaterialIcons name="search" size={18} color="#64748B" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search messages by name, property, or keywords..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7}>
+                <MaterialIcons name="close" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Sort Dropdown */}
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={() => setShowSortModal(true)}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="swap-vert" size={16} color="#0F172A" />
+            <Text style={styles.sortButtonText}>
+              {sortOption === "latest" ? "Latest First" : "Oldest First"}
+            </Text>
+            <MaterialIcons name="keyboard-arrow-down" size={16} color="#475569" />
+          </TouchableOpacity>
+        </View>
+
+        {/* ================= 4. SEGMENTED FILTER TABS ================= */}
+        <View style={styles.tabsContainer}>
+          {/* All Messages */}
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "all" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("all")}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === "all" && styles.tabTextActive]}>
+              All Messages
+            </Text>
+          </TouchableOpacity>
+
+          {/* Unread */}
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "unread" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("unread")}
+            activeOpacity={0.8}
+          >
+            <View style={styles.unreadTabContent}>
+              <Text style={[styles.tabText, activeTab === "unread" && styles.tabTextActive]}>
+                Unread
+              </Text>
+              {unreadCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
                 </View>
+              )}
+            </View>
+          </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.chatModalCloseBtn}
-                  onPress={() => setSelectedChat(null)}
-                >
-                  <MaterialIcons name="close" size={22} color="#475569" />
-                </TouchableOpacity>
-              </View>
+          {/* Archived */}
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "archived" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("archived")}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === "archived" && styles.tabTextActive]}>
+              Archived
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-              {/* Chat Messages Body */}
-              <ScrollView
-                style={styles.chatMessagesScroll}
-                contentContainerStyle={styles.chatMessagesContent}
+        {/* ================= 5. MESSAGE LIST CARDS ================= */}
+        <View style={styles.messagesList}>
+          {filteredConversations.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="mail-outline" size={44} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No messages found</Text>
+              <Text style={styles.emptySub}>
+                {searchQuery
+                  ? "No conversations match your search terms."
+                  : activeTab === "unread"
+                  ? "You have caught up with all your messages."
+                  : "No conversations archived yet."}
+              </Text>
+            </View>
+          ) : (
+            filteredConversations.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.card}
+                onPress={() => handleOpenChat(item)}
+                activeOpacity={0.9}
               >
-                {/* Security Trust Notice */}
-                <View style={styles.chatTrustNotice}>
-                  <MaterialIcons name="verified-user" size={16} color="#059669" />
-                  <Text style={styles.chatTrustText}>
-                    End-to-end consent gated conversation. Your phone & personal info remain private until mutual consent.
-                  </Text>
-                </View>
-
-                {/* Message bubbles */}
-                {selectedChat.messages.map((m) => (
-                  <View
-                    key={m.id}
-                    style={[
-                      styles.messageBubbleRow,
-                      m.sender === "me" ? styles.messageBubbleRowMe : styles.messageBubbleRowThem,
-                    ]}
-                  >
+                <View style={styles.cardRow}>
+                  {/* Left Avatar */}
+                  <View style={styles.avatarWrap}>
                     <View
                       style={[
-                        styles.messageBubble,
-                        m.sender === "me" ? styles.messageBubbleMe : styles.messageBubbleThem,
+                        styles.avatarCircle,
+                        { backgroundColor: item.avatarColor || "#059669" },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.messageText,
-                          m.sender === "me" ? styles.messageTextMe : styles.messageTextThem,
-                        ]}
-                      >
-                        {m.text}
-                      </Text>
+                      <Text style={styles.avatarLetter}>{item.avatarLetter}</Text>
+                    </View>
 
-                      {/* Document Attachment card */}
-                      {m.attachment && (
+                    {/* Verified check badge on avatar corner */}
+                    {item.verified && (
+                      <View style={styles.verifiedBadgeCorner}>
+                        <MaterialIcons name="check" size={10} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Right Content Area */}
+                  <View style={styles.cardContent}>
+                    {/* Top Row: Name and Time / Unread Dot */}
+                    <View style={styles.nameRow}>
+                      <Text style={styles.senderName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <View style={styles.timeWrap}>
+                        <Text style={styles.timeText}>{item.time}</Text>
+                        {item.unread && <View style={styles.unreadDot} />}
+                      </View>
+                    </View>
+
+                    {/* Property / Task Pin Row */}
+                    <View style={styles.propertyRow}>
+                      <MaterialIcons name="place" size={13} color="#059669" />
+                      <Text style={styles.propertyText} numberOfLines={1}>
+                        {item.property}
+                      </Text>
+                    </View>
+
+                    {/* Last message snippet & chevron */}
+                    <View style={styles.snippetRow}>
+                      <Text style={styles.snippetText} numberOfLines={1}>
+                        {item.lastMsg}
+                      </Text>
+                      <MaterialIcons name="chevron-right" size={18} color="#94A3B8" />
+                    </View>
+
+                    {/* Tags Row */}
+                    <View style={styles.tagsRow}>
+                      {item.tag1 && (
                         <View
                           style={[
-                            styles.attachmentCard,
-                            m.sender === "me"
-                              ? styles.attachmentCardMe
-                              : styles.attachmentCardThem,
+                            styles.tagPill,
+                            {
+                              backgroundColor: item.tag1.bg || "#ECFDF5",
+                              borderColor: item.tag1.border || "#A7F3D0",
+                            },
                           ]}
                         >
                           <MaterialIcons
-                            name={
-                              m.attachment.type === "offer"
-                                ? "payments"
-                                : "description"
-                            }
-                            size={20}
-                            color={m.sender === "me" ? "#FFFFFF" : "#059669"}
+                            name={item.tag1.icon}
+                            size={12}
+                            color={item.tag1.color || "#065F46"}
                           />
-                          <View style={{ flex: 1 }}>
-                            <Text
-                              style={[
-                                styles.attachmentTitle,
-                                m.sender === "me" && { color: "#FFFFFF" },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {m.attachment.title}
-                            </Text>
-                            {m.attachment.size && (
-                              <Text
-                                style={[
-                                  styles.attachmentSize,
-                                  m.sender === "me" && { color: "#D1FAE5" },
-                                ]}
-                              >
-                                {m.attachment.size}
-                              </Text>
-                            )}
-                          </View>
-                          <MaterialIcons
-                            name="file-download"
-                            size={18}
-                            color={m.sender === "me" ? "#FFFFFF" : "#059669"}
-                          />
+                          <Text
+                            style={[
+                              styles.tagText,
+                              { color: item.tag1.color || "#065F46" },
+                            ]}
+                          >
+                            {item.tag1.label}
+                          </Text>
                         </View>
                       )}
 
-                      <Text
-                        style={[
-                          styles.messageTime,
-                          m.sender === "me" ? styles.messageTimeMe : styles.messageTimeThem,
-                        ]}
-                      >
-                        {m.time}
-                      </Text>
+                      {item.tag2 && (
+                        <View
+                          style={[
+                            styles.tagPill,
+                            {
+                              backgroundColor: item.tag2.bg || "#ECFDF5",
+                              borderColor: item.tag2.border || "#A7F3D0",
+                            },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name={item.tag2.icon}
+                            size={12}
+                            color={item.tag2.color || "#065F46"}
+                          />
+                          <Text
+                            style={[
+                              styles.tagText,
+                              { color: item.tag2.color || "#065F46" },
+                            ]}
+                          >
+                            {item.tag2.label}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
-                ))}
-              </ScrollView>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </ScrollView>
 
-              {/* Chat Input Bar */}
-              <View style={styles.chatInputBar}>
-                <TouchableOpacity style={styles.chatAttachBtn} activeOpacity={0.7}>
-                  <MaterialIcons name="attach-file" size={22} color="#64748B" />
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.chatTextInput}
-                  placeholder={language === "hi" ? "संदेश लिखें..." : "Type a message..."}
-                  placeholderTextColor="#94A3B8"
-                  value={replyText}
-                  onChangeText={setReplyText}
-                  onSubmitEditing={handleSendMessage}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.chatSendBtn,
-                    replyText.trim().length > 0 && styles.chatSendBtnActive,
-                  ]}
-                  onPress={handleSendMessage}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="send" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
+      {/* ================= 6. SORT SELECTION MODAL ================= */}
+      <Modal
+        visible={showSortModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSortModal(false)}
+        >
+          <View style={styles.sortModalBox}>
+            <Text style={styles.sortModalTitle}>Sort Messages</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.sortOptionRow,
+                sortOption === "latest" && styles.sortOptionRowActive,
+              ]}
+              onPress={() => {
+                setSortOption("latest");
+                setShowSortModal(false);
+              }}
+            >
+              <MaterialIcons
+                name="schedule"
+                size={18}
+                color={sortOption === "latest" ? "#065F46" : "#64748B"}
+              />
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  sortOption === "latest" && styles.sortOptionTextActive,
+                ]}
+              >
+                Latest First
+              </Text>
+              {sortOption === "latest" && (
+                <MaterialIcons name="check" size={18} color="#065F46" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.sortOptionRow,
+                sortOption === "oldest" && styles.sortOptionRowActive,
+              ]}
+              onPress={() => {
+                setSortOption("oldest");
+                setShowSortModal(false);
+              }}
+            >
+              <MaterialIcons
+                name="history"
+                size={18}
+                color={sortOption === "oldest" ? "#065F46" : "#64748B"}
+              />
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  sortOption === "oldest" && styles.sortOptionTextActive,
+                ]}
+              >
+                Oldest First
+              </Text>
+              {sortOption === "oldest" && (
+                <MaterialIcons name="check" size={18} color="#065F46" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ================= 7. INTERACTIVE CHAT SCREEN MODAL ================= */}
+      {selectedChat && (
+        <Modal
+          visible={true}
+          animationType="slide"
+          onRequestClose={() => setSelectedChat(null)}
+        >
+          <KeyboardAvoidingView
+            style={styles.chatModalContainer}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            {/* Chat Top Bar */}
+            <View style={styles.chatHeader}>
+              <TouchableOpacity
+                style={styles.chatBackBtn}
+                onPress={() => setSelectedChat(null)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="arrow-back" size={22} color="#0F172A" />
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.chatHeaderAvatar,
+                  { backgroundColor: selectedChat.avatarColor || "#059669" },
+                ]}
+              >
+                <Text style={styles.chatHeaderAvatarText}>
+                  {selectedChat.avatarLetter}
+                </Text>
+              </View>
+
+              <View style={styles.chatHeaderInfo}>
+                <Text style={styles.chatHeaderName} numberOfLines={1}>
+                  {selectedChat.name}
+                </Text>
+                <Text style={styles.chatHeaderProp} numberOfLines={1}>
+                  {selectedChat.property}
+                </Text>
+              </View>
+
+              {/* OTP Protected Badge */}
+              <View style={styles.otpHeaderBadge}>
+                <MaterialIcons name="shield" size={13} color="#059669" />
+                <Text style={styles.otpHeaderBadgeText}>OTP Verified</Text>
               </View>
             </View>
-          </View>
-        </Modal>
-      )}
 
-      {/* ================= SUPPORT MODAL ================= */}
-      {showSupportModal && (
-        <Modal
-          visible={showSupportModal}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => setShowSupportModal(false)}
-        >
-          <View style={styles.chatModalOverlay}>
-            <View style={styles.supportModalCard}>
-              <View style={styles.supportHeader}>
-                <View style={styles.sidebarHelpIconCircle}>
-                  <MaterialIcons name="headset-mic" size={24} color="#059669" />
-                </View>
-                <Text style={styles.supportTitle}>MalikSe Trust & Safety</Text>
-                <TouchableOpacity
-                  style={styles.chatModalCloseBtn}
-                  onPress={() => setShowSupportModal(false)}
+            {/* Messages Scroll View */}
+            <ScrollView
+              style={styles.chatScrollView}
+              contentContainerStyle={styles.chatScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Security notice banner */}
+              <View style={styles.chatSecurityBanner}>
+                <MaterialIcons name="lock" size={14} color="#059669" />
+                <Text style={styles.chatSecurityBannerText}>
+                  End-to-end verified deal communication with OTP protection.
+                </Text>
+              </View>
+
+              {selectedChat.messages.map((msg) => (
+                <View
+                  key={msg.id}
+                  style={[
+                    styles.msgWrapper,
+                    msg.sender === "me" ? styles.msgWrapperMe : styles.msgWrapperThem,
+                  ]}
                 >
-                  <MaterialIcons name="close" size={22} color="#475569" />
-                </TouchableOpacity>
-              </View>
+                  <View
+                    style={[
+                      styles.msgBubble,
+                      msg.sender === "me" ? styles.msgBubbleMe : styles.msgBubbleThem,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.msgText,
+                        msg.sender === "me" ? styles.msgTextMe : styles.msgTextThem,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
 
-              <Text style={styles.supportBodyText}>
-                Our trust & safety team monitors conversations 24/7 to protect verified land buyers and sellers. You can report spam, request phone unmasking, or speak to a dedicated relationship advisor.
-              </Text>
+                    {/* Attachment preview if present */}
+                    {msg.attachment && (
+                      <View style={styles.attachmentCard}>
+                        <View style={styles.attachmentIconBox}>
+                          <MaterialIcons
+                            name={
+                              msg.attachment.type === "offer"
+                                ? "payments"
+                                : "description"
+                            }
+                            size={18}
+                            color="#059669"
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.attachmentTitle} numberOfLines={1}>
+                            {msg.attachment.title}
+                          </Text>
+                          {msg.attachment.size && (
+                            <Text style={styles.attachmentSize}>
+                              {msg.attachment.size}
+                            </Text>
+                          )}
+                        </View>
+                        <TouchableOpacity style={styles.attachmentDownloadBtn} activeOpacity={0.7}>
+                          <MaterialIcons name="file-download" size={16} color="#065F46" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
 
-              <View style={styles.supportOptions}>
-                <TouchableOpacity style={styles.supportOptionBtn} activeOpacity={0.8}>
-                  <MaterialIcons name="report" size={18} color="#DC2626" />
-                  <Text style={styles.supportOptionText}>Report Suspicious Broker / Spam</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.supportOptionBtn} activeOpacity={0.8}>
-                  <MaterialIcons name="lock-open" size={18} color="#059669" />
-                  <Text style={styles.supportOptionText}>Request Mutual Phone Number Exchange</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.supportOptionBtn} activeOpacity={0.8}>
-                  <MaterialIcons name="support-agent" size={18} color="#2563EB" />
-                  <Text style={styles.supportOptionText}>Connect with Dedicated Advisor</Text>
-                </TouchableOpacity>
-              </View>
+                    <Text
+                      style={[
+                        styles.msgTime,
+                        msg.sender === "me" ? styles.msgTimeMe : styles.msgTimeThem,
+                      ]}
+                    >
+                      {msg.time}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Chat Composer Input Row */}
+            <View style={styles.chatComposer}>
+              <TouchableOpacity style={styles.composerAttachBtn} activeOpacity={0.7}>
+                <MaterialIcons name="attach-file" size={20} color="#64748B" />
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.composerInput}
+                placeholder="Type your message..."
+                placeholderTextColor="#94A3B8"
+                value={replyText}
+                onChangeText={setReplyText}
+                multiline
+              />
 
               <TouchableOpacity
-                style={styles.supportCloseActionBtn}
-                onPress={() => setShowSupportModal(false)}
+                style={[
+                  styles.composerSendBtn,
+                  !replyText.trim() && styles.composerSendBtnDisabled,
+                ]}
+                onPress={handleSendMessage}
+                disabled={!replyText.trim()}
+                activeOpacity={0.8}
               >
-                <Text style={styles.supportCloseActionBtnText}>Close</Text>
+                <MaterialIcons name="send" size={17} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       )}
     </View>
@@ -1110,811 +915,628 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scrollContainer: {
-    paddingBottom: 48,
-  },
-  mainLayout: {
-    width: "100%",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  mainLayoutDesktop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 24,
+    paddingBottom: 24,
   },
 
-  /* ================= LEFT SIDEBAR ================= */
-  sidebar: {
-    width: 240,
-    backgroundColor: "transparent",
-  },
-  sidebarHeaderBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  /* ================= HERO BANNER (TOP CONTAINER) ================= */
+  heroContainer: {
+    marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  sidebarHeaderIconSquare: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: "#059669",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  sidebarHeaderTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.2,
-  },
-  sidebarMenu: {
-    gap: 4,
-    marginBottom: 20,
-  },
-  sidebarNavItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "transparent",
-  },
-  sidebarNavItemActive: {
-    backgroundColor: "#ECFDF5",
-    borderLeftWidth: 3,
-    borderLeftColor: "#059669",
-  },
-  sidebarNavLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  sidebarNavText: {
-    fontSize: 13,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  sidebarNavTextActive: {
-    color: "#065F46",
-    fontWeight: "800",
-  },
-  sidebarBadge: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    borderRadius: 9999,
-  },
-  sidebarBadgeActive: {
-    backgroundColor: "#A7F3D0",
-  },
-  sidebarBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  sidebarBadgeTextActive: {
-    color: "#065F46",
-    fontWeight: "800",
-  },
-
-  /* Sidebar Help Card */
-  sidebarHelpCard: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    padding: 14,
-    marginBottom: 16,
-    gap: 12,
-  },
-  sidebarHelpTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  sidebarHelpIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#DCFCE7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sidebarHelpTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  sidebarHelpSubtitle: {
-    fontSize: 10.5,
-    color: "#64748B",
-    marginTop: 2,
-    lineHeight: 14,
-  },
-  sidebarHelpBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.2,
-    borderColor: "#059669",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 9999,
-  },
-  sidebarHelpBtnText: {
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: "#059669",
-  },
-
-  /* Sidebar Bottom Graphic */
-  sidebarFooterGraphicWrap: {
-    position: "relative",
-    width: "100%",
-    height: 90,
-    justifyContent: "flex-end",
-    alignItems: "flex-start",
-  },
-  sidebarCursiveWrap: {
-    position: "absolute",
-    bottom: 6,
-    left: 8,
-  },
-  sidebarCursiveText: {
-    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, cursive" : "System",
-    fontSize: 13,
-    color: "#065F46",
-    fontStyle: "italic",
-    lineHeight: 16,
-    opacity: 0.85,
-  },
-
-  /* ================= RIGHT MAIN CONTENT ================= */
-  mainContent: {
-    flex: 1,
-  },
-
-  /* Hero Header Banner */
-  heroBannerCard: {
-    width: "100%",
-    minHeight: 135,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
     position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 18,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginBottom: 20,
+    backgroundColor: "#E2E8F0",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+    minHeight: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  heroBannerBackground: {
+  heroImage: {
     ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
-    ...Platform.select({
-      web: {
-        objectFit: "cover",
-        objectPosition: "center 70%",
-      } as any,
-    }),
   },
-  heroBannerOverlay: {
+  heroOverlay: {
     ...StyleSheet.absoluteFill,
-    pointerEvents: "none",
-    ...Platform.select({
-      web: {
-        backgroundImage:
-          "linear-gradient(90deg, rgba(230, 245, 238, 0.94) 0%, rgba(230, 245, 238, 0.88) 35%, rgba(230, 245, 238, 0.35) 65%, transparent 90%)",
-      } as any,
-      default: {
-        backgroundColor: "rgba(230, 245, 238, 0.4)",
-      },
-    }),
+    backgroundColor: "rgba(255, 255, 255, 0.42)",
   },
-  heroLeftCol: {
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     zIndex: 2,
-    flex: 1,
-    maxWidth: 620,
   },
-  heroMainTitle: {
-    fontSize: 25,
+  heroTitlesWrap: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  heroCategoryLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#475569",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  heroHeadline: {
+    fontSize: 21,
     fontWeight: "900",
     color: "#0F172A",
+    lineHeight: 26,
     letterSpacing: -0.4,
+    marginTop: 4,
   },
   heroSubtitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#334155",
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  heroCursiveWrap: {
+    alignItems: "flex-end",
+    paddingTop: 2,
+  },
+  heroCursiveText: {
+    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
     fontSize: 13,
-    color: "#475569",
-    fontWeight: "500",
-    marginTop: 3,
-    marginBottom: 12,
+    color: "#166534",
+    fontStyle: "italic",
+    textAlign: "right",
+    lineHeight: 16,
+    transform: [{ rotate: "-4deg" }],
+    fontWeight: "700",
   },
   heroPillsRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 6,
+    marginTop: 16,
+    zIndex: 2,
   },
-  heroPillCard: {
+  heroPill: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 7,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    gap: 6,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-      } as any,
-    }),
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  heroPillIconCircle: {
+  heroPillIconBox: {
     width: 26,
     height: 26,
-    borderRadius: 13,
-    backgroundColor: "#D1FAE5",
+    borderRadius: 7,
+    backgroundColor: "#E6F4EA",
     justifyContent: "center",
     alignItems: "center",
   },
+  heroPillTextWrap: {
+    flex: 1,
+  },
   heroPillTitle: {
-    fontSize: 11.5,
+    fontSize: 10,
     fontWeight: "800",
     color: "#0F172A",
   },
   heroPillSub: {
-    fontSize: 9.5,
-    color: "#64748B",
+    fontSize: 8.5,
+    color: "#475569",
+    fontWeight: "600",
+    marginTop: 1,
   },
 
-  /* Cursive Script in Hero */
-  heroCursiveBox: {
-    zIndex: 2,
-    alignItems: "center",
-    transform: [{ rotate: "-4deg" }],
-    marginHorizontal: 10,
-  },
-  heroCursiveText: {
-    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, cursive" : "System",
-    fontSize: 17,
-    color: "#065F46",
-    fontStyle: "italic",
-    textAlign: "center",
-    lineHeight: 20,
-    fontWeight: "700",
-  },
-  heroCursiveUnderline: {
-    textDecorationLine: "underline",
-  },
-
-  /* Floating Quote Card */
-  heroQuoteCard: {
-    zIndex: 2,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    maxWidth: 180,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-      } as any,
-    }),
-  },
-  heroQuoteMark: {
-    fontSize: 24,
-    color: "#059669",
-    fontWeight: "900",
-    lineHeight: 24,
-  },
-  heroQuoteText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#0F172A",
-    lineHeight: 15,
-  },
-
-  /* Search & Sort Controls */
+  /* ================= SEARCH & SORT ROW ================= */
   searchSortRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
   },
-  searchBarWrap: {
+  searchBar: {
     flex: 1,
-    height: 44,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    height: 42,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    gap: 10,
+    paddingHorizontal: 12,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12.5,
     color: "#0F172A",
-    ...Platform.select({
-      web: { outlineStyle: "none" } as any,
-    }),
+    outlineStyle: "none" as any,
   },
-  sortDropdownBtn: {
-    height: 44,
+  sortButton: {
+    height: 42,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    gap: 6,
-    ...Platform.select({
-      web: { cursor: "pointer" } as any,
-    }),
+    paddingHorizontal: 10,
+    gap: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  sortDropdownText: {
-    fontSize: 13,
+  sortButtonText: {
+    fontSize: 12,
     fontWeight: "700",
     color: "#0F172A",
   },
 
-  /* Conversations Cards List */
-  conversationsContainer: {
-    gap: 12,
-  },
-  conversationCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 18,
+  /* ================= SEGMENTED TABS ================= */
+  tabsContainer: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    backgroundColor: "#EEF2F6",
+    borderRadius: 12,
+    padding: 4,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    ...Platform.select({
-      web: {
-        cursor: "pointer",
-        transition: "all 0.15s ease",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-      } as any,
-    }),
   },
-  conversationCardUnread: {
-    borderColor: "#A7F3D0",
-    backgroundColor: "#FAFCFB",
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  avatarContainer: {
+  tabBtnActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  tabTextActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+  unreadTabContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  unreadBadge: {
+    backgroundColor: "#A7F3D0",
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 9999,
+  },
+  unreadBadgeText: {
+    color: "#065F46",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  /* ================= MESSAGE CARDS ================= */
+  messagesList: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  avatarWrap: {
     position: "relative",
   },
   avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarLetter: {
-    fontSize: 20,
-    fontWeight: "900",
     color: "#FFFFFF",
+    fontSize: 19,
+    fontWeight: "900",
   },
-  verifiedCheckBadge: {
+  verifiedBadgeCorner: {
     position: "absolute",
     bottom: -2,
     right: -2,
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
-    backgroundColor: "#10B981",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#059669",
     borderWidth: 2,
     borderColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  /* Middle Conv Info */
-  convMainInfo: {
+  cardContent: {
     flex: 1,
-    gap: 4,
+    marginLeft: 12,
   },
-  convName: {
-    fontSize: 15.5,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.2,
-  },
-  convPropRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  convPropText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#475569",
-  },
-  convLastMsg: {
-    fontSize: 13,
-    color: "#475569",
-    marginTop: 2,
-  },
-  convLastMsgUnread: {
-    color: "#0F172A",
-    fontWeight: "800",
-  },
-  convTagsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 6,
-    flexWrap: "wrap",
-  },
-  convTagPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 9,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  convTagText: {
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-
-  /* Right Conv Meta */
-  convRightMeta: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  timeUnreadRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  convTimeText: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  unreadGreenDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: "#059669",
-  },
-
-  /* Bottom Quote */
-  bottomQuoteWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-    marginTop: 36,
-    paddingHorizontal: 20,
-  },
-  bottomQuoteLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-    maxWidth: 140,
-  },
-  bottomQuoteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  bottomQuoteMarks: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#059669",
-  },
-  bottomQuoteText: {
-    fontSize: 13,
-    color: "#047857",
-    fontWeight: "700",
-    fontStyle: "italic",
-    textAlign: "center",
-  },
-
-  /* Empty State */
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  emptyHeading: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  emptySubText: {
-    fontSize: 13,
-    color: "#64748B",
-    textAlign: "center",
-    maxWidth: 320,
-  },
-
-  /* ================= CHAT MODAL ================= */
-  chatModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  chatModalCard: {
-    width: "100%",
-    height: "85%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    ...Platform.select({
-      web: {
-        boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-      } as any,
-    }),
-  },
-  chatModalCardDesktop: {
-    maxWidth: 760,
-  },
-  chatModalHeader: {
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
   },
-  chatModalHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  chatModalName: {
-    fontSize: 15,
+  senderName: {
+    fontSize: 13.5,
     fontWeight: "800",
     color: "#0F172A",
-  },
-  chatModalCloseBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  chatMessagesScroll: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    marginRight: 6,
   },
-  chatMessagesContent: {
-    padding: 20,
-    gap: 14,
+  timeWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  chatTrustNotice: {
+  timeText: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#059669",
+  },
+  propertyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: 3,
+  },
+  propertyText: {
+    fontSize: 11.5,
+    color: "#475569",
+    fontWeight: "600",
+    flex: 1,
+  },
+  snippetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  snippetText: {
+    fontSize: 12,
+    color: "#334155",
+    lineHeight: 16,
+    flex: 1,
+    marginRight: 6,
+  },
+  tagsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#ECFDF5",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 6,
+    flexWrap: "wrap",
   },
-  chatTrustText: {
-    fontSize: 11.5,
-    color: "#065F46",
-    fontWeight: "500",
-    flex: 1,
-    lineHeight: 16,
-  },
-  messageBubbleRow: {
-    flexDirection: "row",
-  },
-  messageBubbleRowThem: {
-    justifyContent: "flex-start",
-  },
-  messageBubbleRowMe: {
-    justifyContent: "flex-end",
-  },
-  messageBubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 16,
-    gap: 6,
-  },
-  messageBubbleThem: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderTopLeftRadius: 4,
-  },
-  messageBubbleMe: {
-    backgroundColor: "#059669",
-    borderTopRightRadius: 4,
-  },
-  messageText: {
-    fontSize: 13.5,
-    lineHeight: 19,
-  },
-  messageTextThem: {
-    color: "#0F172A",
-  },
-  messageTextMe: {
-    color: "#FFFFFF",
-  },
-  attachmentCard: {
+  tagPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 4,
+    gap: 4,
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  attachmentCardThem: {
+  tagText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+
+  /* Empty State */
+  emptyState: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginTop: 10,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 10,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  /* ================= SORT MODAL ================= */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  sortModalBox: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  sortModalTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 14,
+  },
+  sortOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  sortOptionRowActive: {
+    backgroundColor: "#E6F4EA",
+  },
+  sortOptionText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    flex: 1,
+  },
+  sortOptionTextActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+
+  /* ================= CHAT MODAL ================= */
+  chatModalContainer: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingTop: Platform.OS === "ios" ? 50 : 16,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    gap: 10,
+  },
+  chatBackBtn: {
+    padding: 4,
+  },
+  chatHeaderAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chatHeaderAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  chatHeaderInfo: {
+    flex: 1,
+  },
+  chatHeaderName: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  chatHeaderProp: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  otpHeaderBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ECFDF5",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  otpHeaderBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#065F46",
+  },
+  chatScrollView: {
+    flex: 1,
+  },
+  chatScrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  chatSecurityBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: "#F0FDF4",
     borderWidth: 1,
     borderColor: "#BBF7D0",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
-  attachmentCardMe: {
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+  chatSecurityBannerText: {
+    fontSize: 11,
+    color: "#065F46",
+    fontWeight: "600",
+    flex: 1,
+  },
+  msgWrapper: {
+    flexDirection: "row",
+    width: "100%",
+  },
+  msgWrapperThem: {
+    justifyContent: "flex-start",
+  },
+  msgWrapperMe: {
+    justifyContent: "flex-end",
+  },
+  msgBubble: {
+    maxWidth: "82%",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+  },
+  msgBubbleThem: {
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: "#E2E8F0",
+    borderBottomLeftRadius: 4,
+  },
+  msgBubbleMe: {
+    backgroundColor: "#0B4D3C",
+    borderBottomRightRadius: 4,
+  },
+  msgText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  msgTextThem: {
+    color: "#0F172A",
+  },
+  msgTextMe: {
+    color: "#FFFFFF",
+  },
+  msgTime: {
+    fontSize: 9.5,
+    marginTop: 4,
+    alignSelf: "flex-end",
+  },
+  msgTimeThem: {
+    color: "#94A3B8",
+  },
+  msgTimeMe: {
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  attachmentCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  attachmentIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: "#E6F4EA",
+    justifyContent: "center",
+    alignItems: "center",
   },
   attachmentTitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "700",
     color: "#0F172A",
   },
   attachmentSize: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: "#64748B",
     marginTop: 1,
   },
-  messageTime: {
-    fontSize: 10.5,
-    alignSelf: "flex-end",
-    marginTop: 2,
+  attachmentDownloadBtn: {
+    padding: 6,
   },
-  messageTimeThem: {
-    color: "#94A3B8",
-  },
-  messageTimeMe: {
-    color: "#D1FAE5",
-  },
-  chatInputBar: {
+  chatComposer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    paddingHorizontal: 16,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
-    gap: 10,
+    gap: 8,
+    paddingBottom: Platform.OS === "ios" ? 30 : 12,
   },
-  chatAttachBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  composerAttachBtn: {
+    padding: 6,
+  },
+  composerInput: {
+    flex: 1,
+    maxHeight: 90,
     backgroundColor: "#F1F5F9",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: "#0F172A",
+    outlineStyle: "none" as any,
+  },
+  composerSendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
   },
-  chatTextInput: {
-    flex: 1,
-    height: 42,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 21,
-    paddingHorizontal: 16,
-    fontSize: 13,
-    color: "#0F172A",
-    ...Platform.select({
-      web: { outlineStyle: "none" } as any,
-    }),
-  },
-  chatSendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  composerSendBtnDisabled: {
     backgroundColor: "#CBD5E1",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  chatSendBtnActive: {
-    backgroundColor: "#059669",
-  },
-
-  /* Support Modal */
-  supportModalCard: {
-    width: "100%",
-    maxWidth: 520,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 24,
-    gap: 16,
-  },
-  supportHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  supportTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: "#0F172A",
-    flex: 1,
-    marginLeft: 10,
-  },
-  supportBodyText: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 19,
-  },
-  supportOptions: {
-    gap: 10,
-  },
-  supportOptionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
-  },
-  supportOptionText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  supportCloseActionBtn: {
-    backgroundColor: "#059669",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 6,
-  },
-  supportCloseActionBtnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 13.5,
   },
 });

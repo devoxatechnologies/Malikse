@@ -1300,7 +1300,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   heroBannerBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
     ...Platform.select({
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     }),
   },
   heroBannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     pointerEvents: "none",
     ...Platform.select({
       web: {

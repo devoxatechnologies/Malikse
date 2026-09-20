@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   heroBannerBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
     ...Platform.select({
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     }),
   },
   heroBannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     pointerEvents: "none",
     ...Platform.select({
       web: {
@@ -1451,12 +1451,12 @@ const styles = StyleSheet.create({
     minHeight: 88,
   },
   boostBannerBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
   },
   boostBannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     pointerEvents: "none",
     ...Platform.select({
       web: {

@@ -1381,7 +1381,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   topHeaderSectionBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
     ...Platform.select({
@@ -1392,7 +1392,7 @@ const styles = StyleSheet.create({
     }),
   },
   topHeaderSectionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     ...Platform.select({
       web: {
         background:

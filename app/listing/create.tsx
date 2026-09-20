@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,21 +9,31 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Image,
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import Svg, { Path, Rect, Defs, LinearGradient, Stop } from "react-native-svg";
 import { propertyService } from "../../src/services/propertyService";
 import { documentService } from "../../src/services/documentService";
 import { useAuthStore } from "../../src/store/authStore";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
-import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import MapParcelPicker from "../../components/MapParcelPicker";
 import AppHeader from "../../components/AppHeader";
-import { AppTheme } from "../../constants/theme";
 
-const DOC_TYPES = ["Registry", "Mutation", "LPC/Jamabandi", "Map", "Rent Receipt", "Owner ID Proof"] as const;
+const heroScenicImg = require("../../assets/messages_hero_scenic.jpg");
+
+const DOC_TYPES = [
+  "Registry (केवाला)",
+  "Mutation (दाखिल-खारिज)",
+  "LPC / Jamabandi",
+  "Map (नक्शा)",
+  "Rent Receipt (लगान रसीद)",
+  "Owner ID Proof",
+] as const;
 type DocType = typeof DOC_TYPES[number];
 
 interface PickedDoc {
@@ -31,32 +41,82 @@ interface PickedDoc {
   docType: DocType;
 }
 
-export default function CreateListingScreen() {
+const BIHAR_DISTRICTS = [
+  "Patna",
+  "Danapur",
+  "Bihta",
+  "Gaya",
+  "Muzaffarpur",
+  "Bhagalpur",
+  "Darbhanga",
+  "Begusarai",
+  "Purnia",
+  "Arrah",
+  "Vaishali",
+  "Nalanda",
+];
+
+function formatIndianCurrencyWords(numStr: string): string {
+  const n = parseInt(numStr.replace(/[^0-9]/g, ""), 10);
+  if (isNaN(n) || n <= 0) return "";
+  if (n >= 10000000) {
+    const cr = (n / 10000000).toFixed(2);
+    return `₹ ${cr.replace(/\.00$/, "")} Crore`;
+  }
+  if (n >= 100000) {
+    const lk = (n / 100000).toFixed(2);
+    return `₹ ${lk.replace(/\.00$/, "")} Lakh`;
+  }
+  if (n >= 1000) {
+    return `₹ ${n.toLocaleString("en-IN")}`;
+  }
+  return `₹ ${n}`;
+}
+
+function getBiharLandUnits(sqftStr: string) {
+  const sqft = parseFloat(sqftStr.replace(/[^0-9.]/g, ""));
+  if (isNaN(sqft) || sqft <= 0) return null;
+  const kattha = (sqft / 1361.25).toFixed(2);
+  const dhur = (sqft / 68.06).toFixed(1);
+  const bigha = (sqft / 27225).toFixed(2);
+  return { kattha, dhur, bigha };
+}
+
+export default function CreateListingMobileScreen() {
   const router = useRouter();
   const { authState, user, accessToken } = useAuthStore();
   const { language } = useLanguageStore();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 900;
-  
-  const [step, setStep] = useState(2); // Set default to Step 2 as active boundary map
-  const [loading, setLoading] = useState(false);
+
+  // Current Step (1: Details, 2: Boundary Map, 3: Document Vault)
+  const [step, setStep] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
 
   // Form State
   const [type, setType] = useState<string>("land");
-  const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("4500000");
-  const [totalArea, setTotalArea] = useState("2400");
-  const [state, setState] = useState("Bihar");
-  const [district, setDistrict] = useState("Patna");
-  const [khata, setKhata] = useState("");
-  const [khesra, setKhesra] = useState("");
-  
-  // Map State - default empty until user taps and plots on the map
+  const [title, setTitle] = useState<string>("");
+  const [price, setPrice] = useState<string>("4500000");
+  const [totalArea, setTotalArea] = useState<string>("2400");
+  const [state, setState] = useState<string>("Bihar");
+  const [district, setDistrict] = useState<string>("Patna");
+  const [locality, setLocality] = useState<string>("Danapur Cantt / Saguna More");
+  const [khata, setKhata] = useState<string>("104");
+  const [khesra, setKhesra] = useState<string>("582");
+  const [thanaNo, setThanaNo] = useState<string>("72");
+  const [jamabandi, setJamabandi] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+
+  // Map Polygon State
   const [parcelPoints, setParcelPoints] = useState<{ lat: number; lng: number }[]>([]);
 
   // Docs State
   const [documents, setDocuments] = useState<PickedDoc[]>([]);
+  const [ownerConsentChecked, setOwnerConsentChecked] = useState<boolean>(true);
+
+  // Computed helper values
+  const currencyWords = useMemo(() => formatIndianCurrencyWords(price), [price]);
+  const landUnits = useMemo(() => getBiharLandUnits(totalArea), [totalArea]);
 
   const handleBackNavigation = () => {
     if (step > 1 && !propertyId) {
@@ -68,7 +128,10 @@ export default function CreateListingScreen() {
 
   const handleNextToMap = () => {
     if (!price || !totalArea || !state || !district) {
-      Alert.alert("Required Fields", "Please fill in Price, Total Area, State, and District before proceeding.");
+      Alert.alert(
+        "Required Fields",
+        "Please fill in Price, Total Area, State, and District before proceeding to the map."
+      );
       return;
     }
     setStep(2);
@@ -76,10 +139,12 @@ export default function CreateListingScreen() {
 
   const handleCreateProperty = async () => {
     if (authState !== "AUTHENTICATED" || !accessToken) {
-      // In dev mode, if not signed in, still allow previewing Step 3 or prompt
-      const msg = "Please sign in as a Property Owner to publish your property on live server.";
+      const msg =
+        "Please sign in as a Property Owner to publish your property on the live server.";
       if (Platform.OS === "web") {
-        const proceed = confirm(`${msg}\n\nDo you want to proceed to Step 3 in preview mode?`);
+        const proceed = confirm(
+          `${msg}\n\nDo you want to proceed to Step 3 in preview mode?`
+        );
         if (proceed) {
           setStep(3);
           return;
@@ -96,11 +161,10 @@ export default function CreateListingScreen() {
     }
 
     if (parcelPoints.length < 3) {
-      if (Platform.OS === "web") {
-        alert("Please draw a polygon boundary with at least 3 points on the map");
-      } else {
-        Alert.alert("Boundary Required", "Please tap on the map to plot at least 3 points for the property parcel.");
-      }
+      Alert.alert(
+        "Boundary Required",
+        "Please tap on the map to plot at least 3 points for the property parcel boundary."
+      );
       return;
     }
 
@@ -108,7 +172,7 @@ export default function CreateListingScreen() {
     try {
       const prop = await propertyService.createProperty({
         type,
-        title: title || `${type.toUpperCase()} in ${district}, ${state}`,
+        title: title || `${type.toUpperCase()} in ${locality || district}, ${state}`,
         price: Number(price),
         totalArea: Number(totalArea),
         sellableArea: Number(totalArea),
@@ -119,22 +183,23 @@ export default function CreateListingScreen() {
           district,
           lat: parcelPoints[0].lat,
           lng: parcelPoints[0].lng,
-          polygon: parcelPoints
-        }
+          polygon: parcelPoints,
+        },
       });
       setPropertyId(prop.id);
       setStep(3);
     } catch (e: any) {
       if (e.response?.status === 401) {
-        const msg = "Your session has expired or you are not signed in. Proceeding to Step 3 in preview mode.";
-        if (Platform.OS === "web") alert(msg);
-        else Alert.alert("Notice", msg);
+        const msg =
+          "Your session has expired. Proceeding to Step 3 in preview mode.";
+        Alert.alert("Notice", msg);
         setStep(3);
         return;
       }
-      const msg = e.response?.data?.message || "Failed to create property listing. Advancing in preview mode.";
-      if (Platform.OS === "web") alert(msg);
-      else Alert.alert("Notice", msg);
+      const msg =
+        e.response?.data?.message ||
+        "Failed to create property listing. Advancing in preview mode.";
+      Alert.alert("Notice", msg);
       setStep(3);
     } finally {
       setLoading(false);
@@ -145,10 +210,13 @@ export default function CreateListingScreen() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "*/*",
-        copyToCacheDirectory: true
+        copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setDocuments([...documents, { asset: result.assets[0], docType: "Registry" }]);
+        setDocuments([
+          ...documents,
+          { asset: result.assets[0], docType: "Registry (केवाला)" },
+        ]);
       }
     } catch (e) {
       console.log("Error picking document", e);
@@ -156,55 +224,67 @@ export default function CreateListingScreen() {
   };
 
   const updateDocType = (idx: number, docType: DocType) => {
-    setDocuments(docs => docs.map((d, i) => i === idx ? { ...d, docType } : d));
+    setDocuments((docs) =>
+      docs.map((d, i) => (i === idx ? { ...d, docType } : d))
+    );
   };
 
   const removeDoc = (idx: number) => {
-    setDocuments(docs => docs.filter((_, i) => i !== idx));
+    setDocuments((docs) => docs.filter((_, i) => i !== idx));
   };
 
   const handleUploadAndFinish = async () => {
     if (!propertyId) {
-      router.replace("/my-properties");
+      Alert.alert(
+        "Listing Ready",
+        "Listing details saved! Sign in to verify with MalikSe advisor.",
+        [{ text: "View Listings", onPress: () => router.replace("/my-properties") }]
+      );
       return;
     }
+
     setLoading(true);
     try {
       for (const { asset, docType } of documents) {
-        let fileObj: any;
-        if (Platform.OS === "web") {
-          const res = await fetch(asset.uri);
-          const blob = await res.blob();
-          fileObj = new File([blob], asset.name || "document", { type: asset.mimeType });
-        } else {
-          fileObj = {
-            uri: asset.uri,
-            name: asset.name || "document",
-            type: asset.mimeType || "application/octet-stream"
-          };
-        }
-        await documentService.uploadDocument(propertyId, docType, fileObj, asset.name);
+        const fileObj = {
+          uri: asset.uri,
+          name: asset.name || "document",
+          type: asset.mimeType || "application/octet-stream",
+        };
+        await documentService.uploadDocument(
+          propertyId,
+          docType.split(" ")[0],
+          fileObj as any,
+          asset.name
+        );
       }
 
-      if (Platform.OS === "web") {
-        alert("Listing and documents submitted! MalikSe Advisor will review shortly.");
-        router.replace("/my-properties");
-      } else {
-        Alert.alert("Success", "Listing submitted! MalikSe Advisor will review shortly.", [
-          { text: "View Listings", onPress: () => router.replace("/my-properties") }
-        ]);
-      }
+      Alert.alert(
+        "Listing Submitted! 🎉",
+        "Your property has been submitted for GPS verification. A MalikSe Advisor will review documents shortly.",
+        [
+          {
+            text: "Go to My Properties",
+            onPress: () => router.replace("/my-properties"),
+          },
+        ]
+      );
     } catch (e: any) {
       if (e.response?.status === 401) {
-        const msg = "Your session has expired. Please sign in as a Property Owner to continue.";
-        if (Platform.OS === "web") alert(msg);
-        else Alert.alert("Sign In Required", msg);
+        Alert.alert(
+          "Sign In Required",
+          "Your session has expired. Please sign in as a Property Owner."
+        );
         router.push("/login");
         return;
       }
       const msg = e.response?.data?.message || "Failed to upload documents";
-      if (Platform.OS === "web") alert(msg);
-      else Alert.alert("Error", msg);
+      Alert.alert("Notice", msg, [
+        {
+          text: "Continue Anyway",
+          onPress: () => router.replace("/my-properties"),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -212,495 +292,913 @@ export default function CreateListingScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Universal Top Header with Back Navigation */}
+      {/* 1. Universal Top Header */}
       <AppHeader
-        title={t(language, "post_property_listing") || "Post Property Listing"}
+        title={language === "hi" ? "संपत्ति पोस्ट करें" : "Post Property Listing"}
         subtitle={
           step === 1
-            ? t(language, "post_step_1_sub") || "Step 1 of 3 • Property Details"
+            ? language === "hi"
+              ? "चरण 1 • विवरण एवं कीमत"
+              : "Step 1 of 3 • Property Details"
             : step === 2
-            ? t(language, "post_step_2_sub") || "Step 2 of 3 • Boundary Map"
-            : t(language, "post_step_3_sub") || "Step 3 of 3 • Document Vault"
+            ? language === "hi"
+              ? "चरण 2 • जीपीएस सीमा नक्शा"
+              : "Step 2 of 3 • Boundary Map"
+            : language === "hi"
+            ? "चरण 3 • दस्तावेज़ सत्यापन"
+            : "Step 3 of 3 • Document Vault"
         }
         showBack={true}
         onBackPress={handleBackNavigation}
         fallbackRoute="/my-properties"
       />
 
-      {/* Progress Bar Indicator */}
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressBar, { width: `${(step / 3) * 100}%` }]} />
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ================= 2. HERO BANNER CONTAINER ================= */}
+        <View style={styles.heroCardContainer}>
+          {/* Scenic Background Image */}
+          <Image
+            source={heroScenicImg}
+            style={styles.heroBackgroundImage}
+            resizeMode="cover"
+          />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.container, step === 2 && styles.containerWide]}>
-          {/* Unauthenticated Landowner Notice */}
-          {authState !== "AUTHENTICATED" && (
-            <View style={styles.authNoticeBanner}>
-              <View style={styles.authNoticeLeft}>
-                <MaterialIcons name="lock" size={20} color="#D97706" />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.authNoticeTitle}>Landowner Sign-In Notice</Text>
-                  <Text style={styles.authNoticeSub}>
-                    You can preview parcel marking and tools. Signing in lets you publish directly to verified buyers.
-                  </Text>
-                </View>
+          {/* Deep Forest Gradient Overlay */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Svg width="100%" height="100%">
+              <Defs>
+                <LinearGradient id="postHeroGradient" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor="#022c22" stopOpacity="0.75" />
+                  <Stop offset="55%" stopColor="#064e3b" stopOpacity="0.82" />
+                  <Stop offset="100%" stopColor="#065f46" stopOpacity="0.94" />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#postHeroGradient)" />
+            </Svg>
+          </View>
+
+          {/* Content inside Hero Card */}
+          <View style={styles.heroContentWrap}>
+            {/* Top Row: Mini Tag & Top Right Plus Icon */}
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroMiniTag}>
+                <MaterialIcons name="verified" size={13} color="#A7F3D0" />
+                <Text style={styles.heroMiniTagText}>
+                  {language === "hi" ? "मालिकसे सत्यापित लिस्टिंग" : "MalikSe Verified Listing"}
+                </Text>
               </View>
-              <TouchableOpacity 
-                style={styles.authNoticeBtn} 
-                onPress={() => router.push("/login")}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.authNoticeBtnText}>Sign In &rarr;</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
-          {/* MAIN CARD CONTAINER */}
-          <View style={[styles.card, step === 2 && styles.cardWide]}>
-            {/* Top Horizontal Stepper (Step 1, Step 2, Step 3) matching screenshot */}
-            <View style={styles.stepperWrap}>
-              {/* Step 1: Basic Details */}
-              <TouchableOpacity
-                style={styles.stepperItem}
-                onPress={() => setStep(1)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={
-                    step === 1
-                      ? styles.stepCircleActive
-                      : styles.stepCircleCompleted
-                  }
-                >
-                  <Text
-                    style={
-                      step === 1
-                        ? styles.stepCircleActiveText
-                        : styles.stepCircleCompletedText
-                    }
-                  >
-                    1
-                  </Text>
-                </View>
-                <View style={styles.stepLabelWrap}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Text
-                      style={
-                        step === 1
-                          ? styles.stepTitleActive
-                          : styles.stepTitleCompleted
-                      }
-                    >
-                      {t(language, "step_basic_details") || "Basic Details"}
-                    </Text>
-                    {step > 1 && (
-                      <MaterialIcons name="check-circle" size={16} color="#059669" />
-                    )}
-                  </View>
-                  {step === 1 && (
-                    <Text style={styles.stepSubActive}>
-                      {t(language, "post_basic_sub") || "Enter specifications"}
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {/* Separator Chevron */}
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color="#CBD5E1"
-                style={styles.stepArrowIcon}
-              />
-
-              {/* Step 2: Boundary Map */}
-              <TouchableOpacity
-                style={styles.stepperItem}
-                onPress={() => setStep(2)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={
-                    step === 2
-                      ? styles.stepCircleActive
-                      : step > 2
-                      ? styles.stepCircleCompleted
-                      : styles.stepCircleInactive
-                  }
-                >
-                  <Text
-                    style={
-                      step === 2
-                        ? styles.stepCircleActiveText
-                        : step > 2
-                        ? styles.stepCircleCompletedText
-                        : styles.stepCircleInactiveText
-                    }
-                  >
-                    2
-                  </Text>
-                </View>
-                <View style={styles.stepLabelWrap}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Text
-                      style={
-                        step === 2
-                          ? styles.stepTitleActive
-                          : styles.stepTitleInactive
-                      }
-                    >
-                      {t(language, "step_boundary_map") || "Boundary Map"}
-                    </Text>
-                    {step > 2 && (
-                      <MaterialIcons name="check-circle" size={16} color="#059669" />
-                    )}
-                  </View>
-                  <Text
-                    style={
-                      step === 2 ? styles.stepSubActive : styles.stepSubInactive
-                    }
-                  >
-                    {t(language, "step_draw_boundary") || "Draw property boundary"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Separator Chevron */}
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color="#CBD5E1"
-                style={styles.stepArrowIcon}
-              />
-
-              {/* Step 3: Review & Publish */}
-              <TouchableOpacity
-                style={styles.stepperItem}
-                onPress={() => setStep(3)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={
-                    step === 3
-                      ? styles.stepCircleActive
-                      : styles.stepCircleInactive
-                  }
-                >
-                  <Text
-                    style={
-                      step === 3
-                        ? styles.stepCircleActiveText
-                        : styles.stepCircleInactiveText
-                    }
-                  >
-                    3
-                  </Text>
-                </View>
-                <View style={styles.stepLabelWrap}>
-                  <Text
-                    style={
-                      step === 3
-                        ? styles.stepTitleActive
-                        : styles.stepTitleInactive
-                    }
-                  >
-                    {t(language, "step_review_publish") || "Review & Publish"}
-                  </Text>
-                  <Text
-                    style={
-                      step === 3 ? styles.stepSubActive : styles.stepSubInactive
-                    }
-                  >
-                    {t(language, "step_verify_post") || "Verify and post"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              {/* Floating Elevated Circular Plus Badge */}
+              <View style={styles.heroPlusBadge}>
+                <MaterialIcons name="add-business" size={20} color="#064E3B" />
+              </View>
             </View>
 
-            {/* ================= STEP 1: Basic Details & Pricing ================= */}
-            {step === 1 && (
+            {/* Main Hero Titles */}
+            <View style={styles.heroTitles}>
+              <Text style={styles.heroMainTitle}>
+                {language === "hi" ? "ज़मीन या मकान पोस्ट करें" : "List Your Land or Property"}
+              </Text>
+              <Text style={styles.heroSubTitle}>
+                {language === "hi"
+                  ? "बिहार भर के सत्यापित खरीदारों तक 0% ब्रोकरेज के साथ पहुंचें"
+                  : "Reach verified buyers across Bihar with zero brokerage hassle"}
+              </Text>
+            </View>
+
+            {/* Trust Badges Pill Bar */}
+            <View style={styles.heroTrustPill}>
+              <View style={styles.heroTrustItem}>
+                <MaterialIcons name="gps-fixed" size={13} color="#10B981" />
+                <Text style={styles.heroTrustText}>
+                  {language === "hi" ? "जीपीएस सीमा" : "GPS Boundary"}
+                </Text>
+              </View>
+              <View style={styles.heroTrustDot} />
+              <View style={styles.heroTrustItem}>
+                <MaterialIcons name="verified-user" size={13} color="#10B981" />
+                <Text style={styles.heroTrustText}>
+                  {language === "hi" ? "सरकारी खाता-खेसरा" : "Govt Records"}
+                </Text>
+              </View>
+              <View style={styles.heroTrustDot} />
+              <View style={styles.heroTrustItem}>
+                <MaterialIcons name="lock" size={13} color="#10B981" />
+                <Text style={styles.heroTrustText}>
+                  {language === "hi" ? "सुरक्षित वॉल्ट" : "Secure Vault"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ================= 3. MOBILE 3-STEPPER INDICATOR ================= */}
+        <View style={styles.stepperContainer}>
+          {/* Step 1: Details */}
+          <TouchableOpacity
+            style={[styles.stepperPill, step === 1 && styles.stepperPillActive]}
+            onPress={() => setStep(1)}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.stepperNumber,
+                step === 1
+                  ? styles.stepperNumberActive
+                  : step > 1
+                  ? styles.stepperNumberCompleted
+                  : styles.stepperNumberInactive,
+              ]}
+            >
+              {step > 1 ? (
+                <MaterialIcons name="check" size={14} color="#059669" />
+              ) : (
+                <Text
+                  style={[
+                    styles.stepperNumberText,
+                    step === 1 && styles.stepperNumberTextActive,
+                  ]}
+                >
+                  1
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.stepperLabel,
+                step === 1 && styles.stepperLabelActive,
+              ]}
+            >
+              {language === "hi" ? "विवरण" : "Details"}
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.stepperConnector,
+              step > 1 && styles.stepperConnectorActive,
+            ]}
+          />
+
+          {/* Step 2: Boundary Map */}
+          <TouchableOpacity
+            style={[styles.stepperPill, step === 2 && styles.stepperPillActive]}
+            onPress={() => setStep(2)}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.stepperNumber,
+                step === 2
+                  ? styles.stepperNumberActive
+                  : step > 2
+                  ? styles.stepperNumberCompleted
+                  : styles.stepperNumberInactive,
+              ]}
+            >
+              {step > 2 ? (
+                <MaterialIcons name="check" size={14} color="#059669" />
+              ) : (
+                <Text
+                  style={[
+                    styles.stepperNumberText,
+                    step === 2 && styles.stepperNumberTextActive,
+                  ]}
+                >
+                  2
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.stepperLabel,
+                step === 2 && styles.stepperLabelActive,
+              ]}
+            >
+              {language === "hi" ? "सीमा नक्शा" : "Boundary"}
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.stepperConnector,
+              step > 2 && styles.stepperConnectorActive,
+            ]}
+          />
+
+          {/* Step 3: Document Vault */}
+          <TouchableOpacity
+            style={[styles.stepperPill, step === 3 && styles.stepperPillActive]}
+            onPress={() => setStep(3)}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.stepperNumber,
+                step === 3
+                  ? styles.stepperNumberActive
+                  : styles.stepperNumberInactive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.stepperNumberText,
+                  step === 3 && styles.stepperNumberTextActive,
+                ]}
+              >
+                3
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.stepperLabel,
+                step === 3 && styles.stepperLabelActive,
+              ]}
+            >
+              {language === "hi" ? "कागज़ात" : "Docs Vault"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Unauthenticated Landowner Notice */}
+        {authState !== "AUTHENTICATED" && (
+          <View style={styles.authNoticeCard}>
+            <MaterialIcons name="lock-outline" size={20} color="#D97706" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.authNoticeTitle}>
+                {language === "hi" ? "भू-स्वामी लॉगिन सूचना" : "Landowner Sign-In Notice"}
+              </Text>
+              <Text style={styles.authNoticeSub}>
+                {language === "hi"
+                  ? "आप प्रीव्यू मोड में हैं। साइन-इन करके सीधे सत्यापित खरीदारों को बेचें।"
+                  : "Previewing in guest mode. Sign in to publish directly to verified buyers."}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.authNoticeBtn}
+              onPress={() => router.push("/login")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.authNoticeBtnText}>
+                {language === "hi" ? "साइन इन" : "Sign In"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ================= STEP 1: PROPERTY DETAILS & PRICING ================= */}
+        {step === 1 && (
+          <View style={styles.formCard}>
+            {/* Section Header */}
+            <View style={styles.formSectionHeader}>
+              <View style={styles.formSectionIconWrap}>
+                <MaterialIcons name="tune" size={18} color="#059669" />
+              </View>
               <View>
-                <Text style={styles.fieldLabel}>{t(language, "post_type_label") || "Property Type *"}</Text>
-                <View style={styles.typeRow}>
-                  {[
-                    { key: "land", label: t(language, "post_type_land") || "Plot / Land", icon: "terrain" },
-                    { key: "house", label: t(language, "post_type_house") || "House / Villa", icon: "home" },
-                    { key: "flat", label: t(language, "post_type_flat") || "Apartment / Flat", icon: "apartment" },
-                  ].map(item => (
-                    <TouchableOpacity 
-                      key={item.key} 
-                      style={[styles.typeBtn, type === item.key && styles.typeBtnActive]}
-                      onPress={() => setType(item.key)}
-                      activeOpacity={0.8}
+                <Text style={styles.formSectionTitle}>
+                  {language === "hi" ? "संपत्ति की प्राथमिक जानकारी" : "Property Specifications"}
+                </Text>
+                <Text style={styles.formSectionSubtitle}>
+                  {language === "hi"
+                    ? "प्रकार, आकार, कीमत और स्थान दर्ज करें"
+                    : "Enter type, dimensions, pricing & location"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Property Type Grid (4 Visual Cards) */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "संपत्ति का प्रकार *" : "Property Category *"}
+            </Text>
+            <View style={styles.categoryGrid}>
+              {[
+                {
+                  id: "land",
+                  title: language === "hi" ? "प्लॉट / ज़मीन" : "Plot / Land",
+                  icon: "terrain",
+                  sub: "Residential or Agro",
+                },
+                {
+                  id: "house",
+                  title: language === "hi" ? "मकान / विला" : "House / Villa",
+                  icon: "home",
+                  sub: "Independent Home",
+                },
+                {
+                  id: "flat",
+                  title: language === "hi" ? "फ़्लैट / अपार्टमेंट" : "Flat / Apartment",
+                  icon: "apartment",
+                  sub: "Multi-story Unit",
+                },
+                {
+                  id: "commercial",
+                  title: language === "hi" ? "व्यावसायिक ज़मीन" : "Commercial",
+                  icon: "business",
+                  sub: "Shop / Godown / Land",
+                },
+              ].map((item) => {
+                const isSelected = type === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.categoryCardItem,
+                      isSelected && styles.categoryCardItemActive,
+                    ]}
+                    onPress={() => setType(item.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.categoryCardIconBox,
+                        isSelected && styles.categoryCardIconBoxActive,
+                      ]}
                     >
                       <MaterialIcons
                         name={item.icon as any}
-                        size={20}
-                        color={type === item.key ? "#065F46" : AppTheme.colors.textMuted}
+                        size={22}
+                        color={isSelected ? "#059669" : "#64748B"}
                       />
-                      <Text style={[styles.typeTxt, type === item.key && styles.typeTxtActive]}>
-                        {item.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Listing Title */}
-                <Text style={styles.fieldLabel}>{t(language, "post_listing_title_label") || "Listing Title (Optional)"}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t(language, "post_listing_title_ph") || "e.g. 2400 sq.ft Commercial Plot on Bailey Road"}
-                  placeholderTextColor={AppTheme.colors.textMuted}
-                  value={title}
-                  onChangeText={setTitle}
-                />
-
-                {/* Location Fields */}
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_state_label") || "State *"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="State"
-                      value={state}
-                      onChangeText={setState}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_district_label") || "District *"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="District"
-                      value={district}
-                      onChangeText={setDistrict}
-                    />
-                  </View>
-                </View>
-
-                {/* Pricing & Area */}
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_price_label") || "Expected Price (₹) *"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g. 5000000"
-                      placeholderTextColor={AppTheme.colors.textMuted}
-                      value={price}
-                      onChangeText={setPrice}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_area_label") || "Total Area (sq.ft) *"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g. 2400"
-                      placeholderTextColor={AppTheme.colors.textMuted}
-                      value={totalArea}
-                      onChangeText={setTotalArea}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-
-                {/* Govt Survey Identifiers */}
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_khata_label") || "Khata No. (Optional)"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g. 104"
-                      value={khata}
-                      onChangeText={setKhata}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>{t(language, "post_khesra_label") || "Khesra / Plot No. (Optional)"}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g. 582"
-                      value={khesra}
-                      onChangeText={setKhesra}
-                    />
-                  </View>
-                </View>
-
-                {/* Next Step Button */}
-                <TouchableOpacity
-                  style={[styles.btnSaveNext, { width: "100%", marginTop: 24 }]}
-                  onPress={handleNextToMap}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.btnSaveNextText}>
-                    {t(language, "post_next_map_btn") || "Next: Plot Boundary on Map"}
-                  </Text>
-                  <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* ================= STEP 2: BOUNDARY MAP (USER SCREENSHOT MATCH) ================= */}
-            {step === 2 && (
-              <View>
-                {/* Section Title Row with Right-Hand Tip Banner */}
-                <View style={styles.sectionHeaderRow}>
-                  <View style={{ flex: 1, minWidth: 260 }}>
-                    <Text style={styles.sectionTitle}>
-                      {t(language, "boundary_title") || "Draw Property Boundary"}
+                    </View>
+                    <Text
+                      style={[
+                        styles.categoryCardTitle,
+                        isSelected && styles.categoryCardTitleActive,
+                      ]}
+                    >
+                      {item.title}
                     </Text>
-                    <Text style={styles.sectionSubtitle}>
-                      {t(language, "boundary_sub") || "Tap points on the map to define the exact parcel outline."}
-                    </Text>
-                  </View>
-
-                  {/* Light Mint Tip Box matching screenshot */}
-                  <View style={styles.tipBox}>
-                    <MaterialIcons name="lightbulb" size={18} color="#059669" />
-                    <Text style={styles.tipBoxText}>
-                      {t(language, "boundary_tip") || "Be as accurate as possible for better visibility and trusted buyers."}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Map and Sidebar Workspace */}
-                <View style={styles.mapWrap}>
-                  <MapParcelPicker
-                    initialPoints={parcelPoints}
-                    onParcelChange={setParcelPoints}
-                    areaSqFt={totalArea || "2,400"}
-                  />
-                </View>
-
-                {/* Bottom Navigation Buttons (Minimal Capsule Design) */}
-                <View style={styles.bottomActionsRow}>
-                  {/* Left: Previous Step (Mint Capsule Pill) */}
-                  <TouchableOpacity
-                    style={styles.btnPrevious}
-                    onPress={() => setStep(1)}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialIcons name="arrow-back" size={18} color="#065F46" />
-                    <Text style={styles.btnPreviousText}>
-                      {t(language, "prev_step") || "Previous Step"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Right: Save & Next (Emerald Capsule Pill) */}
-                  <TouchableOpacity
-                    style={styles.btnSaveNext}
-                    onPress={handleCreateProperty}
-                    disabled={loading}
-                    activeOpacity={0.85}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.btnSaveNextText}>
-                          {t(language, "save_next") || "Save & Next"}
-                        </Text>
-                        <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
-                      </>
+                    <Text style={styles.categoryCardSub}>{item.sub}</Text>
+                    {isSelected && (
+                      <View style={styles.categoryCheckBadge}>
+                        <MaterialIcons name="check" size={12} color="#FFFFFF" />
+                      </View>
                     )}
                   </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Listing Title */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "लिस्टिंग शीर्षक (वैकल्पिक)" : "Listing Title (Optional)"}
+            </Text>
+            <View style={styles.inputWrap}>
+              <MaterialIcons name="title" size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInputWithIcon}
+                placeholder={
+                  language === "hi"
+                    ? "उदा: 2400 वर्गफ़ीट कॉमर्शियल प्लॉट, बेली रोड"
+                    : "e.g. 2400 sq.ft Prime Plot on Bailey Road"
+                }
+                placeholderTextColor="#94A3B8"
+                value={title}
+                onChangeText={setTitle}
+              />
+            </View>
+
+            {/* Expected Price Card with Live Words */}
+            <View style={styles.pricingCard}>
+              <View style={styles.pricingHeaderRow}>
+                <Text style={styles.inputLabelNoMargin}>
+                  {language === "hi" ? "अपेक्षित मूल्य (Expected Price) *" : "Expected Price (₹) *"}
+                </Text>
+                {currencyWords ? (
+                  <View style={styles.currencyWordsChip}>
+                    <Text style={styles.currencyWordsText}>{currencyWords}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.priceInputWrap}>
+                <Text style={styles.currencyRupeePrefix}>₹</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="e.g. 4500000"
+                  placeholderTextColor="#94A3B8"
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="numeric"
+                />
+              </View>
+              <Text style={styles.priceHelpText}>
+                {language === "hi"
+                  ? "सीधे खरीदारों से बातचीत होगी, कोई बिचौलिया शुल्क नहीं"
+                  : "Direct buyer inquiries with zero intermediary brokerage"}
+              </Text>
+            </View>
+
+            {/* Total Area with Bihar Land Units Converter */}
+            <View style={styles.areaCard}>
+              <Text style={styles.inputLabelNoMargin}>
+                {language === "hi" ? "कुल क्षेत्रफल (Total Area in sq.ft) *" : "Total Area (sq.ft) *"}
+              </Text>
+              <View style={styles.inputWrap}>
+                <MaterialIcons name="square-foot" size={18} color="#94A3B8" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInputWithIcon}
+                  placeholder="e.g. 2400"
+                  placeholderTextColor="#94A3B8"
+                  value={totalArea}
+                  onChangeText={setTotalArea}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.inputSuffix}>sq.ft</Text>
+              </View>
+
+              {/* Bihar Land Measurement Conversion Pill */}
+              {landUnits && (
+                <View style={styles.biharUnitsBar}>
+                  <View style={styles.biharUnitItem}>
+                    <Text style={styles.biharUnitValue}>{landUnits.kattha}</Text>
+                    <Text style={styles.biharUnitLabel}>कट्ठा (Kattha)</Text>
+                  </View>
+                  <View style={styles.biharUnitDivider} />
+                  <View style={styles.biharUnitItem}>
+                    <Text style={styles.biharUnitValue}>{landUnits.dhur}</Text>
+                    <Text style={styles.biharUnitLabel}>धुर (Dhur)</Text>
+                  </View>
+                  <View style={styles.biharUnitDivider} />
+                  <View style={styles.biharUnitItem}>
+                    <Text style={styles.biharUnitValue}>{landUnits.bigha}</Text>
+                    <Text style={styles.biharUnitLabel}>बीघा (Bigha)</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Quick Area Preset Buttons */}
+              <View style={styles.quickAreaRow}>
+                <Text style={styles.quickAreaLabel}>Quick Pick:</Text>
+                {[
+                  { label: "1 Kattha (1361 sq.ft)", val: "1361" },
+                  { label: "2 Kattha (2722 sq.ft)", val: "2722" },
+                  { label: "5 Kattha (6806 sq.ft)", val: "6806" },
+                ].map((preset) => (
+                  <TouchableOpacity
+                    key={preset.val}
+                    style={styles.quickAreaChip}
+                    onPress={() => setTotalArea(preset.val)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.quickAreaChipText}>{preset.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Location & District Selector */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "ज़िला (District) *" : "District in Bihar *"}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.districtScrollContainer}
+            >
+              {BIHAR_DISTRICTS.map((d) => {
+                const isSelected = district === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[
+                      styles.districtChip,
+                      isSelected && styles.districtChipActive,
+                    ]}
+                    onPress={() => setDistrict(d)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.districtChipText,
+                        isSelected && styles.districtChipTextActive,
+                      ]}
+                    >
+                      {d}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Locality / Landmark */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "स्थान / मोहल्ला / लैंडमार्क *" : "Locality / Landmark *"}
+            </Text>
+            <View style={styles.inputWrap}>
+              <MaterialIcons name="place" size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInputWithIcon}
+                placeholder="e.g. Danapur Cantt, Near Railway Station"
+                placeholderTextColor="#94A3B8"
+                value={locality}
+                onChangeText={setLocality}
+              />
+            </View>
+
+            {/* Bihar Govt Revenue & Survey Identifiers (दखल-कब्ज़ा व कागज़ात) */}
+            <View style={styles.govtRecordsCard}>
+              <View style={styles.govtRecordsHeader}>
+                <View style={styles.govtRecordsBadge}>
+                  <MaterialIcons name="security" size={16} color="#059669" />
+                  <Text style={styles.govtRecordsBadgeText}>
+                    {language === "hi" ? "सरकारी भू-अभिलेख" : "Bihar Land Registry"}
+                  </Text>
+                </View>
+                <Text style={styles.govtRecordsSub}>
+                  {language === "hi"
+                    ? "खाता व खेसरा नंबर डालने से लिस्टिंग 3x तेज़ी से सत्यापित होती है"
+                    : "Adding Khata/Khesra speeds up advisor verification by 3x"}
+                </Text>
+              </View>
+
+              <View style={styles.twoColRow}>
+                <View style={styles.colHalf}>
+                  <Text style={styles.smallInputLabel}>
+                    {language === "hi" ? "खाता संख्या (Khata No.)" : "Khata No."}
+                  </Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    placeholder="e.g. 104"
+                    placeholderTextColor="#94A3B8"
+                    value={khata}
+                    onChangeText={setKhata}
+                  />
+                </View>
+                <View style={styles.colHalf}>
+                  <Text style={styles.smallInputLabel}>
+                    {language === "hi" ? "खेसरा संख्या (Khesra No.)" : "Khesra / Plot No."}
+                  </Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    placeholder="e.g. 582"
+                    placeholderTextColor="#94A3B8"
+                    value={khesra}
+                    onChangeText={setKhesra}
+                  />
                 </View>
               </View>
-            )}
 
-            {/* ================= STEP 3: Document Vault ================= */}
-            {step === 3 && (
-              <View>
-                <View style={styles.sectionHeaderRow}>
-                  <View style={{ flex: 1, minWidth: 260 }}>
-                    <Text style={styles.sectionTitle}>
-                      {t(language, "post_vault_title") || "Document Vault & Verification"}
-                    </Text>
-                    <Text style={styles.sectionSubtitle}>
-                      {t(language, "post_vault_sub") || "Attach ownership documents for advisor speed verification"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Upload Dropzone */}
-                <TouchableOpacity
-                  style={styles.uploadBox}
-                  onPress={handlePickDocument}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.uploadIconWrap}>
-                    <MaterialIcons name="cloud-upload" size={32} color="#059669" />
-                  </View>
-                  <Text style={styles.uploadTitle}>
-                    {t(language, "post_choose_docs") || "Choose Documents"}
+              <View style={styles.twoColRow}>
+                <View style={styles.colHalf}>
+                  <Text style={styles.smallInputLabel}>
+                    {language === "hi" ? "थाना संख्या (Thana No.)" : "Thana No."}
                   </Text>
-                  <Text style={styles.uploadSub}>
-                    {t(language, "post_choose_docs_sub") || "PDF, JPG, or PNG (Registry, Mutation, Jamabandi)"}
+                  <TextInput
+                    style={styles.smallInput}
+                    placeholder="e.g. 72"
+                    placeholderTextColor="#94A3B8"
+                    value={thanaNo}
+                    onChangeText={setThanaNo}
+                  />
+                </View>
+                <View style={styles.colHalf}>
+                  <Text style={styles.smallInputLabel}>
+                    {language === "hi" ? "जमाबंदी संख्या (Jamabandi)" : "Jamabandi No."}
+                  </Text>
+                  <TextInput
+                    style={styles.smallInput}
+                    placeholder="Optional"
+                    placeholderTextColor="#94A3B8"
+                    value={jamabandi}
+                    onChangeText={setJamabandi}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Description / Highlights */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "संपत्ति का विवरण (विवरण जोड़ें)" : "Property Description (Optional)"}
+            </Text>
+            <TextInput
+              style={styles.textAreaInput}
+              placeholder={
+                language === "hi"
+                  ? "सड़क की चौड़ाई, आस-पास की सुविधाएं, पानी-बिजली कनेक्टिविटी..."
+                  : "Road width (e.g. 30 ft road), water/electricity, nearby amenities..."
+              }
+              placeholderTextColor="#94A3B8"
+              value={description}
+              onChangeText={setDescription}
+              multiline={true}
+              numberOfLines={3}
+            />
+
+            {/* Step 1 Submit Button */}
+            <TouchableOpacity
+              style={styles.primaryActionButton}
+              onPress={handleNextToMap}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.primaryActionText}>
+                {language === "hi"
+                  ? "अगला: नक्शे पर सीमा बनाएं"
+                  : "Next: Plot Boundary on Map"}
+              </Text>
+              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ================= STEP 2: BOUNDARY MAP MARKING ================= */}
+        {step === 2 && (
+          <View style={styles.formCard}>
+            {/* Section Header with Tip */}
+            <View style={styles.formSectionHeader}>
+              <View style={styles.formSectionIconWrap}>
+                <MaterialIcons name="map" size={18} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.formSectionTitle}>
+                  {language === "hi" ? "ज़मीन की जीपीएस बाउंड्री बनाएं" : "Mark Property Boundary"}
+                </Text>
+                <Text style={styles.formSectionSubtitle}>
+                  {language === "hi"
+                    ? "नक्शे पर प्लॉट के कोनों पर टैप करके सीमा निर्धारित करें"
+                    : "Tap corners on map to define polygon perimeter"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Instructions Guide Pill */}
+            <View style={styles.mapTipBanner}>
+              <MaterialIcons name="info" size={18} color="#059669" />
+              <Text style={styles.mapTipText}>
+                {language === "hi"
+                  ? "कम से कम 3 बिंदु (Points) जोड़कर भू-खंड पूरा करें। जीपीएस बाउंड्री से खरीदारों का विश्वास 10 गुना बढ़ता है।"
+                  : "Plot at least 3 points around property perimeter. GPS parcels receive 10x higher buyer engagement."}
+              </Text>
+            </View>
+
+            {/* Map Parcel Component */}
+            <View style={styles.mobileMapBox}>
+              <MapParcelPicker
+                initialPoints={parcelPoints}
+                onParcelChange={setParcelPoints}
+                areaSqFt={totalArea || "2,400"}
+              />
+            </View>
+
+            {/* Parcel Points Counter Pill */}
+            <View style={styles.parcelStatusRow}>
+              <View style={styles.parcelCountPill}>
+                <MaterialIcons
+                  name={parcelPoints.length >= 3 ? "check-circle" : "radio-button-unchecked"}
+                  size={16}
+                  color={parcelPoints.length >= 3 ? "#059669" : "#D97706"}
+                />
+                <Text style={styles.parcelCountText}>
+                  {parcelPoints.length} {language === "hi" ? "बिंदु चिह्नित" : "Points Marked"}
+                  {parcelPoints.length >= 3 ? " • Ready" : " (Min 3 needed)"}
+                </Text>
+              </View>
+
+              {parcelPoints.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearMapBtn}
+                  onPress={() => setParcelPoints([])}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="refresh" size={15} color="#DC2626" />
+                  <Text style={styles.clearMapBtnText}>
+                    {language === "hi" ? "रीसेट करें" : "Clear Points"}
                   </Text>
                 </TouchableOpacity>
+              )}
+            </View>
 
-                {/* Uploaded Documents List */}
+            {/* Step 2 Bottom Navigation Buttons */}
+            <View style={styles.twoBtnRow}>
+              <TouchableOpacity
+                style={styles.secondaryActionButton}
+                onPress={() => setStep(1)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="arrow-back" size={18} color="#065F46" />
+                <Text style={styles.secondaryActionText}>
+                  {language === "hi" ? "पिछला चरण" : "Back"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.primaryActionButtonFlex}
+                onPress={handleCreateProperty}
+                disabled={loading}
+                activeOpacity={0.88}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryActionText}>
+                      {language === "hi" ? "सहेजें और अगला" : "Save & Next"}
+                    </Text>
+                    <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ================= STEP 3: DOCUMENT VAULT & VERIFICATION ================= */}
+        {step === 3 && (
+          <View style={styles.formCard}>
+            {/* Section Header */}
+            <View style={styles.formSectionHeader}>
+              <View style={styles.formSectionIconWrap}>
+                <MaterialIcons name="verified-user" size={18} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.formSectionTitle}>
+                  {language === "hi" ? "दस्तावेज़ वॉल्ट (कागज़ात सत्यापन)" : "Document Vault & Verification"}
+                </Text>
+                <Text style={styles.formSectionSubtitle}>
+                  {language === "hi"
+                    ? "स्वामित्व प्रमाण पत्र अपलोड करके 'ब्लू टिक' बैज पाएं"
+                    : "Attach legal land papers to earn MalikSe Verified Badge"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Recommended Document Categories Chips */}
+            <Text style={styles.inputLabel}>
+              {language === "hi" ? "मान्य दस्तावेज़ प्रकार:" : "Accepted Document Categories:"}
+            </Text>
+            <View style={styles.docTypesWrap}>
+              {DOC_TYPES.map((dt) => (
+                <View key={dt} style={styles.docTypeBadge}>
+                  <MaterialIcons name="check" size={13} color="#059669" />
+                  <Text style={styles.docTypeBadgeText}>{dt}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Big Touch-Friendly Upload Dropzone */}
+            <TouchableOpacity
+              style={styles.mobileUploadDropzone}
+              onPress={handlePickDocument}
+              activeOpacity={0.8}
+            >
+              <View style={styles.mobileUploadIconCircle}>
+                <MaterialIcons name="cloud-upload" size={28} color="#059669" />
+              </View>
+              <Text style={styles.mobileUploadTitle}>
+                {language === "hi" ? "दस्तावेज़ चुनें या फ़ोटो खींचें" : "Upload Land Documents"}
+              </Text>
+              <Text style={styles.mobileUploadSubtitle}>
+                {language === "hi"
+                  ? "PDF, JPG या PNG (केवाला, दाखिल-खारिज, रसीद)"
+                  : "PDF, JPG or PNG (Registry, Mutation, LPC, Map)"}
+              </Text>
+              <View style={styles.mobileUploadBtnTag}>
+                <MaterialIcons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.mobileUploadBtnTagText}>
+                  {language === "hi" ? "फ़ाइल जोड़ें" : "Browse Files"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Uploaded Documents List */}
+            {documents.length > 0 && (
+              <View style={styles.uploadedDocsList}>
+                <Text style={styles.uploadedDocsHeading}>
+                  {language === "hi"
+                    ? `अपलोड किए गए दस्तावेज़ (${documents.length})`
+                    : `Attached Documents (${documents.length})`}
+                </Text>
+
                 {documents.map(({ asset, docType }, idx) => (
-                  <View key={idx} style={styles.docItem}>
-                    <View style={styles.docHeader}>
-                      <MaterialIcons name="insert-drive-file" size={20} color="#059669" />
-                      <Text style={styles.docName} numberOfLines={1}>{asset.name}</Text>
-                      <TouchableOpacity onPress={() => removeDoc(idx)} style={styles.removeBtn}>
+                  <View key={idx} style={styles.docCardItem}>
+                    <View style={styles.docCardHeader}>
+                      <View style={styles.docFileIconBox}>
+                        <MaterialIcons name="description" size={20} color="#059669" />
+                      </View>
+                      <View style={{ flex: 1, marginHorizontal: 8 }}>
+                        <Text style={styles.docFileName} numberOfLines={1}>
+                          {asset.name || `Document_${idx + 1}`}
+                        </Text>
+                        <Text style={styles.docFileSize}>
+                          {asset.size ? `${(asset.size / 1024).toFixed(0)} KB` : "File Ready"}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => removeDoc(idx)}
+                        style={styles.docDeleteBtn}
+                        activeOpacity={0.7}
+                      >
                         <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.docTypeLabel}>Document Category:</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll}>
-                      {DOC_TYPES.map(t => (
-                        <TouchableOpacity
-                          key={t}
-                          style={[styles.typeChip, docType === t && styles.typeChipActive]}
-                          onPress={() => updateDocType(idx, t)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.typeChipTxt, docType === t && styles.typeChipTxtActive]}>{t}</Text>
-                        </TouchableOpacity>
-                      ))}
+                    {/* Category Selector Chips */}
+                    <Text style={styles.docCategorySelectLabel}>
+                      {language === "hi" ? "श्रेणी चुनें:" : "Select Category:"}
+                    </Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.docCategoryChipsRow}
+                    >
+                      {DOC_TYPES.map((dt) => {
+                        const isChipActive = docType === dt;
+                        return (
+                          <TouchableOpacity
+                            key={dt}
+                            style={[
+                              styles.docCategoryChip,
+                              isChipActive && styles.docCategoryChipActive,
+                            ]}
+                            onPress={() => updateDocType(idx, dt)}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              style={[
+                                styles.docCategoryChipText,
+                                isChipActive && styles.docCategoryChipTextActive,
+                              ]}
+                            >
+                              {dt}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </ScrollView>
                   </View>
                 ))}
-
-                {/* Bottom Navigation Row */}
-                <View style={styles.bottomActionsRow}>
-                  <TouchableOpacity
-                    style={styles.btnPrevious}
-                    onPress={() => setStep(2)}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialIcons name="arrow-back" size={18} color="#065F46" />
-                    <Text style={styles.btnPreviousText}>
-                      {t(language, "prev_step") || "Previous Step"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.btnSaveNext}
-                    onPress={handleUploadAndFinish}
-                    disabled={loading}
-                    activeOpacity={0.85}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.btnSaveNextText}>
-                          {t(language, "post_finish_btn") || "Finish & Submit Listing"}
-                        </Text>
-                        <MaterialIcons name="check" size={18} color="#FFFFFF" />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
               </View>
             )}
+
+            {/* Owner Consent Declaration */}
+            <TouchableOpacity
+              style={styles.declarationWrap}
+              onPress={() => setOwnerConsentChecked(!ownerConsentChecked)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons
+                name={ownerConsentChecked ? "check-box" : "check-box-outline-blank"}
+                size={22}
+                color={ownerConsentChecked ? "#059669" : "#94A3B8"}
+              />
+              <Text style={styles.declarationText}>
+                {language === "hi"
+                  ? "मैं प्रमाणित करता/करती हूँ कि मैं इस संपत्ति का वैध मालिक अथवा अधिकृत प्रतिनिधि हूँ और दी गई जानकारी पूर्णतः सही है।"
+                  : "I declare that I am the legal owner / authorized representative of this property and the provided details are accurate."}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Security Guarantee Box */}
+            <View style={styles.securityBox}>
+              <MaterialIcons name="lock" size={16} color="#059669" />
+              <Text style={styles.securityBoxText}>
+                {language === "hi"
+                  ? "आपके दस्तावेज़ 256-bit एन्क्रिप्शन के साथ मलिकसे सुरक्षित वॉल्ट में संग्रहीत हैं।"
+                  : "Your documents are securely encrypted in MalikSe Protected Vault."}
+              </Text>
+            </View>
+
+            {/* Step 3 Action Buttons */}
+            <View style={styles.twoBtnRow}>
+              <TouchableOpacity
+                style={styles.secondaryActionButton}
+                onPress={() => setStep(2)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="arrow-back" size={18} color="#065F46" />
+                <Text style={styles.secondaryActionText}>
+                  {language === "hi" ? "पिछला चरण" : "Back"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryActionButtonFlex,
+                  !ownerConsentChecked && { opacity: 0.6 },
+                ]}
+                onPress={handleUploadAndFinish}
+                disabled={loading || !ownerConsentChecked}
+                activeOpacity={0.88}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryActionText}>
+                      {language === "hi" ? "लिस्टिंग प्रकाशित करें" : "Publish Listing"}
+                    </Text>
+                    <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -711,32 +1209,232 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  progressTrack: {
-    height: 4,
-    backgroundColor: "#E2E8F0",
-    width: "100%",
+  scrollContent: {
+    paddingBottom: 60,
   },
-  progressBar: {
+
+  /* ================= HERO BANNER CONTAINER ================= */
+  heroCardContainer: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 16,
+    borderRadius: 22,
+    overflow: "hidden",
+    position: "relative",
+    backgroundColor: "#064E3B",
+    elevation: 4,
+    shadowColor: "#064E3B",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  heroBackgroundImage: {
+    ...StyleSheet.absoluteFill,
+    width: "100%",
     height: "100%",
+    opacity: 0.4,
+  },
+  heroContentWrap: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  heroMiniTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(6, 78, 59, 0.75)",
+    borderWidth: 1,
+    borderColor: "rgba(167, 243, 208, 0.4)",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 9999,
+    gap: 5,
+  },
+  heroMiniTagText: {
+    fontSize: 11,
+    color: "#A7F3D0",
+    fontWeight: "700",
+  },
+  heroPlusBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#ECFDF5",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  heroTitles: {
+    marginBottom: 14,
+  },
+  heroMainTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  heroSubTitle: {
+    fontSize: 12.5,
+    color: "#D1FAE5",
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  heroTrustPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(2, 44, 34, 0.75)",
+    borderWidth: 1,
+    borderColor: "rgba(167, 243, 208, 0.3)",
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    gap: 8,
+    alignSelf: "flex-start",
+  },
+  heroTrustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  heroTrustText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ECFDF5",
+  },
+  heroTrustDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "#A7F3D0",
+  },
+
+  /* ================= 3-STEPPER INDICATOR ================= */
+  stepperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  stepperPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  stepperPillActive: {
+    backgroundColor: "#ECFDF5",
+  },
+  stepperNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stepperNumberActive: {
     backgroundColor: "#059669",
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 50,
+  stepperNumberCompleted: {
+    backgroundColor: "#E6F4EA",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
   },
-  container: {
-    maxWidth: 780,
-    width: "100%",
-    alignSelf: "center",
+  stepperNumberInactive: {
+    backgroundColor: "#F1F5F9",
   },
-  containerWide: {
-    maxWidth: 1480,
-    width: "98%",
+  stepperNumberText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#64748B",
   },
-  card: {
+  stepperNumberTextActive: {
+    color: "#FFFFFF",
+  },
+  stepperLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  stepperLabelActive: {
+    color: "#065F46",
+    fontWeight: "800",
+  },
+  stepperConnector: {
+    flex: 1,
+    height: 2,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 4,
+  },
+  stepperConnectorActive: {
+    backgroundColor: "#059669",
+  },
+
+  /* Unauthenticated Banner */
+  authNoticeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+    borderRadius: 14,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  authNoticeTitle: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#92400E",
+  },
+  authNoticeSub: {
+    fontSize: 11,
+    color: "#B45309",
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  authNoticeBtn: {
+    backgroundColor: "#059669",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+  },
+  authNoticeBtnText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  /* Form Main Card */
+  formCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 20,
+    marginHorizontal: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     shadowColor: "#000",
@@ -745,187 +1443,471 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  cardWide: {
-    padding: Platform.OS === "web" ? 32 : 16,
-    borderRadius: 20,
-  },
-
-  /* Horizontal Stepper matching user screenshot */
-  stepperWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 22,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    marginBottom: 24,
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  stepperItem: {
+  formSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    marginBottom: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  stepCircleActive: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#059669",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  stepCircleActiveText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  stepCircleCompleted: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#E6F4EA",
+  formSectionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
     justifyContent: "center",
     alignItems: "center",
   },
-  stepCircleCompletedText: {
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  formSectionSubtitle: {
+    fontSize: 11.5,
+    color: "#64748B",
+    marginTop: 2,
+  },
+
+  /* Inputs & Labels */
+  inputLabel: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  inputLabelNoMargin: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  textInputWithIcon: {
+    flex: 1,
+    fontSize: 13.5,
+    color: "#0F172A",
+    paddingVertical: 10,
+  },
+  inputSuffix: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+    marginLeft: 6,
+  },
+  textAreaInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 13,
+    color: "#0F172A",
+    textAlignVertical: "top",
+    minHeight: 72,
+    marginBottom: 14,
+  },
+
+  /* Category Grid (4 Cards) */
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  categoryCardItem: {
+    width: "48.5%",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    position: "relative",
+  },
+  categoryCardItemActive: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#059669",
+  },
+  categoryCardIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  categoryCardIconBoxActive: {
+    backgroundColor: "#D1FAE5",
+    borderColor: "#A7F3D0",
+  },
+  categoryCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  categoryCardTitleActive: {
     color: "#065F46",
-    fontSize: 14,
     fontWeight: "800",
   },
-  stepCircleInactive: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F1F5F9",
+  categoryCardSub: {
+    fontSize: 10.5,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  categoryCheckBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#059669",
     justifyContent: "center",
     alignItems: "center",
   },
-  stepCircleInactiveText: {
-    color: "#94A3B8",
-    fontSize: 14,
-    fontWeight: "700",
+
+  /* Pricing Card */
+  pricingCard: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 10,
   },
-  stepLabelWrap: {
-    justifyContent: "center",
+  pricingHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 6,
   },
-  stepTitleActive: {
-    fontSize: 14,
+  currencyWordsChip: {
+    backgroundColor: "#DCFCE7",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
+    borderWidth: 0.5,
+    borderColor: "#86EFAC",
+  },
+  currencyWordsText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#15803D",
+  },
+  priceInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#86EFAC",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  currencyRupeePrefix: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#059669",
+    marginRight: 6,
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 18,
     fontWeight: "800",
     color: "#0F172A",
+    paddingVertical: 8,
   },
-  stepTitleCompleted: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
+  priceHelpText: {
+    fontSize: 11,
+    color: "#166534",
+    marginTop: 6,
   },
-  stepTitleInactive: {
+
+  /* Area Card */
+  areaCard: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 10,
+  },
+  biharUnitsBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  biharUnitItem: {
+    alignItems: "center",
+  },
+  biharUnitValue: {
     fontSize: 14,
+    fontWeight: "800",
+    color: "#065F46",
+  },
+  biharUnitLabel: {
+    fontSize: 10.5,
+    color: "#047857",
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  biharUnitDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#A7F3D0",
+  },
+  quickAreaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+  quickAreaLabel: {
+    fontSize: 11,
     fontWeight: "600",
     color: "#64748B",
   },
-  stepSubActive: {
-    fontSize: 11.5,
-    color: "#64748B",
-    marginTop: 2,
+  quickAreaChip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 9999,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
   },
-  stepSubInactive: {
-    fontSize: 11.5,
-    color: "#94A3B8",
-    marginTop: 2,
-  },
-  stepArrowIcon: {
-    marginHorizontal: 8,
+  quickAreaChipText: {
+    fontSize: 10.5,
+    color: "#334155",
+    fontWeight: "600",
   },
 
-  /* Section Title and Light Mint Tip Box */
-  sectionHeaderRow: {
-    flexDirection: Platform.OS === "web" ? "row" : "column",
-    justifyContent: "space-between",
-    alignItems: Platform.OS === "web" ? "center" : "flex-start",
-    marginBottom: 20,
-    gap: 14,
+  /* District Scroll */
+  districtScrollContainer: {
+    gap: 6,
+    paddingBottom: 6,
   },
-  sectionTitle: {
-    fontSize: 24,
+  districtChip: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+  },
+  districtChipActive: {
+    backgroundColor: "#059669",
+    borderColor: "#059669",
+  },
+  districtChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  districtChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  /* Bihar Govt Records Card */
+  govtRecordsCard: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 12,
+  },
+  govtRecordsHeader: {
+    marginBottom: 10,
+  },
+  govtRecordsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#ECFDF5",
+    alignSelf: "flex-start",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: "#A7F3D0",
+  },
+  govtRecordsBadgeText: {
+    fontSize: 11,
     fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.4,
+    color: "#065F46",
   },
-  sectionSubtitle: {
-    fontSize: 13,
+  govtRecordsSub: {
+    fontSize: 11,
     color: "#64748B",
     marginTop: 4,
+    lineHeight: 15,
   },
-  tipBox: {
+  twoColRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 8,
+  },
+  colHalf: {
+    flex: 1,
+  },
+  smallInputLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 4,
+  },
+  smallInput: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12.5,
+    color: "#0F172A",
+  },
+
+  /* Action Buttons */
+  primaryActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#059669",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 8,
+    marginTop: 14,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  primaryActionText: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+
+  /* Step 2 Map Specific Styles */
+  mapTipBanner: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    padding: 10,
     gap: 8,
-    maxWidth: Platform.OS === "web" ? 440 : "100%",
+    marginBottom: 12,
   },
-  tipBoxText: {
-    fontSize: 12,
+  mapTipText: {
+    fontSize: 11.5,
     color: "#065F46",
-    fontWeight: "600",
-    lineHeight: 16,
     flex: 1,
+    lineHeight: 16,
+    fontWeight: "600",
   },
-
-  /* Workspace */
-  mapWrap: {
+  mobileMapBox: {
     width: "100%",
-    marginBottom: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+    marginBottom: 12,
   },
-
-  /* Bottom Actions (Unified Pill Design) */
-  bottomActionsRow: {
+  parcelStatusRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 24,
-    gap: 16,
-    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 14,
   },
-  btnPrevious: {
+  parcelCountPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 9999,
+    gap: 6,
+  },
+  parcelCountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  clearMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  clearMapBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  twoBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+  secondaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E6F4EA",
-    borderWidth: 1.5,
-    borderColor: "#A7F3D0",
-    borderRadius: 9999,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 14,
     paddingVertical: 13,
-    paddingHorizontal: 32,
-    minWidth: 180,
-    gap: 8,
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 1,
+    paddingHorizontal: 18,
+    gap: 6,
   },
-  btnPreviousText: {
-    color: "#065F46",
-    fontSize: 14,
-    fontWeight: "800",
+  secondaryActionText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#334155",
   },
-  btnSaveNext: {
+  primaryActionButtonFlex: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#059669",
-    borderRadius: 9999,
+    borderRadius: 14,
     paddingVertical: 13,
-    paddingHorizontal: 38,
-    minWidth: 260,
+    paddingHorizontal: 18,
     gap: 8,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 3 },
@@ -933,188 +1915,184 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  btnSaveNextText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
 
-  /* Step 1 & Step 3 Inputs */
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  typeRow: {
+  /* Step 3 Document Vault Specific Styles */
+  docTypesWrap: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 14,
   },
-  typeBtn: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
+  docTypeBadge: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
     gap: 4,
   },
-  typeBtnActive: {
-    backgroundColor: "#E6F4EA",
-    borderColor: "#059669",
-  },
-  typeTxt: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  typeTxtActive: {
+  docTypeBadgeText: {
+    fontSize: 10.5,
+    fontWeight: "700",
     color: "#065F46",
-    fontWeight: "800",
   },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  input: {
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "web" ? 11 : 9,
-    fontSize: 13.5,
-    color: "#0F172A",
-    marginBottom: 8,
-    outlineStyle: "none" as any,
-  },
-
-  /* Document Upload in Step 3 */
-  uploadBox: {
+  mobileUploadDropzone: {
     borderWidth: 2,
     borderColor: "#059669",
     borderStyle: "dashed",
-    borderRadius: 14,
-    padding: 24,
+    borderRadius: 18,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
     alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    marginVertical: 12,
+    backgroundColor: "#F0FDF4",
+    marginVertical: 8,
   },
-  uploadIconWrap: {
+  mobileUploadIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
-  uploadTitle: {
-    fontSize: 15,
+  mobileUploadTitle: {
+    fontSize: 14.5,
     fontWeight: "800",
     color: "#065F46",
   },
-  uploadSub: {
-    fontSize: 12,
+  mobileUploadSubtitle: {
+    fontSize: 11.5,
     color: "#64748B",
     marginTop: 4,
+    textAlign: "center",
   },
-  docItem: {
-    padding: 14,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  docHeader: {
+  mobileUploadBtnTag: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-  },
-  docName: {
-    marginLeft: 8,
-    fontSize: 13.5,
-    color: "#0F172A",
-    fontWeight: "600",
-    flex: 1,
-  },
-  removeBtn: {
-    padding: 4,
-  },
-  docTypeLabel: {
-    fontSize: 11,
-    color: "#94A3B8",
-    marginBottom: 6,
-    fontWeight: "600",
-  },
-  typeScroll: {
-    flexDirection: "row",
-  },
-  typeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
-    marginRight: 6,
-  },
-  typeChipActive: {
     backgroundColor: "#059669",
-    borderColor: "#059669",
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    gap: 5,
+    marginTop: 12,
   },
-  typeChipTxt: {
-    fontSize: 11,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  typeChipTxtActive: {
+  mobileUploadBtnTagText: {
+    fontSize: 12,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
 
-  /* Unauthenticated Banner */
-  authNoticeBanner: {
-    backgroundColor: "#FFFBEB",
-    borderWidth: 1.5,
-    borderColor: "#FDE68A",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 12,
+  /* Uploaded Documents */
+  uploadedDocsList: {
+    marginTop: 14,
+    marginBottom: 6,
   },
-  authNoticeLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    minWidth: 260,
-  },
-  authNoticeTitle: {
-    fontSize: 13.5,
+  uploadedDocsHeading: {
+    fontSize: 13,
     fontWeight: "800",
-    color: "#92400E",
+    color: "#0F172A",
+    marginBottom: 8,
   },
-  authNoticeSub: {
-    fontSize: 12,
-    color: "#B45309",
+  docCardItem: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  docCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  docFileIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  docFileName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  docFileSize: {
+    fontSize: 11,
+    color: "#64748B",
     marginTop: 2,
-    lineHeight: 17,
   },
-  authNoticeBtn: {
-    backgroundColor: "#059669",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+  docDeleteBtn: {
+    padding: 6,
+  },
+  docCategorySelectLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#475569",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  docCategoryChipsRow: {
+    gap: 6,
+  },
+  docCategoryChip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
     borderRadius: 9999,
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
   },
-  authNoticeBtnText: {
+  docCategoryChipActive: {
+    backgroundColor: "#059669",
+    borderColor: "#059669",
+  },
+  docCategoryChipText: {
+    fontSize: 10.5,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  docCategoryChipTextActive: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "700",
+  },
+
+  /* Declaration & Security */
+  declarationWrap: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  declarationText: {
+    flex: 1,
+    fontSize: 11,
+    color: "#334155",
+    lineHeight: 16,
+  },
+  securityBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: 10,
+    padding: 10,
+    gap: 8,
+    marginVertical: 12,
+  },
+  securityBoxText: {
+    fontSize: 11,
+    color: "#065F46",
+    flex: 1,
+    lineHeight: 15,
   },
 });

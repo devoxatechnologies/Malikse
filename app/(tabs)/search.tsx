@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   listPadding: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   loaderBox: {
     padding: 40,

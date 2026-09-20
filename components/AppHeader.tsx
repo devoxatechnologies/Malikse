@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions, StatusBar as RNStatusBar } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppTheme } from "../constants/theme";
 import { useLanguageStore } from "../src/store/languageStore";
 import { useAuthStore } from "../src/store/authStore";
@@ -40,6 +41,11 @@ export default function AppHeader({
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === "web"
+    ? 0
+    : Math.max(insets.top, Platform.OS === "android" ? (RNStatusBar.currentHeight || 28) : 44);
+
   const { language, toggleLanguage } = useLanguageStore();
   const { user, authState } = useAuthStore();
 
@@ -63,8 +69,16 @@ export default function AppHeader({
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.container}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          paddingTop: Platform.OS === "web" ? 10 : topInset + 4,
+          paddingBottom: 10,
+        },
+      ]}
+    >
+      <View style={[styles.container, !isDesktop && styles.containerMobile]}>
         {/* Left Section: Brand Logo or Back Button */}
         <View style={styles.leftSection}>
           {showBack ? (
@@ -85,12 +99,12 @@ export default function AppHeader({
               onPress={() => router.replace("/search")}
               activeOpacity={0.8}
             >
-              <View style={styles.logoIcon}>
-                <FontAwesome5 name="shield-alt" size={18} color="#FFFFFF" />
+              <View style={[styles.logoIcon, !isDesktop && styles.logoIconMobile]}>
+                <FontAwesome5 name="shield-alt" size={isDesktop ? 18 : 15} color="#FFFFFF" />
               </View>
               <View style={styles.brandTextCol}>
-                <Text style={styles.brandName}>MalikSe</Text>
-                <Text style={styles.brandTagline}>
+                <Text style={[styles.brandName, !isDesktop && styles.brandNameMobile]}>MalikSe</Text>
+                <Text style={[styles.brandTagline, !isDesktop && styles.brandTaglineMobile]}>
                   {t(language, "brand_tagline") || "Your Land. A Safer Future."}
                 </Text>
               </View>
@@ -263,68 +277,66 @@ export default function AppHeader({
         ) : null}
 
         {/* Right Section: Post Land (Free), Language Pill, User Profile Pill */}
-        <View style={styles.rightSection}>
+        <View style={[styles.rightSection, !isDesktop && styles.rightSectionMobile]}>
+          {/* + Post Land (Free) Button - Desktop only */}
+          {showPostPropertyBtn && isDesktop && !rightElement && (
+            <TouchableOpacity
+              style={styles.postPropertyBtn}
+              onPress={() => {
+                if (authState !== "AUTHENTICATED" || !user) {
+                  router.push("/login");
+                } else {
+                  router.push("/listing/create");
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="add" size={17} color="#065F46" />
+              <Text style={styles.postPropertyBtnText}>
+                {t(language, "post_land_free") || "Post Land (Free)"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Language Pill (Both mobile & desktop) */}
+          {showLanguageToggle && (
+            <TouchableOpacity
+              style={[styles.langBtn, !isDesktop && styles.langBtnMobile]}
+              onPress={toggleLanguage}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.langSymbol}>文A</Text>
+              <Text style={styles.langText}>{language === "en" ? "हिंदी" : "Eng"}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* User Profile Pill or custom rightElement */}
           {rightElement ? (
             rightElement
           ) : (
-            <>
-              {/* + Post Land (Free) Button */}
-              {showPostPropertyBtn && isDesktop && (
-                <TouchableOpacity
-                  style={styles.postPropertyBtn}
-                  onPress={() => {
-                    if (authState !== "AUTHENTICATED" || !user) {
-                      router.push("/login");
-                    } else {
-                      router.push("/listing/create");
-                    }
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <MaterialIcons name="add" size={17} color="#065F46" />
-                  <Text style={styles.postPropertyBtnText}>
-                    {t(language, "post_land_free") || "Post Land (Free)"}
+            <TouchableOpacity
+              style={[styles.userProfilePill, !isDesktop && styles.userProfilePillMobile]}
+              onPress={() => {
+                if (authState !== "AUTHENTICATED") {
+                  router.push("/login");
+                } else {
+                  router.push("/profile");
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.userAvatarCircle}>
+                <Text style={styles.userAvatarText}>{avatarLetter}</Text>
+              </View>
+              {isDesktop && (
+                <>
+                  <Text style={styles.userProfileName} numberOfLines={1}>
+                    {displayName}
                   </Text>
-                </TouchableOpacity>
+                  <MaterialIcons name="keyboard-arrow-down" size={17} color="#065F46" />
+                </>
               )}
-
-              {/* Language Pill (exact user screenshot: "文A हिंदी" or "文A Eng") */}
-              {showLanguageToggle && (
-                <TouchableOpacity
-                  style={styles.langBtn}
-                  onPress={toggleLanguage}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.langSymbol}>文A</Text>
-                  <Text style={styles.langText}>{language === "en" ? "हिंदी" : "Eng"}</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* User Profile Pill ("N Nikhil kumar ⌵") */}
-              <TouchableOpacity
-                style={styles.userProfilePill}
-                onPress={() => {
-                  if (authState !== "AUTHENTICATED") {
-                    router.push("/login");
-                  } else {
-                    router.push("/profile");
-                  }
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={styles.userAvatarCircle}>
-                  <Text style={styles.userAvatarText}>{avatarLetter}</Text>
-                </View>
-                {isDesktop && (
-                  <>
-                    <Text style={styles.userProfileName} numberOfLines={1}>
-                      {displayName}
-                    </Text>
-                    <MaterialIcons name="keyboard-arrow-down" size={17} color="#065F46" />
-                  </>
-                )}
-              </TouchableOpacity>
-            </>
+            </TouchableOpacity>
           )}
 
           {showHomeButton && (
@@ -347,15 +359,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
-    paddingTop: Platform.OS === "web" ? 10 : Platform.OS === "ios" ? 48 : 12,
-    paddingBottom: 10,
     zIndex: 100,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
-    height: Platform.OS === "web" ? 64 : undefined,
     justifyContent: "center",
   },
   container: {
@@ -367,11 +376,13 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
+  containerMobile: {
+    paddingHorizontal: 12,
+  },
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
-    width: 215,
-    overflow: "hidden",
+    flexShrink: 1,
   },
   backButton: {
     flexDirection: "row",
@@ -408,6 +419,11 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
+  logoIconMobile: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
   brandTextCol: {
     justifyContent: "center",
   },
@@ -417,6 +433,10 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     letterSpacing: -0.5,
   },
+  brandNameMobile: {
+    fontSize: 18,
+    letterSpacing: -0.4,
+  },
   brandTagline: {
     fontSize: 10.5,
     color: "#64748B",
@@ -424,6 +444,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
     lineHeight: 14,
     height: 14,
+  },
+  brandTaglineMobile: {
+    fontSize: 9,
+    lineHeight: 11,
+    height: 11,
   },
 
   /* Center Nav Links (Desktop) */
@@ -502,7 +527,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 8,
-    width: 375,
+    flexShrink: 0,
+  },
+  rightSectionMobile: {
+    gap: 6,
   },
   postPropertyBtn: {
     flexDirection: "row",
@@ -550,6 +578,12 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
     gap: 5,
   },
+  langBtnMobile: {
+    width: "auto",
+    paddingHorizontal: 8,
+    height: 32,
+    gap: 4,
+  },
   langSymbol: {
     fontSize: 13,
     fontWeight: "800",
@@ -573,6 +607,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
     justifyContent: "center",
+  },
+  userProfilePillMobile: {
+    height: 32,
+    paddingHorizontal: 5,
+    gap: 4,
   },
   userAvatarCircle: {
     width: 24,

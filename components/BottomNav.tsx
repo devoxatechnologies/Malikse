@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../src/store/authStore";
 import { useLanguageStore } from "../src/store/languageStore";
 
@@ -12,6 +13,11 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 800;
+  const insets = useSafeAreaInsets();
+  const bottomInset = Platform.OS === "web"
+    ? 0
+    : Math.max(insets.bottom, Platform.OS === "android" ? 16 : 20);
+
   const { authState } = useAuthStore();
   const { language } = useLanguageStore();
 
@@ -146,7 +152,7 @@ export default function BottomNav() {
 
   // Mobile navigation
   return (
-    <View style={styles.mobileWrapper}>
+    <View style={[styles.mobileWrapper, { paddingBottom: bottomInset }]}>
       <View style={styles.mobileContainer}>
         <TouchableOpacity style={styles.tab} onPress={() => router.replace("/search")} activeOpacity={0.7}>
           <MaterialIcons name="home" size={22} color={isHomeActive ? "#059669" : "#64748B"} />
@@ -321,9 +327,9 @@ const styles = StyleSheet.create({
   },
   mobileContainer: {
     flexDirection: "row",
-    height: Platform.OS === "ios" ? 82 : 62,
-    paddingBottom: Platform.OS === "ios" ? 18 : 6,
-    paddingTop: 6,
+    height: 54,
+    paddingTop: 4,
+    paddingBottom: 2,
     maxWidth: 600,
     width: "100%",
     alignSelf: "center",
@@ -337,13 +343,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   label: {
-    fontSize: 10,
+    fontSize: 10.5,
     color: "#64748B",
     marginTop: 2,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   activeLabel: {
     color: "#059669",
-    fontWeight: "700",
+    fontWeight: "800",
   },
 });

@@ -11,8 +11,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import Svg, { Path, Rect, Defs, LinearGradient, Stop } from "react-native-svg";
 
-// Adjusted portrait scenic background with zoomed-out landscape fitting across full screen
-const scenicBgImg = require("../assets/opening_bg_portrait.jpg");
+// Exact scenic image: lake, mountains, house, green leaves
+const scenicBgImg = require("../assets/messages_hero_scenic.jpg");
 
 interface AppOpeningScreenProps {
   onFinish?: () => void;
@@ -92,7 +92,7 @@ export default function AppOpeningScreen({ onFinish }: AppOpeningScreenProps) {
   return (
     <Animated.View style={[styles.overlayContainer, { opacity: fadeAnim }]}>
       <Pressable style={styles.pressableContainer} onPress={finishAndDismiss}>
-        {/* 1. Full Screen Scenic Background Image (Zoomed-out & adjusted) */}
+        {/* 1. Full Screen Scenic Background Image */}
         <Image
           source={scenicBgImg}
           style={styles.backgroundImage}
@@ -104,10 +104,10 @@ export default function AppOpeningScreen({ onFinish }: AppOpeningScreenProps) {
           <Svg width="100%" height="100%">
             <Defs>
               <LinearGradient id="openingMistOverlay" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
-                <Stop offset="25%" stopColor="#FFFFFF" stopOpacity="0.50" />
-                <Stop offset="48%" stopColor="#FFFFFF" stopOpacity="0.30" />
-                <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.05" />
+                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.50" />
+                <Stop offset="26%" stopColor="#FFFFFF" stopOpacity="0.70" />
+                <Stop offset="48%" stopColor="#FFFFFF" stopOpacity="0.45" />
+                <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.08" />
                 <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
               </LinearGradient>
             </Defs>

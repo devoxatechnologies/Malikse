@@ -14,8 +14,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Svg, { Path, Rect, Defs, LinearGradient, Stop } from "react-native-svg";
 import { useAuthStore } from "../src/store/authStore";
 
-// Adjusted portrait scenic background with zoomed-out landscape fitting across full screen
-const scenicBgImg = require("../assets/opening_bg_portrait.jpg");
+// The exact scenic image uploaded before (mountains, lake, modern house)
+const scenicBgImg = require("../assets/messages_hero_scenic.jpg");
 
 export default function AppOpeningScreen() {
   const router = useRouter();
@@ -107,7 +107,7 @@ export default function AppOpeningScreen() {
 
   return (
     <Pressable style={styles.container} onPress={handleNavigate}>
-      {/* 1. Full Screen Scenic Background Image (Zoomed-out & adjusted) */}
+      {/* 1. Full Screen Scenic Background Image */}
       <Image
         source={scenicBgImg}
         style={styles.backgroundImage}
@@ -119,10 +119,10 @@ export default function AppOpeningScreen() {
         <Svg width="100%" height="100%">
           <Defs>
             <LinearGradient id="openingMist" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
-              <Stop offset="25%" stopColor="#FFFFFF" stopOpacity="0.50" />
-              <Stop offset="48%" stopColor="#FFFFFF" stopOpacity="0.30" />
-              <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.05" />
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
+              <Stop offset="25%" stopColor="#FFFFFF" stopOpacity="0.65" />
+              <Stop offset="48%" stopColor="#FFFFFF" stopOpacity="0.40" />
+              <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.08" />
               <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
             </LinearGradient>
           </Defs>

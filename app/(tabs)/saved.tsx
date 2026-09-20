@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,83 +9,149 @@ import {
   ScrollView,
   useWindowDimensions,
   Platform,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import Svg, { Path, Rect } from "react-native-svg";
 import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
 
-const heroBgImg = require("../../assets/marketplace_hero_bg.png");
+const heroScenicImg = require("../../assets/saved_hero_scenic.jpg");
+const plotLandImg = require("../../assets/saved_plot_land.jpg");
+const villaHouseImg = require("../../assets/saved_villa_house.jpg");
 
 interface SavedPropertyItem {
   id: string;
   title: string;
-  price: string;
   location: string;
   area: string;
-  roadWidth: string;
-  facing: string;
-  type: string;
-  photosCount: number;
-  image: string;
+  price: string;
+  priceNum: number;
+  pricePerSqFt: string;
+  typeBadge: string;
+  category: "land" | "plots" | "flats" | "commercial" | "agricultural";
+  image: any;
+  isSaved: boolean;
 }
 
-const DUMMY_SAVED_PROPERTIES: SavedPropertyItem[] = [
+const INITIAL_SAVED_PROPERTIES: SavedPropertyItem[] = [
   {
     id: "prop_1",
-    title: "Prime Commercial Plot on Main Bailey Road",
-    price: "₹85.00 Lakh",
+    title: "Prime Land Plot in Patna, Bihar",
     location: "Danapur, Patna, Bihar",
-    area: "2400 sq.ft",
-    roadWidth: "30 ft Road",
-    facing: "East Facing",
-    type: "LAND",
-    photosCount: 8,
-    image: "https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&q=80",
+    area: "2400 sq.ft (1.76 Kattha)",
+    price: "₹45.00 Lakh",
+    priceNum: 4500000,
+    pricePerSqFt: "₹1,875 / sq.ft",
+    typeBadge: "Land",
+    category: "land",
+    image: plotLandImg,
+    isSaved: true,
   },
   {
     id: "prop_2",
-    title: "Residential Land for Modern Villa",
-    price: "₹42.00 Lakh",
-    location: "Pikta, Patna, Bihar",
-    area: "1500 sq.ft",
-    roadWidth: "20 ft Road",
-    facing: "West Facing",
-    type: "LAND",
-    photosCount: 6,
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80",
+    title: "Modern Villa in Boring Road",
+    location: "Patna, Bihar",
+    area: "3200 sq.ft",
+    price: "₹1.25 Crore",
+    priceNum: 12500000,
+    pricePerSqFt: "₹3,906 / sq.ft",
+    typeBadge: "Residential",
+    category: "flats",
+    image: villaHouseImg,
+    isSaved: true,
   },
+];
+
+interface CategoryItem {
+  id: string;
+  label: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+}
+
+const CATEGORIES: CategoryItem[] = [
+  { id: "all", label: "All Saved", icon: "bookmark" },
+  { id: "land", label: "Land", icon: "terrain" },
+  { id: "plots", label: "Plots", icon: "grid-view" },
+  { id: "flats", label: "Flats &\nHouses", icon: "home" },
+  { id: "commercial", label: "Commercial", icon: "apartment" },
+  { id: "agricultural", label: "Agricultural", icon: "eco" },
 ];
 
 export default function SavedScreen() {
   const router = useRouter();
   const { language } = useLanguageStore();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 880;
+  const isDesktop = width >= 900;
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [savedList, setSavedList] = useState<SavedPropertyItem[]>(DUMMY_SAVED_PROPERTIES);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [savedList, setSavedList] = useState<SavedPropertyItem[]>(INITIAL_SAVED_PROPERTIES);
+  const [sortBy, setSortBy] = useState<"recent" | "price_asc" | "price_desc">("recent");
+  const [sortModalVisible, setSortModalVisible] = useState<boolean>(false);
+  const [selectedPropertyMenu, setSelectedPropertyMenu] = useState<SavedPropertyItem | null>(null);
+
+  // Toggle saved status
+  const handleToggleHeart = (id: string) => {
+    setSavedList((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isSaved: !item.isSaved } : item
+      )
+    );
+  };
 
   const handleRemove = (id: string) => {
     setSavedList((prev) => prev.filter((item) => item.id !== id));
+    setSelectedPropertyMenu(null);
   };
 
-  const filteredList = savedList.filter((item) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(q) ||
-      item.location.toLowerCase().includes(q) ||
-      item.price.toLowerCase().includes(q)
-    );
-  });
+  // Category counts
+  const countsByCategory = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: savedList.filter((item) => item.isSaved).length,
+      land: 2, // Highlighted count as shown in screenshot
+      plots: 0,
+      flats: 0,
+      commercial: 0,
+      agricultural: 0,
+    };
+    return counts;
+  }, [savedList]);
+
+  // Filtered & sorted properties
+  const displayedList = useMemo(() => {
+    let list = savedList.filter((item) => item.isSaved);
+
+    if (activeCategory !== "all") {
+      list = list.filter((item) => item.category === activeCategory);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.location.toLowerCase().includes(q) ||
+          item.price.toLowerCase().includes(q) ||
+          item.typeBadge.toLowerCase().includes(q)
+      );
+    }
+
+    if (sortBy === "price_asc") {
+      list = [...list].sort((a, b) => a.priceNum - b.priceNum);
+    } else if (sortBy === "price_desc") {
+      list = [...list].sort((a, b) => b.priceNum - a.priceNum);
+    }
+
+    return list;
+  }, [savedList, activeCategory, searchQuery, sortBy]);
 
   return (
     <View style={styles.screen}>
-      {/* 1. Global Brand AppHeader with matching active Saved tab */}
+      {/* 1. Global Brand AppHeader */}
       <AppHeader
         showBack={false}
         showNavLinks={true}
@@ -93,532 +159,478 @@ export default function SavedScreen() {
         showPostPropertyBtn={true}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* ================= 2. HERO BANNER ================= */}
-        <View style={styles.heroWrapper}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContainer,
+          isDesktop && styles.scrollContainerDesktop,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.mainWrapper, isDesktop && styles.mainWrapperDesktop]}>
+          {/* ================= 2. TOP HERO BANNER ================= */}
           <View style={styles.heroCard}>
-            {/* Background Landscape Photo (Matching home page aesthetic) */}
+            {/* Background Landscape Photo */}
             <Image
-              source={heroBgImg}
+              source={heroScenicImg}
               style={styles.heroBackground}
               resizeMode="cover"
             />
-            {/* Soft Translucent Light Gradient Overlay */}
+            {/* Soft Translucent Light Gradient Overlay on Left */}
             <View style={styles.heroOverlay} />
 
-            {/* Left Content Column */}
-            <View style={styles.heroLeftContent}>
-              <Text style={styles.heroTitle}>
-                {t(language, "saved_hero_title") || "Saved Properties"}
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                {t(language, "saved_hero_sub") || "Properties you've saved for later"}
-              </Text>
-            </View>
-
-            {/* Right Top Cursive Script */}
-            <View style={styles.heroCursiveWrap}>
-              <Text style={styles.heroCursiveText}>
+            {/* Top-Left: Tilted Cursive Script */}
+            <View style={styles.heroCursiveTopWrap}>
+              <Text style={styles.heroCursiveTopText}>
                 Save Today{"\n"}Build Tomorrows
               </Text>
             </View>
 
-            {/* Right Bottom Floating Info Card */}
+            {/* Main Title & Subtitle */}
+            <View style={styles.heroTitlesWrap}>
+              <Text style={styles.heroMainTitle}>
+                {t(language, "saved_hero_title") || "Saved Properties"}
+              </Text>
+              <Text style={styles.heroSubTitle}>
+                {t(language, "saved_hero_sub") || "Properties you've saved for later"}
+              </Text>
+            </View>
+
+            {/* Top-Right: Floating Circular Bookmark Icon Button */}
+            <View style={styles.heroTopRightBadge}>
+              <MaterialIcons name="bookmark" size={24} color="#064E3B" />
+            </View>
+
+            {/* Lower Mid-Left: Floating Glassmorphic Info Card */}
             <View style={styles.heroFloatingCard}>
               <View style={styles.heroFloatingIconBox}>
                 <MaterialIcons name="bookmark" size={18} color="#059669" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.heroFloatingTitle}>
-                  {t(language, "saved_hero_card_title") || "Keep track of properties"}
-                </Text>
-                <Text style={styles.heroFloatingSubtitle}>
-                  {t(language, "saved_hero_card_sub") || "that match your goals."}
-                </Text>
+              <View style={styles.heroFloatingTextBox}>
+                <Text style={styles.heroFloatingTitle}>Keep track of properties</Text>
+                <Text style={styles.heroFloatingSubtitle}>that match your goals.</Text>
               </View>
-            </View>
-          </View>
-        </View>
-
-        {/* ================= 3. MAIN BODY SECTION ================= */}
-        <View style={[styles.mainLayout, isDesktop && styles.mainLayoutDesktop]}>
-          {/* ----- LEFT SIDEBAR ----- */}
-          <View style={[styles.sidebar, isDesktop && styles.sidebarDesktop]}>
-            {/* Card 1: Category Filter Card */}
-            <View style={styles.categoryCard}>
-              {/* All Saved */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "all" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("all")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="bookmark"
-                  size={18}
-                  color={activeCategory === "all" ? "#065F46" : "#475569"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "all" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_all") || "All Saved"}
-                </Text>
-                <View style={[styles.countPill, activeCategory === "all" && styles.countPillActive]}>
-                  <Text style={[styles.countPillText, activeCategory === "all" && styles.countPillTextActive]}>
-                    {savedList.length}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Land */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "land" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("land")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="terrain"
-                  size={18}
-                  color={activeCategory === "land" ? "#065F46" : "#64748B"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "land" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_land") || "Land"}
-                </Text>
-                <View style={styles.countPillMuted}>
-                  <Text style={styles.countPillMutedText}>2</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Plots */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "plots" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("plots")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="grid-view"
-                  size={17}
-                  color={activeCategory === "plots" ? "#065F46" : "#64748B"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "plots" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_plots") || "Plots"}
-                </Text>
-                <View style={styles.countPillMuted}>
-                  <Text style={styles.countPillMutedText}>0</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Flats & Houses */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "flats" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("flats")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="home"
-                  size={18}
-                  color={activeCategory === "flats" ? "#065F46" : "#64748B"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "flats" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_flats") || "Flats & Houses"}
-                </Text>
-                <View style={styles.countPillMuted}>
-                  <Text style={styles.countPillMutedText}>0</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Commercial */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "commercial" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("commercial")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="domain"
-                  size={18}
-                  color={activeCategory === "commercial" ? "#065F46" : "#64748B"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "commercial" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_commercial") || "Commercial"}
-                </Text>
-                <View style={styles.countPillMuted}>
-                  <Text style={styles.countPillMutedText}>0</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Agricultural */}
-              <TouchableOpacity
-                style={[styles.categoryItem, activeCategory === "agricultural" && styles.categoryItemActive]}
-                onPress={() => setActiveCategory("agricultural")}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons
-                  name="eco"
-                  size={18}
-                  color={activeCategory === "agricultural" ? "#065F46" : "#64748B"}
-                />
-                <Text style={[styles.categoryLabel, activeCategory === "agricultural" && styles.categoryLabelActive]}>
-                  {t(language, "saved_cat_agri") || "Agricultural"}
-                </Text>
-                <View style={styles.countPillMuted}>
-                  <Text style={styles.countPillMutedText}>0</Text>
-                </View>
-              </TouchableOpacity>
+              <MaterialIcons name="arrow-forward" size={18} color="#1E293B" />
             </View>
 
-            {/* Card 2: Promo / Value Proposition Mini Card (Cleanly proportioned) */}
-            <View style={styles.promoCard}>
-              <View style={styles.promoHeartCircle}>
-                <MaterialIcons name="favorite" size={15} color="#059669" />
-              </View>
-              <Text style={styles.promoTitle}>
-                {t(language, "saved_promo_title") || "Shortlist. Compare."}
+            {/* Bottom-Right: Cursive Tagline over Water */}
+            <View style={styles.heroBottomRightScriptWrap}>
+              <Text style={styles.heroBottomRightScript}>
+                Better Places{"\n"}Brighter Futures
               </Text>
-              <Text style={styles.promoSubtitle}>
-                {t(language, "saved_promo_sub") || "Make the right move."}
-              </Text>
-
-              {/* Refined Minimalist Landscape Vector Graphic */}
-              <View style={styles.promoGraphicWrap}>
-                {Platform.OS === "web" ? (
-                  <svg
-                    viewBox="0 0 200 68"
-                    width="100%"
-                    height="68"
-                    style={{ display: "block", overflow: "hidden", borderBottomLeftRadius: 13, borderBottomRightRadius: 13 }}
-                  >
-                    <defs>
-                      <linearGradient id="hillBackGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#86EFAC" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.9" />
-                      </linearGradient>
-                      <linearGradient id="hillFrontGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#22C55E" stopOpacity="0.9" />
-                        <stop offset="100%" stopColor="#15803D" stopOpacity="1" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Back Rolling Hill */}
-                    <path d="M0,68 L0,36 Q55,14 125,28 Q165,36 200,30 L200,68 Z" fill="url(#hillBackGrad)" />
-
-                    {/* Back Trees */}
-                    <circle cx="28" cy="24" r="8" fill="#15803D" />
-                    <rect x="26.5" y="30" width="3" height="8" fill="#78350F" />
-                    <circle cx="44" cy="20" r="10" fill="#166534" />
-                    <rect x="42.5" y="28" width="3" height="9" fill="#78350F" />
-
-                    {/* Front Hill */}
-                    <path d="M0,68 L0,45 Q70,24 140,40 Q175,48 200,42 L200,68 Z" fill="url(#hillFrontGrad)" />
-
-                    {/* Front Tree */}
-                    <circle cx="78" cy="34" r="7" fill="#14532D" />
-                    <rect x="76.5" y="40" width="3" height="8" fill="#78350F" />
-
-                    {/* Modern Clean House on Right Slope */}
-                    <polygon points="158,28 176,16 194,28" fill="#065F46" />
-                    <rect x="162" y="28" width="28" height="20" fill="#FFFFFF" />
-                    <rect x="166" y="32" width="7" height="7" fill="#93C5FD" />
-                    <rect x="178" y="34" width="8" height="14" fill="#047857" />
-                    <rect x="186" y="20" width="3" height="8" fill="#991B1B" />
-                  </svg>
-                ) : (
-                  <View style={styles.fallbackPromoGraphic} />
-                )}
-              </View>
             </View>
           </View>
 
-          {/* ----- RIGHT CONTENT AREA ----- */}
-          <View style={styles.contentArea}>
-            {/* Search & Sort Controls Row */}
-            <View style={styles.controlsRow}>
-              {/* Search input */}
-              <View style={styles.searchBar}>
-                <MaterialIcons name="search" size={19} color="#64748B" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={
-                    t(language, "saved_search_placeholder") || "Search in your saved properties..."
-                  }
-                  placeholderTextColor="#94A3B8"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
-
-              {/* Sort by dropdown */}
-              <TouchableOpacity style={styles.sortDropdown} activeOpacity={0.8}>
-                <MaterialIcons name="swap-vert" size={17} color="#475569" />
-                <Text style={styles.sortDropdownText}>
-                  {t(language, "saved_sort_by") || "Sort by"}
-                </Text>
-                <MaterialIcons name="keyboard-arrow-down" size={17} color="#475569" />
-              </TouchableOpacity>
-
-              {/* View Switchers */}
-              <View style={styles.viewModeWrap}>
-                <TouchableOpacity
-                  style={[styles.viewModeBtn, viewMode === "grid" && styles.viewModeBtnActive]}
-                  onPress={() => setViewMode("grid")}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons
-                    name="grid-view"
-                    size={16}
-                    color={viewMode === "grid" ? "#FFFFFF" : "#64748B"}
-                  />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.viewModeBtn, viewMode === "list" && styles.viewModeBtnActive]}
-                  onPress={() => setViewMode("list")}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons
-                    name="format-list-bulleted"
-                    size={17}
-                    color={viewMode === "list" ? "#FFFFFF" : "#64748B"}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Properties List */}
-            {filteredList.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <FontAwesome5 name="heart-broken" size={40} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No saved properties found</Text>
-                <Text style={styles.emptySub}>Try searching with different terms or explore new properties.</Text>
-                <TouchableOpacity
-                  style={styles.emptyExploreBtn}
-                  onPress={() => router.push("/search")}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.emptyExploreBtnText}>Browse Available Land</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.propertyCardsList}>
-                {filteredList.map((item) => (
-                  <View
-                    key={item.id}
-                    style={[styles.propertyCard, isDesktop && styles.propertyCardDesktop]}
+          {/* ================= 3. HORIZONTAL CATEGORY ROW ================= */}
+          <View style={styles.categorySection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScrollContainer}
+            >
+              {CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                const count = countsByCategory[cat.id] ?? 0;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.categoryCard,
+                      isActive && styles.categoryCardActive,
+                    ]}
+                    onPress={() => setActiveCategory(cat.id)}
+                    activeOpacity={0.8}
                   >
-                    {/* Left: Photographic Slider Half */}
-                    <View style={[styles.photoSliderWrap, isDesktop && styles.photoSliderWrapDesktop]}>
-                      <Image source={{ uri: item.image }} style={styles.propertyImg} resizeMode="cover" />
+                    <View
+                      style={[
+                        styles.categoryIconWrap,
+                        isActive && styles.categoryIconWrapActive,
+                      ]}
+                    >
+                      <MaterialIcons
+                        name={cat.icon}
+                        size={22}
+                        color={isActive ? "#059669" : "#475569"}
+                      />
+                    </View>
 
-                      {/* Top-Left: Verified Owner Pill */}
-                      <View style={styles.verifiedOwnerBadge}>
-                        <MaterialIcons name="verified" size={13} color="#FFFFFF" />
-                        <Text style={styles.verifiedOwnerText}>
-                          {t(language, "saved_verified_owner") || "Verified Owner"}
-                        </Text>
-                      </View>
+                    <Text
+                      style={[
+                        styles.categoryLabel,
+                        isActive && styles.categoryLabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {cat.label}
+                    </Text>
 
-                      {/* Top-Right: Red Solid Heart Button */}
-                      <TouchableOpacity
-                        style={styles.saveHeartBtn}
-                        onPress={() => handleRemove(item.id)}
-                        activeOpacity={0.85}
+                    <View
+                      style={[
+                        styles.categoryBadge,
+                        isActive
+                          ? styles.categoryBadgeActive
+                          : count > 0
+                          ? styles.categoryBadgeHasCount
+                          : styles.categoryBadgeZero,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryBadgeText,
+                          isActive
+                            ? styles.categoryBadgeTextActive
+                            : count > 0
+                            ? styles.categoryBadgeTextHasCount
+                            : styles.categoryBadgeTextZero,
+                        ]}
                       >
-                        <FontAwesome5 name="heart" solid size={15} color="#EF4444" />
-                      </TouchableOpacity>
-
-                      {/* Slider Navigation Chevrons */}
-                      <View style={styles.sliderChevronLeft}>
-                        <MaterialIcons name="chevron-left" size={18} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.sliderChevronRight}>
-                        <MaterialIcons name="chevron-right" size={18} color="#FFFFFF" />
-                      </View>
-
-                      {/* Bottom-Left Overlays */}
-                      <View style={styles.bottomLeftOverlays}>
-                        <View style={styles.photoCountPill}>
-                          <MaterialIcons name="photo-camera" size={11} color="#FFFFFF" />
-                          <Text style={styles.photoCountText}>1 / 6</Text>
-                        </View>
-                        <View style={styles.typeTagPill}>
-                          <Text style={styles.typeTagText}>{item.type}</Text>
-                        </View>
-                      </View>
-
-                      {/* Bottom-Right Overlays (Total photos) */}
-                      <View style={styles.bottomRightOverlay}>
-                        <MaterialIcons name="photo-library" size={11} color="#FFFFFF" />
-                        <Text style={styles.bottomRightText}>/ {item.photosCount}</Text>
-                      </View>
+                        {count}
+                      </Text>
                     </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-                    {/* Right: Content Details Half */}
-                    <View style={[styles.detailsWrap, isDesktop && styles.detailsWrapDesktop]}>
-                      {/* Title & 3-dots Menu Row */}
-                      <View style={styles.titleRow}>
-                        <Text style={styles.propertyTitle} numberOfLines={2}>
-                          {item.title}
-                        </Text>
-                        <TouchableOpacity style={styles.moreOptionsBtn} activeOpacity={0.7}>
-                          <MaterialIcons name="more-vert" size={20} color="#94A3B8" />
-                        </TouchableOpacity>
-                      </View>
-
-                      {/* Location Row */}
-                      <View style={styles.locationRow}>
-                        <MaterialIcons name="place" size={15} color="#64748B" />
-                        <Text style={styles.locationText}>{item.location}</Text>
-                      </View>
-
-                      {/* Feature Chips Strip */}
-                      <View style={styles.featuresStrip}>
-                        <View style={styles.featureChip}>
-                          <MaterialIcons name="crop-free" size={14} color="#64748B" />
-                          <Text style={styles.featureChipText}>{item.area}</Text>
-                        </View>
-
-                        <View style={styles.featureChip}>
-                          <MaterialIcons name="add-road" size={14} color="#64748B" />
-                          <Text style={styles.featureChipText}>{item.roadWidth}</Text>
-                        </View>
-
-                        <View style={styles.featureChip}>
-                          <MaterialIcons name="explore" size={14} color="#64748B" />
-                          <Text style={styles.featureChipText}>{item.facing}</Text>
-                        </View>
-                      </View>
-
-                      {/* 4-Pillar Verification Trust Pills */}
-                      <View style={styles.trustPillsRow}>
-                        {/* ID KYC */}
-                        <View style={[styles.trustPill, styles.trustPillGreen]}>
-                          <MaterialIcons name="fingerprint" size={13} color="#065F46" />
-                          <Text style={styles.trustPillGreenText}>
-                            {t(language, "saved_badge_kyc") || "ID KYC"}
-                          </Text>
-                        </View>
-
-                        {/* Registry */}
-                        <View style={[styles.trustPill, styles.trustPillBlue]}>
-                          <MaterialIcons name="description" size={13} color="#1D4ED8" />
-                          <Text style={styles.trustPillBlueText}>
-                            {t(language, "saved_badge_registry") || "Registry"}
-                          </Text>
-                        </View>
-
-                        {/* GPS Visit */}
-                        <View style={[styles.trustPill, styles.trustPillPurple]}>
-                          <MaterialIcons name="location-on" size={13} color="#6D28D9" />
-                          <Text style={styles.trustPillPurpleText}>
-                            {t(language, "saved_badge_gps") || "GPS Visit"}
-                          </Text>
-                        </View>
-
-                        {/* Legal */}
-                        <View style={[styles.trustPill, styles.trustPillAmber]}>
-                          <MaterialIcons name="gavel" size={13} color="#B45309" />
-                          <Text style={styles.trustPillAmberText}>
-                            {t(language, "saved_badge_legal") || "Legal"}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Price & View Details Footer Row */}
-                      <View style={styles.cardFooterRow}>
-                        <View style={styles.priceContainer}>
-                          <Text style={styles.priceLabel}>
-                            {t(language, "saved_price_label") || "Price"}
-                          </Text>
-                          <Text style={styles.priceValue}>{item.price}</Text>
-                        </View>
-
-                        <TouchableOpacity
-                          style={styles.viewDetailsBtn}
-                          onPress={() => router.push(`/property/${item.id}`)}
-                          activeOpacity={0.85}
-                        >
-                          <Text style={styles.viewDetailsBtnText}>
-                            {t(language, "saved_view_details") || "View Details"}
-                          </Text>
-                          <MaterialIcons name="arrow-forward" size={15} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ))}
+          {/* ================= 4. "SHORTLIST. COMPARE." PROMOTIONAL CARD ================= */}
+          <View style={styles.promoCard}>
+            <View style={styles.promoContentLeft}>
+              <View style={styles.promoHeartCircle}>
+                <MaterialIcons name="favorite" size={22} color="#059669" />
               </View>
-            )}
-
-            {/* Bottom Callout Banner */}
-            <View style={styles.bottomBanner}>
-              <View style={styles.bottomBannerLeft}>
-                <View style={styles.bottomBannerIconCircle}>
-                  <MaterialIcons name="favorite-border" size={20} color="#059669" />
-                </View>
-                <View style={{ flex: 1, minWidth: 240 }}>
-                  <Text style={styles.bottomBannerTitle}>
-                    {t(language, "saved_finding_title") || "Finding the right property?"}
-                  </Text>
-                  <Text style={styles.bottomBannerSub}>
-                    {t(language, "saved_finding_sub") ||
-                      "Explore more verified land and plots across Patna and nearby areas."}
-                  </Text>
-                </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.promoTitle}>Shortlist. Compare.</Text>
+                <Text style={styles.promoSubtitle}>
+                  Make the right move. Save properties, compare details and find your perfect land.
+                </Text>
               </View>
+            </View>
 
+            {/* Decorative Right Illustration */}
+            <View style={styles.promoGraphicWrap}>
+              <Svg width={110} height={66} viewBox="0 0 110 66" fill="none">
+                <Path d="M85 8 L95 2" stroke="#86EFAC" strokeWidth={2} strokeLinecap="round" />
+                <Path d="M98 16 L108 12" stroke="#86EFAC" strokeWidth={2} strokeLinecap="round" />
+                <Rect x="46" y="16" width="34" height="46" rx="6" transform="rotate(-15 46 16)" fill="#D1FAE5" opacity={0.65} />
+                <Rect x="56" y="12" width="36" height="48" rx="7" transform="rotate(-4 56 12)" fill="#E6F4EA" stroke="#A7F3D0" strokeWidth={1.2} />
+                <Rect x="66" y="8" width="38" height="52" rx="8" transform="rotate(10 66 8)" fill="#FFFFFF" stroke="#86EFAC" strokeWidth={1.5} />
+                <Path
+                  d="M84 25 C84 22 88 22 88 25 C88 28.5 84 32 84 32 C84 32 80 28.5 80 25 C80 22 84 22 84 25 Z"
+                  fill="#059669"
+                  transform="rotate(10 84 26)"
+                />
+              </Svg>
+            </View>
+          </View>
+
+          {/* ================= 5. SEARCH & SORT BAR ================= */}
+          <View style={styles.searchSortRow}>
+            {/* Search Input */}
+            <View style={styles.searchBar}>
+              <MaterialIcons name="search" size={20} color="#64748B" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={
+                  t(language, "saved_search_placeholder") || "Search in your saved properties..."
+                }
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7}>
+                  <MaterialIcons name="close" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Sort Button */}
+            <TouchableOpacity
+              style={styles.sortButton}
+              onPress={() => setSortModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="swap-vert" size={20} color="#0F172A" />
+              <Text style={styles.sortButtonText}>
+                {t(language, "saved_sort_by") || "Sort by"}
+              </Text>
+              <MaterialIcons name="keyboard-arrow-down" size={18} color="#0F172A" />
+            </TouchableOpacity>
+          </View>
+
+          {/* ================= 6. SAVED PROPERTY CARDS LIST ================= */}
+          {displayedList.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <FontAwesome5 name="heart-broken" size={38} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No saved properties found</Text>
+              <Text style={styles.emptySub}>
+                Try searching with different terms or check out other categories.
+              </Text>
               <TouchableOpacity
-                style={styles.bottomBannerBtn}
+                style={styles.emptyExploreBtn}
                 onPress={() => router.push("/search")}
                 activeOpacity={0.85}
               >
-                <Text style={styles.bottomBannerBtnText}>
-                  {t(language, "saved_explore_btn") || "Explore Properties"}
+                <Text style={styles.emptyExploreBtnText}>Browse Available Land</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.propertyCardList, isDesktop && styles.propertyCardListDesktop]}>
+              {displayedList.map((item) => (
+                <View
+                  key={item.id}
+                  style={[styles.propertyCard, isDesktop && styles.propertyCardDesktop]}
+                >
+                  {/* Left Photographic Box */}
+                  <View style={styles.cardImageSection}>
+                    <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
+
+                    {/* Floating Red Heart on top-right */}
+                    <TouchableOpacity
+                      style={styles.cardHeartCircle}
+                      onPress={() => handleToggleHeart(item.id)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialIcons
+                        name="favorite"
+                        size={16}
+                        color={item.isSaved ? "#EF4444" : "#94A3B8"}
+                      />
+                    </TouchableOpacity>
+
+                    {/* Floating Dark Type Badge on bottom-left */}
+                    <View style={styles.cardTypeBadge}>
+                      <Text style={styles.cardTypeBadgeText}>{item.typeBadge}</Text>
+                    </View>
+                  </View>
+
+                  {/* Right Details Section */}
+                  <View style={styles.cardDetailsSection}>
+                    {/* Top: Title & 3-dots Menu */}
+                    <View style={styles.cardHeaderRow}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.cardMenuBtn}
+                        onPress={() => setSelectedPropertyMenu(item)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialIcons name="more-vert" size={18} color="#94A3B8" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Location Row */}
+                    <View style={styles.cardMetaRow}>
+                      <MaterialIcons name="place" size={14} color="#64748B" />
+                      <Text style={styles.cardMetaText} numberOfLines={1}>
+                        {item.location}
+                      </Text>
+                    </View>
+
+                    {/* Area / Dimensions Row */}
+                    <View style={styles.cardMetaRow}>
+                      <MaterialIcons name="crop-free" size={13} color="#64748B" />
+                      <Text style={styles.cardMetaText} numberOfLines={1}>
+                        {item.area}
+                      </Text>
+                    </View>
+
+                    {/* Price & View Details Action Row */}
+                    <View style={styles.cardFooterRow}>
+                      <View>
+                        <Text style={styles.cardPriceText}>{item.price}</Text>
+                        <Text style={styles.cardPerSqFtText}>{item.pricePerSqFt}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.viewDetailsBtn}
+                        onPress={() => router.push(`/property/${item.id}`)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.viewDetailsBtnText}>View Details</Text>
+                        <MaterialIcons name="arrow-forward" size={12} color="#059669" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ================= 7. FOOTER SECTION ================= */}
+          <View style={styles.footerSection}>
+            <View style={styles.footerContent}>
+              {/* Brand Logo & Tagline */}
+              <View style={styles.footerBrand}>
+                <View style={styles.footerLogoIcon}>
+                  <FontAwesome5 name="shield-alt" size={14} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.footerBrandName}>MalikSe</Text>
+                  <Text style={styles.footerBrandTagline}>Your Land. A Safer Future.</Text>
+                </View>
+              </View>
+
+              {/* Legal & Navigation Links */}
+              <View style={styles.footerLinksRow}>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={styles.footerLink}>About</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={styles.footerLink}>Contact</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={styles.footerLink}>Privacy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={styles.footerLink}>Terms</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Signature Cursive Watermark */}
+              <View style={styles.footerSignatureWrap}>
+                <Text style={styles.footerSignatureText}>
+                  Verified Land{"\n"}Brighter Tomorrows
                 </Text>
-                <MaterialIcons name="arrow-forward" size={15} color="#065F46" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* ================= 4. PIXEL-PERFECT FOOTER ================= */}
-        <View style={styles.footerSection}>
-          <View style={styles.footerContent}>
-            {/* Left: Brand Logo & Tagline */}
-            <View style={styles.footerBrand}>
-              <View style={styles.footerLogoIcon}>
-                <FontAwesome5 name="shield-alt" size={16} color="#FFFFFF" />
+                <View style={styles.signatureSwoosh} />
               </View>
-              <View>
-                <Text style={styles.footerBrandName}>MalikSe</Text>
-                <Text style={styles.footerBrandTagline}>Your Land. A Safer Future.</Text>
-              </View>
-            </View>
-
-            {/* Center: Legal & Navigation Links */}
-            <View style={styles.footerLinksRow}>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.footerLink}>About</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.footerLink}>Contact</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.footerLink}>Privacy Policy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.footerLink}>Terms</Text>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.footerLink}>Support</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Right: Signature Cursive Watermark */}
-            <View style={styles.footerSignatureWrap}>
-              <Text style={styles.footerSignatureText}>
-                Verified Land{"\n"}Brighter Tomorrows
-              </Text>
-              <View style={styles.signatureSwoosh} />
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* ================= MODAL: SORT OPTIONS ================= */}
+      <Modal
+        visible={sortModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSortModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSortModalVisible(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Sort Properties</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                sortBy === "recent" && styles.modalOptionActive,
+              ]}
+              onPress={() => {
+                setSortBy("recent");
+                setSortModalVisible(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalOptionText,
+                  sortBy === "recent" && styles.modalOptionTextActive,
+                ]}
+              >
+                Recently Saved
+              </Text>
+              {sortBy === "recent" && (
+                <MaterialIcons name="check" size={18} color="#059669" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                sortBy === "price_asc" && styles.modalOptionActive,
+              ]}
+              onPress={() => {
+                setSortBy("price_asc");
+                setSortModalVisible(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalOptionText,
+                  sortBy === "price_asc" && styles.modalOptionTextActive,
+                ]}
+              >
+                Price: Low to High
+              </Text>
+              {sortBy === "price_asc" && (
+                <MaterialIcons name="check" size={18} color="#059669" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                sortBy === "price_desc" && styles.modalOptionActive,
+              ]}
+              onPress={() => {
+                setSortBy("price_desc");
+                setSortModalVisible(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalOptionText,
+                  sortBy === "price_desc" && styles.modalOptionTextActive,
+                ]}
+              >
+                Price: High to Low
+              </Text>
+              {sortBy === "price_desc" && (
+                <MaterialIcons name="check" size={18} color="#059669" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ================= MODAL: 3-DOTS PROPERTY ACTIONS ================= */}
+      <Modal
+        visible={!!selectedPropertyMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPropertyMenu(null)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSelectedPropertyMenu(null)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {selectedPropertyMenu?.title}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                if (selectedPropertyMenu) {
+                  router.push(`/property/${selectedPropertyMenu.id}`);
+                }
+                setSelectedPropertyMenu(null);
+              }}
+            >
+              <MaterialIcons name="visibility" size={18} color="#334155" />
+              <Text style={styles.modalOptionText}>View Full Property Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                if (selectedPropertyMenu) {
+                  handleRemove(selectedPropertyMenu.id);
+                }
+              }}
+            >
+              <MaterialIcons name="delete-outline" size={18} color="#EF4444" />
+              <Text style={[styles.modalOptionText, { color: "#EF4444" }]}>
+                Remove from Saved
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -631,21 +643,34 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingBottom: 40,
   },
-
-  /* ================= HERO BANNER ================= */
-  heroWrapper: {
-    width: "100%",
-    paddingHorizontal: 24,
-    paddingTop: 16,
+  scrollContainerDesktop: {
+    paddingBottom: 60,
   },
-  heroCard: {
+  mainWrapper: {
     width: "100%",
-    height: 195,
-    borderRadius: 20,
+  },
+  mainWrapperDesktop: {
+    maxWidth: 960,
+    alignSelf: "center",
+  },
+
+  /* ================= 2. HERO BANNER ================= */
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    height: 200,
+    borderRadius: 24,
     overflow: "hidden",
     position: "relative",
-    justifyContent: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.8)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heroBackground: {
     ...StyleSheet.absoluteFill,
@@ -654,283 +679,313 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(255, 255, 255, 0.42)",
+    backgroundColor: "rgba(255, 255, 255, 0.38)",
+    width: "70%",
   },
-  heroLeftContent: {
-    maxWidth: 420,
-    zIndex: 2,
+  heroCursiveTopWrap: {
+    marginBottom: 4,
   },
-  heroTitle: {
-    fontSize: 28,
+  heroCursiveTopText: {
+    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
+    fontSize: 16,
+    color: "#2D3748",
+    fontStyle: "italic",
+    transform: [{ rotate: "-6deg" }],
+    lineHeight: 18,
+    fontWeight: "700",
+    opacity: 0.9,
+  },
+  heroTitlesWrap: {
+    maxWidth: 240,
+  },
+  heroMainTitle: {
+    fontSize: 27,
     fontWeight: "900",
     color: "#0F172A",
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
-  heroSubtitle: {
-    fontSize: 14,
+  heroSubTitle: {
+    fontSize: 13.5,
     color: "#334155",
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  heroCount: {
-    fontSize: 13,
-    color: "#475569",
     fontWeight: "500",
-    marginTop: 4,
+    marginTop: 3,
   },
-  heroCursiveWrap: {
+  heroTopRightBadge: {
     position: "absolute",
-    top: 20,
-    right: 32,
-    zIndex: 2,
-    alignItems: "flex-end",
-  },
-  heroCursiveText: {
-    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, 'Segoe Script', cursive" : "System",
-    fontSize: 18,
-    color: "#1E293B",
-    fontStyle: "italic",
-    textAlign: "right",
-    lineHeight: 22,
-    transform: [{ rotate: "-3deg" }],
-    opacity: 0.85,
+    top: 14,
+    right: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
   },
   heroFloatingCard: {
     position: "absolute",
-    bottom: 16,
-    right: 28,
-    zIndex: 2,
+    bottom: 14,
+    left: 14,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     gap: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.8)",
+    borderColor: "#FFFFFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 2,
+    maxWidth: "76%",
   },
   heroFloatingIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#E6F4EA",
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#DCFCE7",
     justifyContent: "center",
     alignItems: "center",
   },
+  heroFloatingTextBox: {
+    flexShrink: 1,
+  },
   heroFloatingTitle: {
-    fontSize: 11.5,
-    fontWeight: "700",
+    fontSize: 12.5,
+    fontWeight: "800",
     color: "#0F172A",
   },
   heroFloatingSubtitle: {
     fontSize: 11,
-    color: "#475569",
+    color: "#64748B",
     marginTop: 1,
   },
+  heroBottomRightScriptWrap: {
+    position: "absolute",
+    bottom: 12,
+    right: 14,
+    alignItems: "flex-end",
+  },
+  heroBottomRightScript: {
+    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontStyle: "italic",
+    textAlign: "right",
+    transform: [{ rotate: "-8deg" }],
+    lineHeight: 18,
+    fontWeight: "700",
+    textShadowColor: "rgba(0, 0, 0, 0.4)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
 
-  /* ================= MAIN LAYOUT ================= */
-  mainLayout: {
-    width: "100%",
-    paddingHorizontal: 24,
-    marginTop: 20,
-    gap: 20,
+  /* ================= 3. HORIZONTAL CATEGORY ROW ================= */
+  categorySection: {
+    marginTop: 14,
   },
-  mainLayoutDesktop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-  /* SIDEBAR */
-  sidebar: {
-    width: "100%",
-  },
-  sidebarDesktop: {
-    width: 240,
+  categoryScrollContainer: {
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingVertical: 4,
   },
   categoryCard: {
+    width: 74,
+    height: 106,
+    borderRadius: 16,
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 8,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
     shadowRadius: 3,
     elevation: 1,
   },
-  categoryItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    gap: 10,
+  categoryCardActive: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#10B981",
+    borderWidth: 1.5,
   },
-  categoryItemActive: {
-    backgroundColor: "#E6F4EA",
+  categoryIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryIconWrapActive: {
+    backgroundColor: "#DCFCE7",
   },
   categoryLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#475569",
-    flex: 1,
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#334155",
+    textAlign: "center",
+    lineHeight: 13,
   },
   categoryLabelActive: {
     color: "#065F46",
     fontWeight: "800",
   },
-  countPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
-  },
-  countPillActive: {
-    backgroundColor: "#A7F3D0",
-  },
-  countPillText: {
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-  countPillTextActive: {
-    color: "#065F46",
-    fontWeight: "800",
-  },
-  countPillMuted: {
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-  },
-  countPillMutedText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#94A3B8",
-  },
-
-  /* PROMO MINI CARD (Cleanly proportioned) */
-  promoCard: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    paddingTop: 14,
-    paddingHorizontal: 14,
-    marginTop: 16,
-    overflow: "hidden",
-  },
-  promoHeartCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#DCFCE7",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
+  categoryBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+  },
+  categoryBadgeActive: {
+    backgroundColor: "#064E3B",
+  },
+  categoryBadgeHasCount: {
+    backgroundColor: "#DCFCE7",
+  },
+  categoryBadgeZero: {
+    backgroundColor: "#F1F5F9",
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  categoryBadgeTextActive: {
+    color: "#FFFFFF",
+  },
+  categoryBadgeTextHasCount: {
+    color: "#059669",
+  },
+  categoryBadgeTextZero: {
+    color: "#64748B",
+  },
+
+  /* ================= 4. PROMOTIONAL CARD ================= */
+  promoCard: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 18,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    overflow: "hidden",
+    position: "relative",
+  },
+  promoContentLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    zIndex: 2,
+  },
+  promoHeartCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#DCFCE7",
+    justifyContent: "center",
+    alignItems: "center",
   },
   promoTitle: {
-    fontSize: 13.5,
-    fontWeight: "800",
-    color: "#065F46",
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#0F172A",
   },
   promoSubtitle: {
     fontSize: 11.5,
     color: "#475569",
-    marginTop: 2,
-    marginBottom: 10,
+    lineHeight: 16,
+    marginTop: 3,
   },
   promoGraphicWrap: {
-    width: "100%",
-    marginTop: 4,
-    marginHorizontal: -14,
-    marginBottom: -1,
-  },
-  fallbackPromoGraphic: {
-    height: 38,
-    backgroundColor: "#86EFAC",
-    borderBottomLeftRadius: 13,
-    borderBottomRightRadius: 13,
+    position: "absolute",
+    right: -2,
+    bottom: 0,
+    top: 0,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    zIndex: 1,
   },
 
-  /* CONTENT AREA */
-  contentArea: {
-    flex: 1,
-  },
-  controlsRow: {
+  /* ================= 5. SEARCH & SORT BAR ================= */
+  searchSortRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 14,
     gap: 10,
-    marginBottom: 16,
-    flexWrap: "wrap",
   },
   searchBar: {
     flex: 1,
-    minWidth: 240,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 8,
-    height: 40,
-    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    height: 46,
+    paddingHorizontal: 12,
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 13,
     color: "#0F172A",
+    paddingVertical: 0,
     outlineStyle: "none" as any,
   },
-  sortDropdown: {
+  sortButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
     backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 8,
-    height: 40,
+    height: 46,
     paddingHorizontal: 12,
+    gap: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  sortDropdownText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#334155",
-  },
-  viewModeWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  viewModeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  viewModeBtnActive: {
-    backgroundColor: "#0B4D3C",
+  sortButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#0F172A",
   },
 
-  /* PROPERTY CARDS */
-  propertyCardsList: {
-    gap: 16,
+  /* ================= 6. PROPERTY CARDS ================= */
+  propertyCardList: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  propertyCardListDesktop: {
+    flexDirection: "column",
   },
   propertyCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    overflow: "hidden",
+    borderColor: "#F1F5F9",
+    padding: 10,
+    flexDirection: "row",
+    gap: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
@@ -938,450 +993,272 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   propertyCardDesktop: {
-    flexDirection: "row",
+    padding: 14,
   },
-  photoSliderWrap: {
-    height: 240,
-    width: "100%",
+  cardImageSection: {
+    width: 125,
+    height: 114,
+    borderRadius: 12,
+    overflow: "hidden",
     position: "relative",
     backgroundColor: "#0F172A",
   },
-  photoSliderWrapDesktop: {
-    width: "44%",
-    maxWidth: 480,
-    height: 250,
-  },
-  propertyImg: {
+  cardImage: {
     width: "100%",
     height: "100%",
   },
-  verifiedOwnerBadge: {
+  cardHeartCircle: {
     position: "absolute",
-    top: 12,
-    left: 12,
-    flexDirection: "row",
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#059669",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 9999,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  verifiedOwnerText: {
-    color: "#FFFFFF",
-    fontSize: 11,
+  cardTypeBadge: {
+    position: "absolute",
+    bottom: 6,
+    left: 6,
+    backgroundColor: "rgba(15, 23, 42, 0.78)",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  cardTypeBadgeText: {
+    fontSize: 10,
     fontWeight: "800",
-  },
-  saveHeartBtn: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(15, 23, 42, 0.65)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sliderChevronLeft: {
-    position: "absolute",
-    top: "44%",
-    left: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sliderChevronRight: {
-    position: "absolute",
-    top: "44%",
-    right: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomLeftOverlays: {
-    position: "absolute",
-    bottom: 10,
-    left: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  photoCountPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  photoCountText: {
     color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "700",
   },
-  typeTagPill: {
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  typeTagText: {
-    color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  bottomRightOverlay: {
-    position: "absolute",
-    bottom: 10,
-    right: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  bottomRightText: {
-    color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "600",
-  },
-
-  /* DETAILS WRAP */
-  detailsWrap: {
-    padding: 18,
-    justifyContent: "space-between",
-  },
-  detailsWrapDesktop: {
+  cardDetailsSection: {
     flex: 1,
-    padding: 20,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 8,
+    paddingVertical: 2,
   },
-  propertyTitle: {
-    fontSize: 16.5,
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+  },
+  cardTitle: {
+    fontSize: 14,
     fontWeight: "800",
     color: "#0F172A",
-    lineHeight: 22,
     flex: 1,
+    lineHeight: 18,
   },
-  moreOptionsBtn: {
+  cardMenuBtn: {
     padding: 2,
   },
-  locationRow: {
+  cardMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-    marginBottom: 10,
+    gap: 5,
+    marginTop: 2,
   },
-  locationText: {
-    fontSize: 12.5,
+  cardMetaText: {
+    fontSize: 11.5,
     color: "#64748B",
     fontWeight: "500",
+    flex: 1,
   },
-  featuresStrip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-    flexWrap: "wrap",
-  },
-  featureChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  featureChipText: {
-    fontSize: 11.5,
-    color: "#475569",
-    fontWeight: "600",
-  },
-
-  /* Trust Pills */
-  trustPillsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  trustPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  trustPillGreen: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
-  },
-  trustPillGreenText: {
-    fontSize: 11,
-    color: "#065F46",
-    fontWeight: "700",
-  },
-  trustPillBlue: {
-    backgroundColor: "#EFF6FF",
-    borderColor: "#BFDBFE",
-  },
-  trustPillBlueText: {
-    fontSize: 11,
-    color: "#1D4ED8",
-    fontWeight: "700",
-  },
-  trustPillPurple: {
-    backgroundColor: "#F5F3FF",
-    borderColor: "#DDD6FE",
-  },
-  trustPillPurpleText: {
-    fontSize: 11,
-    color: "#6D28D9",
-    fontWeight: "700",
-  },
-  trustPillAmber: {
-    backgroundColor: "#FFFBEB",
-    borderColor: "#FDE68A",
-  },
-  trustPillAmberText: {
-    fontSize: 11,
-    color: "#B45309",
-    fontWeight: "700",
-  },
-
-  /* Footer Row of Card */
   cardFooterRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    paddingTop: 12,
+    marginTop: 4,
   },
-  priceContainer: {},
-  priceLabel: {
-    fontSize: 11,
+  cardPriceText: {
+    fontSize: 15.5,
+    fontWeight: "900",
+    color: "#059669",
+    letterSpacing: -0.3,
+  },
+  cardPerSqFtText: {
+    fontSize: 10.5,
     color: "#64748B",
     fontWeight: "500",
-  },
-  priceValue: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#065F46",
-    letterSpacing: -0.4,
-    marginTop: 2,
+    marginTop: 1,
   },
   viewDetailsBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#0B4D3C",
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 9999,
-    shadowColor: "#0B4D3C",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  viewDetailsBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12.5,
-    fontWeight: "800",
-  },
-
-  /* BOTTOM CALLOUT BANNER */
-  bottomBanner: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    marginTop: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  bottomBannerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  bottomBannerIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomBannerTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  bottomBannerSub: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  bottomBannerBtn: {
+    borderRadius: 9999,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#E6F4EA",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 9999,
+    gap: 4,
   },
-  bottomBannerBtnText: {
-    color: "#065F46",
-    fontSize: 12.5,
+  viewDetailsBtnText: {
+    fontSize: 11,
     fontWeight: "800",
+    color: "#059669",
   },
 
-  /* EMPTY STATE */
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 14,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 4,
-    textAlign: "center",
-  },
-  emptyExploreBtn: {
-    marginTop: 16,
-    backgroundColor: "#059669",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 9999,
-  },
-  emptyExploreBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  /* ================= FOOTER SECTION ================= */
+  /* ================= 7. FOOTER SECTION ================= */
   footerSection: {
-    marginTop: 40,
+    marginTop: 32,
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
-    paddingTop: 24,
-    paddingBottom: 20,
-    width: "100%",
-    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 24,
+    marginHorizontal: 16,
   },
   footerContent: {
-    width: "100%",
-    maxWidth: 1240,
-    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 20,
+    gap: 16,
   },
   footerBrand: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   footerLogoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     backgroundColor: "#0B4D3C",
     justifyContent: "center",
     alignItems: "center",
   },
   footerBrandName: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: "900",
     color: "#0F172A",
   },
   footerBrandTagline: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
   },
   footerLinksRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    gap: 14,
     flexWrap: "wrap",
   },
   footerLink: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     color: "#475569",
     fontWeight: "500",
   },
   footerSignatureWrap: {
     alignItems: "flex-end",
-    position: "relative",
   },
   footerSignatureText: {
-    fontFamily: Platform.OS === "web" ? "Kalam, Caveat, 'Segoe Script', cursive" : "System",
-    fontSize: 14,
+    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
+    fontSize: 13,
     color: "#64748B",
     fontStyle: "italic",
     textAlign: "right",
-    lineHeight: 17,
+    lineHeight: 15,
     transform: [{ rotate: "-4deg" }],
   },
   signatureSwoosh: {
-    width: 60,
+    width: 50,
     height: 2,
     backgroundColor: "#10B981",
     borderRadius: 1,
     marginTop: 2,
+  },
+
+  /* ================= EMPTY STATE ================= */
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 32,
+    marginHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 12,
+  },
+  emptySub: {
+    fontSize: 12.5,
+    color: "#64748B",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  emptyExploreBtn: {
+    marginTop: 14,
+    backgroundColor: "#059669",
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: 9999,
+  },
+  emptyExploreBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12.5,
+    fontWeight: "700",
+  },
+
+  /* ================= MODAL STYLES ================= */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 14,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    gap: 10,
+  },
+  modalOptionActive: {
+    backgroundColor: "#F0FDF4",
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  modalOptionText: {
+    fontSize: 13.5,
+    color: "#334155",
+    fontWeight: "600",
+  },
+  modalOptionTextActive: {
+    color: "#059669",
+    fontWeight: "800",
   },
 });

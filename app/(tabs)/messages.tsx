@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import Svg, { Rect, Defs, LinearGradient, Stop } from "react-native-svg";
 import AppHeader from "../../components/AppHeader";
 import { useLanguageStore } from "../../src/store/languageStore";
 import { t } from "../../src/i18n/translations";
@@ -295,6 +296,21 @@ export default function MessagesScreenMobile() {
   const router = useRouter();
   const { language } = useLanguageStore();
 
+  // Inject Google Fonts for authentic cursive script on web
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const fontId = "google-fonts-malikse-cursive";
+      if (!document.getElementById(fontId)) {
+        const link = document.createElement("link");
+        link.id = fontId;
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&display=swap";
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
+
   const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
   const [activeTab, setActiveTab] = useState<"all" | "unread" | "archived">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -394,71 +410,92 @@ export default function MessagesScreenMobile() {
         showsVerticalScrollIndicator={false}
       >
         {/* ================= 2. HERO BANNER (TOP CONTAINER) ================= */}
-        <View style={styles.heroContainer}>
-          {/* Scenic Background Image */}
+        <View style={styles.heroCard}>
+          {/* Scenic Background Image — fills 100% of the container */}
           <Image
             source={heroScenicImg}
-            style={styles.heroImage}
+            style={styles.heroBackground}
             resizeMode="cover"
           />
 
-          {/* Soft semi-translucent gradient overlay on the left */}
-          <View style={styles.heroOverlay} />
-
-          {/* Top Row: Left Direct Messages + Right Cursive Script */}
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroTitlesWrap}>
-              <Text style={styles.heroCategoryLabel}>
-                {t(language, "messages_direct") || "DIRECT MESSAGES"}
-              </Text>
-              <Text style={styles.heroHeadline}>
-                Secure Conversations{"\n"}for Better Deals
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                Connect, share documents and stay updated{"\n"}with buyers, owners and advisors.
-              </Text>
-            </View>
-
-            {/* Right Top Cursive Script */}
-            <View style={styles.heroCursiveWrap}>
-              <Text style={styles.heroCursiveText}>
-                Good Conversations{"\n"}Build Great{"\n"}Opportunities
-              </Text>
-            </View>
+          {/* Seamless Soft Gradient Mist on Left for pristine text contrast */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Svg width="100%" height="100%">
+              <Defs>
+                <LinearGradient id="heroGradient" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.88" />
+                  <Stop offset="36%" stopColor="#FFFFFF" stopOpacity="0.72" />
+                  <Stop offset="58%" stopColor="#FFFFFF" stopOpacity="0.25" />
+                  <Stop offset="78%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#heroGradient)" />
+            </Svg>
           </View>
 
-          {/* Bottom 3 Floating Feature Pills */}
-          <View style={styles.heroPillsRow}>
-            {/* Pill 1: Protected by OTP */}
-            <View style={styles.heroPill}>
-              <View style={styles.heroPillIconBox}>
-                <MaterialIcons name="lock" size={14} color="#059669" />
+          {/* Content Layer (Overlays) */}
+          <View style={styles.heroContentLayer} pointerEvents="box-none">
+            {/* Top Row: Direct Messages title on left + Cursive Script on right */}
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroTitlesWrap}>
+                <Text style={styles.heroCategoryLabel}>
+                  {language === "hi" ? "सीधे संदेश" : "DIRECT MESSAGES"}
+                </Text>
+                <Text style={styles.heroHeadline}>
+                  Secure Conversations{"\n"}for Better Deals
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  Connect, share documents and stay updated{"\n"}with buyers, owners and advisors.
+                </Text>
               </View>
-              <View style={styles.heroPillTextWrap}>
-                <Text style={styles.heroPillTitle}>Protected</Text>
-                <Text style={styles.heroPillSub}>by OTP</Text>
+
+              {/* Right Top Cursive Script */}
+              <View style={styles.heroCursiveWrap}>
+                <Text style={styles.heroCursiveText}>
+                  Good Conversations{"\n"}Build Great{"\n"}Opportunities
+                </Text>
               </View>
             </View>
 
-            {/* Pill 2: No Spam Genuine Users Only */}
-            <View style={styles.heroPill}>
-              <View style={styles.heroPillIconBox}>
-                <MaterialIcons name="verified-user" size={14} color="#059669" />
+            {/* Bottom 3 Floating Feature Pills */}
+            <View style={styles.heroPillsRow}>
+              {/* Pill 1: Protected by OTP */}
+              <View style={styles.heroPill}>
+                <View style={styles.heroPillIconBox}>
+                  <MaterialIcons name="lock" size={14} color="#059669" />
+                </View>
+                <View style={styles.heroPillTextWrap}>
+                  <Text style={styles.heroPillTitle}>Protected</Text>
+                  <Text style={styles.heroPillSub}>by OTP</Text>
+                </View>
               </View>
-              <View style={styles.heroPillTextWrap}>
-                <Text style={styles.heroPillTitle}>No Spam</Text>
-                <Text style={styles.heroPillSub} numberOfLines={1}>Genuine Users Only</Text>
-              </View>
-            </View>
 
-            {/* Pill 3: Trusted Platform Verified People */}
-            <View style={styles.heroPill}>
-              <View style={styles.heroPillIconBox}>
-                <FontAwesome5 name="handshake" size={12} color="#059669" />
+              {/* Pill 2: No Spam Genuine Users Only */}
+              <View style={styles.heroPill}>
+                <View style={styles.heroPillIconBox}>
+                  <MaterialIcons name="verified-user" size={14} color="#059669" />
+                </View>
+                <View style={styles.heroPillTextWrap}>
+                  <Text style={styles.heroPillTitle}>No Spam</Text>
+                  <Text style={styles.heroPillSub} numberOfLines={1}>
+                    Genuine Users
+                  </Text>
+                </View>
               </View>
-              <View style={styles.heroPillTextWrap}>
-                <Text style={styles.heroPillTitle}>Trusted Platform</Text>
-                <Text style={styles.heroPillSub} numberOfLines={1}>Verified People</Text>
+
+              {/* Pill 3: Trusted Platform Verified People */}
+              <View style={styles.heroPill}>
+                <View style={styles.heroPillIconBox}>
+                  <FontAwesome5 name="handshake" size={12} color="#059669" />
+                </View>
+                <View style={styles.heroPillTextWrap}>
+                  <Text style={styles.heroPillTitle} numberOfLines={1}>
+                    Trusted Platform
+                  </Text>
+                  <Text style={styles.heroPillSub} numberOfLines={1}>
+                    Verified People
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -918,58 +955,67 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  /* ================= HERO BANNER (TOP CONTAINER) ================= */
-  heroContainer: {
+  /* ================= HERO BANNER ================= */
+  heroCard: {
     marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 16,
-    borderRadius: 20,
+    marginTop: 10,
+    marginBottom: 14,
+    height: 222,
+    borderRadius: 22,
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#E2E8F0",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 14,
-    minHeight: 200,
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.8)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
+    backgroundColor: "#E2E8F0",
   },
-  heroImage: {
-    ...StyleSheet.absoluteFill,
+  heroBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: "100%",
     height: "100%",
   },
-  heroOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(255, 255, 255, 0.42)",
+  heroContentLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    justifyContent: "space-between",
   },
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    zIndex: 2,
   },
   heroTitlesWrap: {
     flex: 1,
-    paddingRight: 8,
+    paddingRight: 6,
   },
   heroCategoryLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "800",
     color: "#475569",
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
   heroHeadline: {
-    fontSize: 21,
+    fontSize: 20.5,
     fontWeight: "900",
     color: "#0F172A",
-    lineHeight: 26,
+    lineHeight: 25,
     letterSpacing: -0.4,
-    marginTop: 4,
+    marginTop: 3,
   },
   heroSubtitle: {
     fontSize: 11,
@@ -980,15 +1026,15 @@ const styles = StyleSheet.create({
   },
   heroCursiveWrap: {
     alignItems: "flex-end",
-    paddingTop: 2,
+    paddingTop: 1,
   },
   heroCursiveText: {
-    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : "System",
-    fontSize: 13,
+    fontFamily: Platform.OS === "web" ? "Caveat, Kalam, 'Segoe Script', cursive" : (Platform.OS === "ios" ? "Snell Roundhand" : "serif"),
+    fontSize: 13.5,
     color: "#166534",
     fontStyle: "italic",
     textAlign: "right",
-    lineHeight: 16,
+    lineHeight: 17,
     transform: [{ rotate: "-4deg" }],
     fontWeight: "700",
   },
@@ -996,18 +1042,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 16,
-    zIndex: 2,
   },
   heroPill: {
     flex: 1,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderRadius: 10,
     paddingVertical: 7,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.9)",
     shadowColor: "#000",
@@ -1017,8 +1061,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   heroPillIconBox: {
-    width: 26,
-    height: 26,
+    width: 25,
+    height: 25,
     borderRadius: 7,
     backgroundColor: "#E6F4EA",
     justifyContent: "center",

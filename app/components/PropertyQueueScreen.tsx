@@ -45,16 +45,16 @@ export default function PropertyQueueScreen({ role }: { role: UserRole }) {
     <View style={ui.row}>{["all", "draft", "pending", "advisor_verified", "correction_required", "rejected", "verified"].filter(status => role === "user" || role === "admin" || status !== "draft").map(status => <Action key={status} title={status === "all" ? "All" : statusLabels[status]} secondary={status !== filter} onPress={() => setFilter(status)} />)}</View>
     {!!error && <Text accessibilityRole="alert" style={ui.error}>{error}</Text>}
     {loading ? <ActivityIndicator color="#047857" /> : !error && filtered.length === 0 ? <Text style={ui.text}>No properties in this queue.</Text> : null}
-    {!loading && filtered.map(property => {
+    {loading ? null : filtered.map(property => {
       const assigned = actorId(role === "advisor" ? property.assignedAdvisorId : property.assignedVerifierId);
       const unassigned = ["advisor", "verifier"].includes(role) && !assigned;
       return <View key={property._id} style={ui.card}>
         <Text style={ui.heading}>{property.title || `${property.type} in ${property.location.district}`}</Text>
         <Text style={ui.text}>{statusLabels[property.status] || property.status}</Text>
         <Text style={ui.muted}>{property.location.district}, {property.location.state} · ₹{property.price.toLocaleString("en-IN")}</Text>
-        {property.rejectionReason && <Text style={ui.error}>{property.rejectionReason}</Text>}
+        {property.rejectionReason ? <Text style={ui.error}>{property.rejectionReason}</Text> : null}
         {unassigned ? <Action title="Claim review" disabled={busy} onPress={() => claim(property._id)} /> : <Action title={role === "user" || role === "admin" ? "Details and history" : "Open review"} onPress={() => router.push({ pathname: "/verification/[id]", params: { id: property._id } })} />}
-        {role === "user" && ["draft", "correction_required"].includes(property.status) && <Action title={property.status === "draft" ? "Continue listing" : "Correct and resubmit"} secondary onPress={() => router.push({ pathname: "/listing/create", params: { id: property._id } })} />}
+        {role === "user" && ["draft", "correction_required"].includes(property.status) ? <Action title={property.status === "draft" ? "Continue listing" : "Correct and resubmit"} secondary onPress={() => router.push({ pathname: "/listing/create", params: { id: property._id } })} /> : null}
       </View>;
     })}
   </WorkflowScreen>;

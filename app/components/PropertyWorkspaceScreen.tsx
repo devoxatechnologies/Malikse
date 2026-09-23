@@ -112,8 +112,8 @@ export default function PropertyWorkspaceScreen({ publicView = false }: { public
           {typeof property.ownerId === "object" && <Text style={ui.text}>{property.ownerId.name} · {property.ownerId.mobile}</Text>}
           <Text style={ui.text}>Block: {property.location.block || "—"} · Mauza: {property.location.mauza || "—"} · Police station: {property.location.policeStation || "—"}</Text>
           <Text style={ui.text}>Khata: {property.khata || "—"} · Khesra: {property.khesra || "—"} · Holding: {property.holdingNumber || "—"}</Text>
-          <Text style={ui.text}>Advisor: {typeof property.assignedAdvisorId === "object" ? property.assignedAdvisorId.name : property.assignedAdvisorId || "Awaiting assignment"}</Text>
-          <Text style={ui.text}>Verifier: {typeof property.assignedVerifierId === "object" ? property.assignedVerifierId.name : property.assignedVerifierId || "Awaiting assignment"}</Text>
+          <Text style={ui.text}>Advisor: {property.assignedAdvisorId && typeof property.assignedAdvisorId === "object" ? property.assignedAdvisorId.name : property.assignedAdvisorId || "Awaiting assignment"}</Text>
+          <Text style={ui.text}>Verifier: {property.assignedVerifierId && typeof property.assignedVerifierId === "object" ? property.assignedVerifierId.name : property.assignedVerifierId || "Awaiting assignment"}</Text>
           <Text style={ui.heading}>Documents (optional)</Text>
           {docs.length === 0 && <Text style={ui.muted}>No documents uploaded.</Text>}
           {docs.map(doc => <Action key={doc._id || doc.id} title={`${doc.type}: ${doc.fileName}`} secondary onPress={() => Linking.openURL(doc.fileUrl).catch(() => setError("Could not open document. Refresh to get a new link."))} />)}
@@ -133,8 +133,14 @@ export default function PropertyWorkspaceScreen({ publicView = false }: { public
           {user?.role === "advisor" && <><Action title="Capture site GPS check-in (if visited)" secondary disabled={busy} onPress={captureGps} />{gps && <Text style={ui.text}>{gps.lat}, {gps.lng}</Text>}</>}
           <Field label="Report notes / correction or rejection reason" value={notes} onChangeText={setNotes} multiline />
           <Field label="Your full name as report signature" value={signature} onChangeText={setSignature} />
-          <Text style={ui.muted}>Approval requires all checks. Corrections and rejections require a reason.</Text>
-          <View style={ui.row}>{(["approve", "correction", "reject"] as const).map(decision => <Action key={decision} title={decision === "approve" ? user?.role === "advisor" ? "Approve → Verifier" : "Approve and publish" : decision === "correction" ? "Request corrections" : "Reject"} disabled={busy || notes.trim().length < 5 || signature.trim().length < 2 || (decision === "approve" && keys.some(key => !checklist[key]))} secondary={decision !== "approve"} onPress={() => run(() => workflowService.review(id, { decision, notes, signature, checklist, gpsCheckIn: gps }))} />)}</View>
+          {(() => {
+            const missing: string[] = [];
+            if (keys.some(key => !checklist[key])) missing.push("tick all checklist items");
+            if (signature.trim().length < 2) missing.push("enter your full name as signature");
+            if (missing.length > 0) return <Text style={ui.muted}>To approve: {missing.join(" · ")}.</Text>;
+            return <Text style={ui.muted}>All set — pick an action below.</Text>;
+          })()}
+          <View style={ui.row}>{(["approve", "correction", "reject"] as const).map(decision => <Action key={decision} title={decision === "approve" ? user?.role === "advisor" ? "Approve → Verifier" : "Approve and publish" : decision === "correction" ? "Request corrections" : "Reject"} disabled={busy || signature.trim().length < 2 || (decision !== "approve" && notes.trim().length < 5) || (decision === "approve" && keys.some(key => !checklist[key]))} secondary={decision !== "approve"} onPress={() => run(() => workflowService.review(id, { decision, notes, signature, checklist, gpsCheckIn: gps }))} />)}</View>
         </View>}
         {user?.role === "admin" && ["pending", "advisor_verified"].includes(property.status) && <View style={ui.card}>
           <Text style={ui.heading}>Assign / reassign reviewer</Text>

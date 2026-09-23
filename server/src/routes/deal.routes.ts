@@ -1,18 +1,24 @@
 import { Router } from "express";
 import { Deal } from "../models/Deal.model";
 import { Property } from "../models/Property.model";
+import { User } from "../models/User.model";
 import { authGuard, roleGuard } from "../middleware/auth.middleware";
 
 const router = Router();
 
 // POST /deals/:propertyId/offer (Buyer)
-router.post("/:propertyId/offer", authGuard, roleGuard("buyer"), async (req: any, res) => {
+router.post("/:propertyId/offer", authGuard, roleGuard("user"), async (req: any, res) => {
   try {
+    const buyer = await User.findById(req.user.id);
+    if (!buyer?.demoKycComplete) return res.status(403).json({ message: "Complete the demo KYC step before making an offer" });
     const { amount } = req.body;
     const propertyId = req.params.propertyId;
     
     const property = await Property.findById(propertyId);
     if (!property) return res.status(404).json({ message: "Property not found" });
+    if (property.status !== "verified" || property.advisorReview?.decision !== "approve" || property.verifierReview?.decision !== "approve") return res.status(409).json({ message: "Offers are available only for fully approved published properties" });
+    if (property.ownerId.toString() === req.user.id) return res.status(400).json({ message: "You cannot make an offer on your own property" });
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) return res.status(400).json({ message: "Enter a positive offer amount" });
 
     const commissionAmount = amount * 0.0118; // 1% + 18% GST
 

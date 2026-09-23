@@ -1,13 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IUser extends Document {
-  role: "owner" | "buyer" | "advisor" | "admin" | "lawyer" | "surveyor" | "bank_rep";
+  role: "user" | "advisor" | "verifier" | "admin";
   name: string;
   mobile: string;
   email?: string;
   passwordHash?: string;
   kycDocuments: string[];
   isVerifiedIdentity: boolean;
+  demoKycComplete: boolean;
   refreshTokenHash?: string;
   createdAt: Date;
 }
@@ -16,7 +17,7 @@ const UserSchema = new Schema<IUser>(
   {
     role: {
       type: String,
-      enum: ["owner", "buyer", "advisor", "admin", "lawyer", "surveyor", "bank_rep"],
+      enum: ["user", "advisor", "verifier", "admin"],
       required: true,
     },
     name: { type: String, required: true, trim: true },
@@ -25,6 +26,7 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String },
     kycDocuments: { type: [String], default: [] },
     isVerifiedIdentity: { type: Boolean, default: false },
+    demoKycComplete: { type: Boolean, default: false },
     refreshTokenHash: { type: String },
   },
   { timestamps: true }

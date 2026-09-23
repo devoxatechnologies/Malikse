@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { User } from "../models/User.model";
 
 export interface AuthRequest extends Request {
   user?: { id: string; role: string };
@@ -11,22 +12,23 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "dev_access_secret";
  * Verifies the Bearer JWT in the Authorization header.
  * Attaches `req.user` on success.
  */
-export function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Authentication required. Please sign in as a verified owner to continue." });
   }
   const token = header.slice(7);
 
-  // Development demo fallback
-  if (token === "dummy_access" || token.startsWith("dummy_")) {
-    req.user = { id: "650000000000000000000001", role: "owner" };
-    return next();
-  }
-
   try {
     const decoded = jwt.verify(token, ACCESS_SECRET) as { id: string; role: string };
-    req.user = decoded;
+    if (typeof decoded.id !== "string" || !/^[a-f0-9]{24}$/i.test(decoded.id)) {
+      return res.status(401).json({ message: "Invalid account session" });
+    }
+    const user = await User.findById(decoded.id).select("role passwordHash");
+    if (!user?.passwordHash) {
+      return res.status(401).json({ message: "Please sign in with your account credentials" });
+    }
+    req.user = { id: user._id.toString(), role: user.role };
     next();
   } catch {
     return res.status(401).json({ message: "Session expired or invalid. Please sign in again." });

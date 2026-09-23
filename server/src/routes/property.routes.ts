@@ -1,83 +1,95 @@
 import { Router } from "express";
+import { isValidObjectId } from "mongoose";
 import { Property } from "../models/Property.model";
+import { User } from "../models/User.model";
 import { authGuard, roleGuard } from "../middleware/auth.middleware";
+import { availableStaff, canReadProperty, historyEvent, listingFields, publicFields, transition, validateListing } from "../services/propertyWorkflow";
 
 const router = Router();
+router.param("id", (_req, res, next, id) => isValidObjectId(id) ? next() : res.status(400).json({ message: "Invalid property ID" }));
 
-// GET /properties/search (Public/Buyer)
 router.get("/search", async (req, res) => {
   try {
-    const { location, type, verifiedOnly, minPrice, maxPrice } = req.query;
-    const query: any = { status: "verified" }; // Only show verified by default in search
-    
-    if (verifiedOnly === "false") {
-      delete query.status; // or allow pending if needed
-    }
-    if (location) {
-      // Simple regex search on state or district
-      const locRegex = new RegExp(location as string, "i");
-      query.$or = [{ "location.state": locRegex }, { "location.district": locRegex }];
+    const { location, type } = req.query;
+    const query: any = { status: "verified", "badges.fullyVerified": true, "advisorReview.decision": "approve", "verifierReview.decision": "approve" };
+    if (typeof location === "string" && location.trim()) {
+      const pattern = new RegExp(location.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      query.$or = [{ "location.state": pattern }, { "location.district": pattern }, { title: pattern }];
     }
     if (type) query.type = type;
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+    const min = req.query.minPrice ?? req.query.budgetMin;
+    const max = req.query.maxPrice ?? req.query.budgetMax;
+    if (min !== undefined || max !== undefined) {
+      if ((min !== undefined && (!Number.isFinite(Number(min)) || Number(min) < 0)) || (max !== undefined && (!Number.isFinite(Number(max)) || Number(max) < 0))) return res.status(400).json({ message: "Invalid price filter" });
+      query.price = { ...(min !== undefined ? { $gte: Number(min) } : {}), ...(max !== undefined ? { $lte: Number(max) } : {}) };
     }
-
-    const properties = await Property.find(query).populate("ownerId", "name").sort("-createdAt").limit(50);
-    res.json(properties);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
+    res.json(await Property.find(query).select(publicFields).sort("-createdAt"));
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
-// GET /properties/mine (Owner)
-router.get("/mine", authGuard, roleGuard("owner"), async (req: any, res) => {
+router.get("/mine", authGuard, roleGuard("user"), async (req: any, res) => {
+  try { res.json(await Property.find({ ownerId: req.user.id }).sort("-createdAt")); }
+  catch (error: any) { res.status(500).json({ message: error.message }); }
+});
+
+router.get("/:id/workspace", authGuard, async (req: any, res) => {
   try {
-    const properties = await Property.find({ ownerId: req.user.id }).sort("-createdAt");
-    res.json(properties);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ message: "Property not found" });
+    if (!canReadProperty(property, req.user)) return res.status(403).json({ message: "This property is not assigned to you" });
+    await property.populate([{ path: "ownerId", select: "name mobile" }, { path: "assignedAdvisorId", select: "name" }, { path: "assignedVerifierId", select: "name" }]);
+    res.json(property);
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
-// GET /properties/:id
 router.get("/:id", async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id).populate("ownerId", "name mobile");
-    if (!property) return res.status(404).json({ message: "Property not found" });
+    const property = await Property.findOne({ _id: req.params.id, status: "verified", "badges.fullyVerified": true, "advisorReview.decision": "approve", "verifierReview.decision": "approve" }).select(publicFields);
+    if (!property) return res.status(404).json({ message: "Published property not found" });
     res.json(property);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
-// POST /properties (Owner)
-router.post("/", authGuard, roleGuard("owner"), async (req: any, res) => {
+router.post("/", authGuard, roleGuard("user"), async (req: any, res) => {
   try {
-    const propertyData = { ...req.body, ownerId: req.user.id, status: "pending" };
-    const property = new Property(propertyData);
-    await property.save();
+    const seller = await User.findById(req.user.id);
+    if (!seller?.demoKycComplete) return res.status(403).json({ message: "Complete demo KYC before listing" });
+    const data = listingFields(req.body);
+    const error = validateListing(data);
+    if (error) return res.status(400).json({ message: error });
+    const property = await Property.create({ ...data, ownerId: req.user.id, status: "draft", verificationHistory: [historyEvent(req.user, "draft", "draft", "draft_created")] });
     res.status(201).json(property);
-  } catch (error: any) {
-    res.status(400).json({ message: error.message });
-  }
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
-// PATCH /properties/:id (Owner)
-router.patch("/:id", authGuard, roleGuard("owner"), async (req: any, res) => {
+router.patch("/:id", authGuard, roleGuard("user"), async (req: any, res) => {
   try {
-    const property = await Property.findOneAndUpdate(
-      { _id: req.params.id, ownerId: req.user.id },
-      req.body,
-      { new: true }
-    );
-    if (!property) return res.status(404).json({ message: "Property not found or unauthorized" });
-    res.json(property);
-  } catch (error: any) {
-    res.status(400).json({ message: error.message });
-  }
+    const property = await Property.findOne({ _id: req.params.id, ownerId: req.user.id });
+    if (!property) return res.status(404).json({ message: "Property not found" });
+    if (!["draft", "correction_required"].includes(property.status)) return res.status(409).json({ message: "Only drafts or properties awaiting corrections can be edited" });
+    const changes = listingFields(req.body);
+    const error = validateListing({ ...property.toObject(), ...changes });
+    if (error) return res.status(400).json({ message: error });
+    const updated = await transition(property, changes, historyEvent(req.user, property.status, property.status, "seller_edited"));
+    if (!updated) return res.status(409).json({ message: "Property changed. Reload and try again" });
+    res.json(updated);
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
 });
 
+router.post("/:id/submit", authGuard, roleGuard("user"), async (req: any, res) => {
+  try {
+    const seller = await User.findById(req.user.id);
+    if (!seller?.demoKycComplete) return res.status(403).json({ message: "Complete demo KYC first" });
+    const property = await Property.findOne({ _id: req.params.id, ownerId: req.user.id });
+    if (!property) return res.status(404).json({ message: "Property not found" });
+    if (!["draft", "correction_required"].includes(property.status)) return res.status(409).json({ message: "Property has already been submitted or cannot be resubmitted" });
+    if (req.body.consent !== true) return res.status(400).json({ message: "Accept the seller declaration before submitting" });
+    const error = validateListing(property);
+    if (error) return res.status(400).json({ message: error });
+    const advisorId = property.assignedAdvisorId || await availableStaff("advisor");
+    const result = await transition(property, { status: "pending", assignedAdvisorId: advisorId || null, assignedVerifierId: null, advisorReview: null, verifierReview: null, rejectionReason: "", badges: { identityVerified: false, documentsChecked: false, siteVisited: false, lawyerReviewed: false, fullyVerified: false } }, historyEvent(req.user, property.status, "pending", "submitted", { assignedAdvisorId: advisorId, consent: true }));
+    if (!result) return res.status(409).json({ message: "Property changed. Reload and try again" });
+    res.json(result);
+  } catch (error: any) { res.status(400).json({ message: error.message }); }
+});
 export default router;

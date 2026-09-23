@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IProperty extends Document {
+  __v: number;
+  title?: string;
+  description?: string;
   ownerId: mongoose.Types.ObjectId;
   jointOwnerIds: mongoose.Types.ObjectId[];
   type: "land" | "flat" | "house" | "shop" | "office";
@@ -26,7 +29,11 @@ export interface IProperty extends Document {
   media: { photos: string[]; videos: string[] };
   documents: mongoose.Types.ObjectId[];
   disclosures: { hasLoan: boolean; hasDispute: boolean; possessionStatus: string };
-  status: "pending" | "correction_required" | "rejected" | "verified" | "sold";
+  status: "draft" | "pending" | "advisor_verified" | "correction_required" | "rejected" | "verified" | "sold";
+  assignedVerifierId?: mongoose.Types.ObjectId;
+  advisorReview?: any;
+  verifierReview?: any;
+  verificationHistory: any[];
   badges: {
     identityVerified: boolean;
     documentsChecked: boolean;
@@ -41,6 +48,12 @@ export interface IProperty extends Document {
 
 const PropertySchema = new Schema<IProperty>(
   {
+    title: { type: String, trim: true, maxlength: 200 },
+    description: { type: String, maxlength: 5000 },
+    assignedVerifierId: { type: Schema.Types.ObjectId, ref: "User" },
+    advisorReview: Schema.Types.Mixed,
+    verifierReview: Schema.Types.Mixed,
+    verificationHistory: { type: [Schema.Types.Mixed], default: [] } as any,
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     jointOwnerIds: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
     type: {
@@ -87,7 +100,7 @@ const PropertySchema = new Schema<IProperty>(
     },
     status: {
       type: String,
-      enum: ["pending", "correction_required", "rejected", "verified", "sold"],
+      enum: ["draft", "pending", "advisor_verified", "correction_required", "rejected", "verified", "sold"],
       default: "pending",
     },
     badges: {

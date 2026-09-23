@@ -1,29 +1,33 @@
 # MalikSe — Verified Owner-to-Buyer Property Marketplace
 
-MalikSe is a mobile + web marketplace where **only verified registered owners** can list properties. A company advisor performs document and physical site verification, and verified listings are then published for buyers to discover and contact the owner directly — with the company earning a transparent commission from each side on a successful deal.
+MalikSe uses four roles: **User** (buying and selling), **Advisor**, **Verifier**, and **Admin**.
 
-## 🚀 Product Vision & Features
+## Current account and verification flow
 
-Property buying/selling is plagued by fake listings, unverifiable ownership, and middlemen. MalikSe solves this by offering a transparent, verified platform.
+- Login and registration open the verified marketplace. The Profile button opens the signed-in account's role dashboard; **My profile** there opens account details and logout.
+- Users complete the explicitly labeled demo KYC step, then fill in property details, location/boundaries, and optional ownership documents. Web supports boundary drawing; mobile supports GPS capture or manual coordinates.
+- The final submission saves a draft, uploads selected documents, and submits it to the Advisor queue. Failed uploads retain the draft; errors never advance in preview mode. Photo/video URLs are supported in this skeleton; a media upload pipeline is not yet included.
+- New submissions are assigned to an available Advisor with the smallest pending queue. Advisor approval assigns an available Verifier. If no reviewer exists, the property stays unassigned and can be claimed after a staff account is created. Admin can assign or reassign pending reviews.
+- Advisors and Verifiers see their assigned properties, seller records, protected documents, checklists and reports. Unassigned queues show only summaries until claimed.
+- Both stages can approve, request corrections, or reject with signed notes. Seller corrections restart Advisor review; previous reports remain in history. Rejected listings cannot be resubmitted through this flow.
+- Only final Verifier approval publishes a listing. Public search and details require both recorded approvals and expose neither private seller contact details nor documents/reports. Fully Verified is not a legal-title guarantee.
+- Submitted or published listings cannot be silently edited. Reviewer decisions use version checks, preventing duplicate approvals or concurrent overwrites. History stores actor, role, timestamp, old/new status and report snapshots.
+- Ownership documents are optional and restricted to the owner, assigned reviewers and Admin, with expiring download links. KYC remains a demo. OTP, payments, legal title guarantees and other planned requirements are not implemented by this workflow.
 
-### Core Pillars
-- **Owner Verification Pipeline**: Multi-stage badge system (Identity → Documents → Site Visit → Lawyer Review) before a listing goes public.
-- **Property Listing & Search**: Structured listing form with map location, media, and buyer-side search/filter/compare.
-- **Controlled Owner–Buyer Contact**: OTP/KYC-gated "Contact Owner" flow; numbers are hidden until the owner consents.
-- **Deal & Commission Tracking**: Offer/counter-offer flow, token payment, auto-generated receipts, and deal status tracking.
-- **Advisor Mobile Panel**: GPS check-in, checklist-driven site verification, photo/video upload, and digital sign-off.
-- **Document Vault**: Secure, access-controlled storage for registry, mutation, LPC/jamabandi, and other ownership documents.
+### Roles
 
-## 👥 User Roles
+- **User:** browse, create listings, correct/resubmit and track reviews.
+- **Advisor:** first-stage review; cannot publish.
+- **Verifier:** final review and publication after Advisor approval.
+- **Admin:** create staff accounts, assign reviews and inspect all property history; cannot bypass final Verifier approval.
 
-- **Seller / Registered Owner**: Register with KYC, list property, upload documents, respond to offers.
-- **Buyer**: Search/filter, save favorites, book site visits, send offers, contact owner (post-KYC).
-- **Company Advisor**: View assigned tasks, GPS check-in, upload site photos, complete checklist, submit reports.
-- **Admin**: Approve/reject listings, assign advisors, manage disputes, view reports.
+### Verify the workflow
+
+With MongoDB available, run `npm --prefix server run test:workflow`. The test uses a uniquely named temporary database and deletes only its own test database and uploaded fixture when finished. It exercises role restrictions, assignment, both correction loops, duplicate approvals, optional documents, protected downloads and publication.
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React Native (Expo SDK 54), TypeScript, Expo Router.
+- **Frontend**: React Native (Expo SDK 57), TypeScript, Expo Router.
 - **Web Support**: React Native Web with Leaflet integration for property pins.
 - **State Management**: Zustand (Auth, Language, Listing Filters).
 - **Backend**: Node.js (Express) REST API.
@@ -34,23 +38,16 @@ Property buying/selling is plagued by fake listings, unverifiable ownership, and
 
 ```text
 malikse/
-├── app/                 # Expo Router (file-based routing)
-│   ├── (auth)/          # Login and Registration screens
-│   ├── (tabs)/          # Main Dashboard (Search, Saved, My Properties, Messages)
-│   ├── admin/           # Admin layouts and dashboards
-│   └── advisor/         # Advisor layouts and dashboards
-├── src/
-│   ├── components/      # UI Components (Cards, Lists, Modals)
-│   ├── services/        # Core API Logic (authService, propertyService, etc.)
-│   ├── store/           # Zustand state management
-│   └── hooks/           # Custom React Hooks
-└── server/              # Node.js + Express Backend
-    ├── src/
-    │   ├── controllers/ # Request handlers
-    │   ├── models/      # Mongoose schemas
-    │   ├── routes/      # Express routes (auth, properties, admin, etc.)
-    │   └── middleware/  # JWT auth guard, RBAC, etc.
-    └── index.ts         # Backend entry point
+├── app/                 # Expo / React Native application
+│   ├── app/             # Expo Router screens (auth, tabs, admin, advisor)
+│   ├── src/             # Components, services, stores, and hooks
+│   ├── assets/          # Application images and fonts
+│   └── package.json     # Frontend dependencies and commands
+├── server/              # Node.js + Express backend
+│   ├── src/             # API routes, models, middleware, and index.ts
+│   ├── uploads/         # Uploaded documents served by the API
+│   └── package.json     # Backend dependencies and commands
+└── website/             # Reserved for the future standalone website
 ```
 
 ## 🚦 Getting Started
@@ -64,11 +61,10 @@ malikse/
 1. **Install Dependencies**:
    ```bash
    # Install frontend dependencies
-   npm install
+   npm --prefix app install
 
    # Install backend dependencies
-   cd server
-   npm install
+   npm --prefix server install
    ```
 
 2. **Environment Configuration**:
@@ -82,23 +78,30 @@ malikse/
    MONGO_URI=your_mongodb_connection_string
    PORT=5000
    ```
-   *(Configure additional environment variables for Expo in the root directory if necessary).*
+   Set `ADMIN_NAME`, `ADMIN_MOBILE`, and `ADMIN_PASSWORD` (at least 6 characters) in `server/.env` to create the first Admin. `ADMIN_EMAIL` is optional. Configure the app API address in `app/.env`; the example is in `app/.env.example`. Expo Go on a phone uses the Metro host for a localhost API URL, so the phone and server should be on the same network.
+
+   Create the Admin once:
+   ```bash
+   npm --prefix server run seed:admin
+   ```
+   The seed is idempotent for the configured Admin mobile and does not overwrite an existing password.
 
 3. **Start the Backend Server**:
    ```bash
-   cd server
-   npm run dev
+   npm --prefix server run dev
    ```
 
 4. **Run the Application (Frontend)**:
    Open a new terminal at the project root:
    ```bash
    # For Web
-   npm run web
+   npm --prefix app run web
    
    # For Android
-   npm run android
+   npm --prefix app run android
    ```
+
+Users register from the app and are signed in immediately. The Admin signs in with the seeded mobile number and password, then clicks Profile and opens **Advisors and Verifiers** on the Admin dashboard to create staff accounts. Staff sign in through the same login screen with the credentials the Admin set. Registration does not create staff or Admin accounts.
 
 ---
 **Note:** This project is adapted from an earlier GIS/drone codebase (Landroid). All previous mapping layers and AI modules have been removed to focus entirely on the verified property marketplace functionality.
